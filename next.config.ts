@@ -1,8 +1,20 @@
-import type { NextConfig } from "next";
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'standalone',
+}
 
-const nextConfig: NextConfig = {
-  /* config options here */
-  reactCompiler: true,
-};
+module.exports = nextConfig
+```
 
-export default nextConfig;
+---
+
+## Passo 3: Criar .dockerignore
+
+Cria o arquivo `.dockerignore` na raiz:
+```
+node_modules
+.next
+.git
+.gitignore
+README.md
+.env*.local
