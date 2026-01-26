@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, Play, FileText, Image as ImageIcon } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import EmojiPicker from './EmojiPicker';
 
 interface Attachment {
   id: number;
@@ -30,6 +31,10 @@ interface Mensagem {
   texto: string;
   hora: string;
   attachments?: Attachment[];
+  replyTo?: {
+    id: number;
+    content: string;
+  };
 }
 
 export default function Conversas() {
@@ -50,8 +55,28 @@ export default function Conversas() {
   
   const [showAnotacao, setShowAnotacao] = useState(false);
   const [anotacaoTemp, setAnotacaoTemp] = useState('');
+  
+  // Emoji picker
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  
+  // Reply
+  const [replyingTo, setReplyingTo] = useState<Mensagem | null>(null);
+  
+  // Gravação de áudio
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Anexos
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const lastMessageIdRef = useRef<number>(0);
+  const isFirstLoadRef = useRef(true);
 
   // Carrega conversas
   useEffect(() => {
@@ -62,9 +87,31 @@ export default function Conversas() {
     }
   }, [CLINICA_ID]);
 
-  // Scroll para última mensagem
+  // Polling de mensagens (a cada 3 segundos, sem loading visual)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (conversaSelecionada && CLINICA_ID) {
+      const interval = setInterval(() => {
+        fetchMensagenssilent(conversaSelecionada.id);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [conversaSelecionada, CLINICA_ID]);
+
+  // Scroll para última mensagem apenas quando houver nova mensagem
+  useEffect(() => {
+    if (mensagens.length > 0) {
+      const lastMsg = mensagens[mensagens.length - 1];
+      if (lastMsg.id !== lastMessageIdRef.current) {
+        lastMessageIdRef.current = lastMsg.id;
+        // Scroll suave apenas se não for primeira carga
+        if (!isFirstLoadRef.current) {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+          isFirstLoadRef.current = false;
+        }
+      }
+    }
   }, [mensagens]);
 
   const fetchConversas = async () => {
@@ -89,7 +136,6 @@ export default function Conversas() {
           const tempoPassado = formatarTempo(conv.timestamp || conv.last_activity_at);
           const labels = conv.labels || [];
           
-          // Verifica se última mensagem tem attachment
           let ultimaMsg = lastMessage?.content || 'Nova conversa';
           if (!ultimaMsg && lastMessage?.attachments?.length > 0) {
             const tipo = lastMessage.attachments[0].file_type;
@@ -130,6 +176,7 @@ export default function Conversas() {
     if (!CLINICA_ID) return;
     
     setLoadingMensagens(true);
+    isFirstLoadRef.current = true;
     
     try {
       const response = await fetch(
@@ -138,16 +185,7 @@ export default function Conversas() {
       const data = await response.json();
       
       if (data.payload) {
-        const mensagensFormatadas: Mensagem[] = data.payload
-          .filter((msg: any) => (msg.content || msg.attachments?.length > 0) && msg.message_type !== 2)
-          .map((msg: any) => ({
-            id: msg.id,
-            tipo: msg.message_type === 0 ? 'recebida' : 'enviada',
-            texto: msg.content || '',
-            hora: formatarHora(msg.created_at),
-            attachments: msg.attachments || [],
-          }));
-
+        const mensagensFormatadas = formatarMensagens(data.payload);
         setMensagens(mensagensFormatadas);
       }
     } catch (error) {
@@ -157,31 +195,187 @@ export default function Conversas() {
     }
   };
 
+  // Busca mensagens sem loading visual (para polling)
+  const fetchMensagenssilent = async (conversaId: number) => {
+    if (!CLINICA_ID) return;
+    
+    try {
+      const response = await fetch(
+        `/api/chatwoot/messages?clinica_id=${CLINICA_ID}&conversation_id=${conversaId}`
+      );
+      const data = await response.json();
+      
+      if (data.payload) {
+        const mensagensFormatadas = formatarMensagens(data.payload);
+        
+        // Só atualiza se tiver mensagens novas
+        if (mensagensFormatadas.length !== mensagens.length || 
+            (mensagensFormatadas.length > 0 && mensagensFormatadas[mensagensFormatadas.length - 1].id !== lastMessageIdRef.current)) {
+          setMensagens(mensagensFormatadas);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar mensagens:', error);
+    }
+  };
+
+  const formatarMensagens = (payload: any[]): Mensagem[] => {
+    return payload
+      .filter((msg: any) => (msg.content || msg.attachments?.length > 0) && msg.message_type !== 2)
+      .map((msg: any) => ({
+        id: msg.id,
+        tipo: msg.message_type === 0 ? 'recebida' : 'enviada',
+        texto: msg.content || '',
+        hora: formatarHora(msg.created_at),
+        attachments: msg.attachments || [],
+        replyTo: msg.content_attributes?.in_reply_to ? {
+          id: msg.content_attributes.in_reply_to,
+          content: msg.content_attributes.in_reply_to_content || ''
+        } : undefined
+      })) as Mensagem[];
+  };
+
   const enviarMensagem = async () => {
-    if (!mensagem.trim() || !conversaSelecionada || !CLINICA_ID) return;
+    if ((!mensagem.trim() && selectedFiles.length === 0) || !conversaSelecionada || !CLINICA_ID) return;
     
     setEnviandoMensagem(true);
     
     try {
-      const response = await fetch('/api/chatwoot/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clinica_id: CLINICA_ID,
-          conversation_id: conversaSelecionada.id,
-          content: mensagem
-        })
-      });
-
-      if (response.ok) {
-        setMensagem('');
-        await fetchMensagens(conversaSelecionada.id);
+      // Se tem arquivos, envia com FormData
+      if (selectedFiles.length > 0) {
+        const formData = new FormData();
+        formData.append('clinica_id', CLINICA_ID);
+        formData.append('conversation_id', conversaSelecionada.id.toString());
+        formData.append('content', mensagem);
+        if (replyingTo) {
+          formData.append('reply_to', replyingTo.id.toString());
+        }
+        selectedFiles.forEach(file => {
+          formData.append('attachments[]', file);
+        });
+        
+        await fetch('/api/chatwoot/messages', {
+          method: 'POST',
+          body: formData
+        });
+      } else {
+        // Envia só texto
+        await fetch('/api/chatwoot/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clinica_id: CLINICA_ID,
+            conversation_id: conversaSelecionada.id,
+            content: mensagem,
+            reply_to: replyingTo?.id
+          })
+        });
       }
+
+      setMensagem('');
+      setSelectedFiles([]);
+      setReplyingTo(null);
+      await fetchMensagenssilent(conversaSelecionada.id);
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
     } finally {
       setEnviandoMensagem(false);
     }
+  };
+
+  // Gravação de áudio
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioFile = new File([audioBlob], 'audio.webm', { type: 'audio/webm' });
+        
+        // Envia o áudio
+        if (conversaSelecionada && CLINICA_ID) {
+          setEnviandoMensagem(true);
+          const formData = new FormData();
+          formData.append('clinica_id', CLINICA_ID);
+          formData.append('conversation_id', conversaSelecionada.id.toString());
+          formData.append('content', '');
+          formData.append('attachments[]', audioFile);
+          
+          try {
+            await fetch('/api/chatwoot/messages', {
+              method: 'POST',
+              body: formData
+            });
+            await fetchMensagenssilent(conversaSelecionada.id);
+          } catch (error) {
+            console.error('Erro ao enviar áudio:', error);
+          } finally {
+            setEnviandoMensagem(false);
+          }
+        }
+        
+        // Para as tracks do stream
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error('Erro ao iniciar gravação:', error);
+      alert('Não foi possível acessar o microfone');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      audioChunksRef.current = [];
+      setIsRecording(false);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    }
+  };
+
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Anexos
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setSelectedFiles(prev => [...prev, ...files]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const formatarTempo = (timestamp: number) => {
@@ -246,6 +440,9 @@ export default function Conversas() {
   const selecionarConversa = (conv: Conversa) => {
     setConversaSelecionada(conv);
     setShowAnotacao(false);
+    setReplyingTo(null);
+    setSelectedFiles([]);
+    lastMessageIdRef.current = 0;
     fetchMensagens(conv.id);
   };
 
@@ -257,9 +454,8 @@ export default function Conversas() {
 
   // Componente para renderizar anexos
   const renderAttachment = (attachment: Attachment, isEnviada: boolean) => {
-    const { file_type, data_url, thumb_url, file_name } = attachment;
+    const { file_type, data_url, file_name } = attachment;
 
-    // Imagem
     if (file_type === 'image') {
       return (
         <a href={data_url} target="_blank" rel="noopener noreferrer" className="block">
@@ -272,17 +468,15 @@ export default function Conversas() {
       );
     }
 
-    // Áudio
     if (file_type === 'audio') {
       return (
-        <audio controls className="max-w-full">
+        <audio controls className="max-w-[250px]">
           <source src={data_url} />
           Seu navegador não suporta áudio.
         </audio>
       );
     }
 
-    // Vídeo
     if (file_type === 'video') {
       return (
         <video controls className="max-w-full rounded-lg max-h-64">
@@ -292,18 +486,6 @@ export default function Conversas() {
       );
     }
 
-    // Sticker/GIF (webp)
-    if (file_type === 'image' || data_url?.includes('.webp') || data_url?.includes('.gif')) {
-      return (
-        <img 
-          src={data_url} 
-          alt="Sticker" 
-          className="max-w-32 max-h-32 object-contain"
-        />
-      );
-    }
-
-    // Arquivo/Documento
     return (
       <a 
         href={data_url} 
@@ -339,7 +521,7 @@ export default function Conversas() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-48px)] -m-4 lg:-m-6">
+    <div className="flex h-[calc(100vh-48px)] -m-4 lg:-m-6 overflow-hidden">
       {/* Lista de conversas */}
       <div className="w-80 bg-[#1e293b] border-r border-[#334155] flex flex-col flex-shrink-0">
         <div className="p-4 border-b border-[#334155]">
@@ -365,7 +547,7 @@ export default function Conversas() {
           </div>
         </div>
         
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {loadingConversas ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 size={24} className="animate-spin text-[#10b981]" />
@@ -383,8 +565,8 @@ export default function Conversas() {
                   conversaSelecionada?.id === conv.id ? 'bg-[#334155]' : ''
                 }`}
               >
-                <div className="relative">
-                  <div className="w-12 h-12 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold flex-shrink-0">
+                <div className="relative flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold">
                     {conv.nome.charAt(0).toUpperCase()}
                   </div>
                   {conv.humano && (
@@ -396,7 +578,7 @@ export default function Conversas() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <p className="font-medium truncate">{conv.nome}</p>
-                    <span className="text-xs text-[#64748b]">{conv.tempo}</span>
+                    <span className="text-xs text-[#64748b] flex-shrink-0 ml-2">{conv.tempo}</span>
                   </div>
                   <p className="text-sm text-[#64748b] truncate">{conv.ultima}</p>
                 </div>
@@ -411,9 +593,9 @@ export default function Conversas() {
 
       {/* Área de chat */}
       {conversaSelecionada ? (
-        <div className="flex-1 flex flex-col bg-[#0f172a] min-w-0">
+        <div className="flex-1 flex flex-col bg-[#0f172a] min-w-0 overflow-hidden">
           {/* Header do chat */}
-          <div className="bg-[#1e293b] border-b border-[#334155] p-4">
+          <div className="bg-[#1e293b] border-b border-[#334155] p-4 flex-shrink-0">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold flex-shrink-0">
@@ -457,7 +639,10 @@ export default function Conversas() {
           </div>
 
           {/* Mensagens */}
-          <div className="flex-1 overflow-auto p-4 space-y-4">
+          <div 
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4"
+          >
             {loadingMensagens ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 size={32} className="animate-spin text-[#10b981]" />
@@ -471,32 +656,66 @@ export default function Conversas() {
                 {mensagens.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex ${msg.tipo === 'enviada' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${msg.tipo === 'enviada' ? 'justify-end' : 'justify-start'} group`}
                   >
-                    <div
-                      className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                        msg.tipo === 'enviada'
-                          ? 'bg-[#10b981] text-white rounded-br-md'
-                          : 'bg-[#1e293b] text-white rounded-bl-md'
-                      }`}
-                    >
-                      {/* Renderiza anexos */}
-                      {msg.attachments && msg.attachments.length > 0 && (
-                        <div className="space-y-2 mb-2">
-                          {msg.attachments.map((att, idx) => (
-                            <div key={idx}>
-                              {renderAttachment(att, msg.tipo === 'enviada')}
-                            </div>
-                          ))}
-                        </div>
+                    <div className="flex items-start gap-1 max-w-[70%]">
+                      {/* Botão de reply (aparece no hover) */}
+                      {msg.tipo === 'recebida' && (
+                        <button
+                          onClick={() => setReplyingTo(msg)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#334155] rounded transition-all self-center"
+                          title="Responder"
+                        >
+                          <Reply size={16} className="text-[#64748b]" />
+                        </button>
                       )}
                       
-                      {/* Texto da mensagem */}
-                      {msg.texto && <p>{msg.texto}</p>}
+                      <div
+                        className={`rounded-2xl px-4 py-2 ${
+                          msg.tipo === 'enviada'
+                            ? 'bg-[#10b981] text-white rounded-br-md'
+                            : 'bg-[#1e293b] text-white rounded-bl-md'
+                        }`}
+                      >
+                        {/* Reply quote */}
+                        {msg.replyTo && (
+                          <div className={`text-xs mb-2 p-2 rounded border-l-2 ${
+                            msg.tipo === 'enviada' 
+                              ? 'bg-[#059669] border-white/50' 
+                              : 'bg-[#334155] border-[#10b981]'
+                          }`}>
+                            <p className="opacity-75 truncate">{msg.replyTo.content || 'Mensagem'}</p>
+                          </div>
+                        )}
+                        
+                        {/* Anexos */}
+                        {msg.attachments && msg.attachments.length > 0 && (
+                          <div className="space-y-2 mb-2">
+                            {msg.attachments.map((att, idx) => (
+                              <div key={idx}>
+                                {renderAttachment(att, msg.tipo === 'enviada')}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {msg.texto && <p className="break-words">{msg.texto}</p>}
+                        
+                        <p className={`text-xs mt-1 ${msg.tipo === 'enviada' ? 'text-green-200' : 'text-[#64748b]'}`}>
+                          {msg.hora}
+                        </p>
+                      </div>
                       
-                      <p className={`text-xs mt-1 ${msg.tipo === 'enviada' ? 'text-green-200' : 'text-[#64748b]'}`}>
-                        {msg.hora}
-                      </p>
+                      {/* Botão de reply para mensagens enviadas */}
+                      {msg.tipo === 'enviada' && (
+                        <button
+                          onClick={() => setReplyingTo(msg)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#334155] rounded transition-all self-center"
+                          title="Responder"
+                        >
+                          <Reply size={16} className="text-[#64748b]" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -507,7 +726,7 @@ export default function Conversas() {
 
           {/* Aviso de modo humano */}
           {conversaSelecionada.humano && (
-            <div className="bg-orange-500/20 border-t border-orange-500/30 px-4 py-2">
+            <div className="bg-orange-500/20 border-t border-orange-500/30 px-4 py-2 flex-shrink-0">
               <p className="text-orange-400 text-sm text-center">
                 <User size={14} className="inline mr-1" />
                 Modo humano ativo - A IA não responderá esta conversa
@@ -515,32 +734,142 @@ export default function Conversas() {
             </div>
           )}
 
-          {/* Input de mensagem */}
-          <div className="bg-[#1e293b] border-t border-[#334155] p-4">
-            <form 
-              onSubmit={(e) => { e.preventDefault(); enviarMensagem(); }}
-              className="flex items-center gap-3"
-            >
-              <input
-                type="text"
-                value={mensagem}
-                onChange={(e) => setMensagem(e.target.value)}
-                placeholder="Digite sua mensagem..."
-                className="flex-1 bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
-                disabled={enviandoMensagem}
-              />
-              <button 
-                type="submit"
-                disabled={enviandoMensagem || !mensagem.trim()}
-                className="bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] text-white p-3 rounded-lg transition-colors"
+          {/* Reply preview */}
+          {replyingTo && (
+            <div className="bg-[#1e293b] border-t border-[#334155] px-4 py-2 flex items-center gap-3 flex-shrink-0">
+              <div className="flex-1 border-l-2 border-[#10b981] pl-3">
+                <p className="text-xs text-[#10b981]">Respondendo</p>
+                <p className="text-sm text-[#94a3b8] truncate">{replyingTo.texto || 'Mídia'}</p>
+              </div>
+              <button
+                onClick={() => setReplyingTo(null)}
+                className="p-1 hover:bg-[#334155] rounded"
               >
-                {enviandoMensagem ? (
-                  <Loader2 size={20} className="animate-spin" />
-                ) : (
-                  <Send size={20} />
-                )}
+                <X size={18} className="text-[#64748b]" />
               </button>
-            </form>
+            </div>
+          )}
+
+          {/* Preview de arquivos selecionados */}
+          {selectedFiles.length > 0 && (
+            <div className="bg-[#1e293b] border-t border-[#334155] px-4 py-2 flex-shrink-0">
+              <div className="flex flex-wrap gap-2">
+                {selectedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-[#334155] rounded-lg px-3 py-1">
+                    <span className="text-sm truncate max-w-[150px]">{file.name}</span>
+                    <button onClick={() => removeFile(idx)} className="hover:text-red-400">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Input de mensagem */}
+          <div className="bg-[#1e293b] border-t border-[#334155] p-4 flex-shrink-0">
+            {isRecording ? (
+              // Interface de gravação
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={cancelRecording}
+                  className="p-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+                  title="Cancelar"
+                >
+                  <X size={20} />
+                </button>
+                
+                <div className="flex-1 flex items-center justify-center gap-3">
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                  <span className="text-white font-medium">{formatRecordingTime(recordingTime)}</span>
+                </div>
+                
+                <button
+                  onClick={stopRecording}
+                  className="p-3 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg transition-colors"
+                  title="Enviar áudio"
+                >
+                  <Send size={20} />
+                </button>
+              </div>
+            ) : (
+              // Interface normal
+              <form 
+                onSubmit={(e) => { e.preventDefault(); enviarMensagem(); }}
+                className="flex items-center gap-2"
+              >
+                {/* Emoji picker */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="p-2 hover:bg-[#334155] rounded-lg transition-colors text-[#64748b] hover:text-white"
+                  >
+                    <Smile size={22} />
+                  </button>
+                  {showEmojiPicker && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowEmojiPicker(false)}></div>
+                      <EmojiPicker
+                        onSelect={(emoji) => setMensagem(prev => prev + emoji)}
+                        onClose={() => setShowEmojiPicker(false)}
+                      />
+                    </>
+                  )}
+                </div>
+                
+                {/* Anexar arquivo */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 hover:bg-[#334155] rounded-lg transition-colors text-[#64748b] hover:text-white"
+                >
+                  <Paperclip size={22} />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
+                />
+                
+                {/* Input de texto */}
+                <input
+                  type="text"
+                  value={mensagem}
+                  onChange={(e) => setMensagem(e.target.value)}
+                  placeholder="Digite sua mensagem..."
+                  className="flex-1 bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  disabled={enviandoMensagem}
+                />
+                
+                {/* Botão de gravar áudio ou enviar */}
+                {mensagem.trim() || selectedFiles.length > 0 ? (
+                  <button 
+                    type="submit"
+                    disabled={enviandoMensagem}
+                    className="p-3 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] text-white rounded-lg transition-colors"
+                  >
+                    {enviandoMensagem ? (
+                      <Loader2 size={20} className="animate-spin" />
+                    ) : (
+                      <Send size={20} />
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    className="p-3 bg-[#334155] hover:bg-[#475569] text-white rounded-lg transition-colors"
+                    title="Gravar áudio"
+                  >
+                    <Mic size={20} />
+                  </button>
+                )}
+              </form>
+            )}
           </div>
         </div>
       ) : (
