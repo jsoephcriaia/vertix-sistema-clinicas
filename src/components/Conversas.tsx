@@ -158,7 +158,6 @@ export default function Conversas() {
             texto: msg.content,
             hora: formatarHora(msg.created_at),
           }))
-          .reverse();
 
         setMensagens(mensagensFormatadas);
       }
