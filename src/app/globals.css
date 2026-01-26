@@ -1,8 +1,78 @@
 @import "tailwindcss";
 
+/* Tema customizado */
+@theme {
+  /* Cores base do tema claro */
+  --color-bg-primary: #FDF8F4;
+  --color-bg-secondary: #FFFFFF;
+  --color-bg-tertiary: #F5EFE9;
+  --color-bg-dark: #0f172a;
+  --color-bg-dark-secondary: #1e293b;
+  --color-bg-dark-tertiary: #334155;
+  
+  /* Cards */
+  --color-card: #FFFFFF;
+  --color-card-border: #E8DFD5;
+  --color-card-dark: #1e293b;
+  --color-card-border-dark: #334155;
+  
+  /* Sidebar - sempre escura */
+  --color-sidebar: #1A3A4A;
+  --color-sidebar-hover: #254B5E;
+  
+  /* Textos tema claro */
+  --color-text-light: #1A3A4A;
+  --color-text-light-secondary: #5A7A8A;
+  --color-text-light-muted: #8AA0AD;
+  
+  /* Textos tema escuro */
+  --color-text-dark: #FFFFFF;
+  --color-text-dark-secondary: #94a3b8;
+  --color-text-dark-muted: #64748b;
+  
+  /* Cores de destaque */
+  --color-primary: #10b981;
+  --color-primary-hover: #059669;
+  
+  /* Inputs tema claro */
+  --color-input: #FFFFFF;
+  --color-input-border: #E8DFD5;
+  --color-input-dark: #0f172a;
+  --color-input-border-dark: #334155;
+}
+
+/* Variáveis CSS para alternância de tema */
+:root {
+  --theme-bg: var(--color-bg-primary);
+  --theme-bg-secondary: var(--color-bg-secondary);
+  --theme-bg-tertiary: var(--color-bg-tertiary);
+  --theme-card: var(--color-card);
+  --theme-card-border: var(--color-card-border);
+  --theme-text: var(--color-text-light);
+  --theme-text-secondary: var(--color-text-light-secondary);
+  --theme-text-muted: var(--color-text-light-muted);
+  --theme-input: var(--color-input);
+  --theme-input-border: var(--color-input-border);
+}
+
+[data-theme="dark"] {
+  --theme-bg: var(--color-bg-dark);
+  --theme-bg-secondary: var(--color-bg-dark-secondary);
+  --theme-bg-tertiary: var(--color-bg-dark-tertiary);
+  --theme-card: var(--color-card-dark);
+  --theme-card-border: var(--color-card-border-dark);
+  --theme-text: var(--color-text-dark);
+  --theme-text-secondary: var(--color-text-dark-secondary);
+  --theme-text-muted: var(--color-text-dark-muted);
+  --theme-input: var(--color-input-dark);
+  --theme-input-border: var(--color-input-border-dark);
+}
+
+/* Aplicar tema ao body */
 body {
-  background-color: #0f172a;
-  color: #ffffff;
+  background-color: var(--theme-bg);
+  color: var(--theme-text);
+  transition: background-color 0.2s, color 0.2s;
 }
 
 /* Scrollbar personalizada */
@@ -12,14 +82,14 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: var(--theme-bg-tertiary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: var(--theme-text-muted);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: var(--theme-text-secondary);
 }

@@ -18,8 +18,8 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
-        <Loader2 size={40} className="animate-spin text-[#10b981]" />
+      <div className="min-h-screen flex items-center justify-center bg-[var(--theme-bg)]">
+        <Loader2 size={40} className="animate-spin text-primary" />
       </div>
     );
   }
@@ -48,7 +48,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen bg-[#0f172a]">
+    <div className="flex h-screen bg-[var(--theme-bg)]">
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
       <main className="flex-1 overflow-auto p-4 lg:p-6 pt-16 lg:pt-6">
         {renderPage()}
