@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Send, User, Tag, StickyNote, X, Plus, Check, Trash2, ChevronRight, Settings, Loader2, RefreshCw } from 'lucide-react';
+import { Search, Send, User, Tag, StickyNote, X, Check, Trash2, ChevronRight, Settings, Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 
@@ -31,13 +31,6 @@ interface Mensagem {
   hora: string;
 }
 
-interface ChatwootConfig {
-  url: string;
-  accountId: string;
-  inboxId: string;
-  apiToken: string;
-}
-
 const coresDisponiveis = [
   'bg-green-500',
   'bg-blue-500',
@@ -59,12 +52,12 @@ export default function Conversas() {
   const [conversaSelecionada, setConversaSelecionada] = useState<Conversa | null>(null);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [etiquetas, setEtiquetas] = useState<Etiqueta[]>([]);
-  const [chatwootConfig, setChatwootConfig] = useState<ChatwootConfig | null>(null);
   
   const [loadingConversas, setLoadingConversas] = useState(true);
   const [loadingMensagens, setLoadingMensagens] = useState(false);
   const [loadingEtiquetas, setLoadingEtiquetas] = useState(true);
   const [enviandoMensagem, setEnviandoMensagem] = useState(false);
+  const [chatwootConfigurado, setChatwootConfigurado] = useState(true);
   
   const [mensagem, setMensagem] = useState('');
   const [busca, setBusca] = useState('');
@@ -81,62 +74,35 @@ export default function Conversas() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Carrega configurações do Chatwoot
+  // Carrega conversas e etiquetas
   useEffect(() => {
     if (CLINICA_ID) {
-      fetchChatwootConfig();
-      fetchEtiquetas();
-    }
-  }, [CLINICA_ID]);
-
-  // Carrega conversas quando tiver config
-  useEffect(() => {
-    if (chatwootConfig) {
       fetchConversas();
-      // Atualiza a cada 30 segundos
+      fetchEtiquetas();
       const interval = setInterval(fetchConversas, 30000);
       return () => clearInterval(interval);
     }
-  }, [chatwootConfig]);
+  }, [CLINICA_ID]);
 
   // Scroll para última mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensagens]);
 
-  const fetchChatwootConfig = async () => {
-    const { data, error } = await supabase
-      .from('clinicas')
-      .select('chatwoot_url, chatwoot_account_id, chatwoot_inbox_id, chatwoot_api_token')
-      .eq('id', CLINICA_ID)
-      .single();
-
-    if (data && data.chatwoot_url && data.chatwoot_api_token) {
-      setChatwootConfig({
-        url: data.chatwoot_url,
-        accountId: data.chatwoot_account_id,
-        inboxId: data.chatwoot_inbox_id || '1',
-        apiToken: data.chatwoot_api_token,
-      });
-    } else {
-      setLoadingConversas(false);
-    }
-  };
-
   const fetchConversas = async () => {
-    if (!chatwootConfig) return;
+    if (!CLINICA_ID) return;
     
     try {
-      const response = await fetch(
-        `${chatwootConfig.url}/api/v1/accounts/${chatwootConfig.accountId}/conversations?inbox_id=${chatwootConfig.inboxId}&status=open`,
-        {
-          headers: {
-            'api_access_token': chatwootConfig.apiToken
-          }
-        }
-      );
-
+      const response = await fetch(`/api/chatwoot/conversations?clinica_id=${CLINICA_ID}`);
       const data = await response.json();
+      
+      if (data.error === 'Chatwoot não configurado') {
+        setChatwootConfigurado(false);
+        setLoadingConversas(false);
+        return;
+      }
+      
+      setChatwootConfigurado(true);
       
       if (data.data?.payload) {
         const conversasFormatadas: Conversa[] = data.data.payload.map((conv: any) => {
@@ -161,7 +127,6 @@ export default function Conversas() {
 
         setConversas(conversasFormatadas);
         
-        // Se não tem conversa selecionada, seleciona a primeira
         if (!conversaSelecionada && conversasFormatadas.length > 0) {
           selecionarConversa(conversasFormatadas[0]);
         }
@@ -174,32 +139,26 @@ export default function Conversas() {
   };
 
   const fetchMensagens = async (conversaId: number) => {
-    if (!chatwootConfig) return;
+    if (!CLINICA_ID) return;
     
     setLoadingMensagens(true);
     
     try {
       const response = await fetch(
-        `${chatwootConfig.url}/api/v1/accounts/${chatwootConfig.accountId}/conversations/${conversaId}/messages`,
-        {
-          headers: {
-            'api_access_token': chatwootConfig.apiToken
-          }
-        }
+        `/api/chatwoot/messages?clinica_id=${CLINICA_ID}&conversation_id=${conversaId}`
       );
-
       const data = await response.json();
       
       if (data.payload) {
         const mensagensFormatadas: Mensagem[] = data.payload
-          .filter((msg: any) => msg.content && msg.message_type !== 2) // Filtra mensagens de atividade
+          .filter((msg: any) => msg.content && msg.message_type !== 2)
           .map((msg: any) => ({
             id: msg.id,
             tipo: msg.message_type === 0 ? 'recebida' : 'enviada',
             texto: msg.content,
             hora: formatarHora(msg.created_at),
           }))
-          .reverse(); // Ordena do mais antigo para o mais recente
+          .reverse();
 
         setMensagens(mensagensFormatadas);
       }
@@ -211,30 +170,23 @@ export default function Conversas() {
   };
 
   const enviarMensagem = async () => {
-    if (!mensagem.trim() || !conversaSelecionada || !chatwootConfig) return;
+    if (!mensagem.trim() || !conversaSelecionada || !CLINICA_ID) return;
     
     setEnviandoMensagem(true);
     
     try {
-      const response = await fetch(
-        `${chatwootConfig.url}/api/v1/accounts/${chatwootConfig.accountId}/conversations/${conversaSelecionada.id}/messages`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'api_access_token': chatwootConfig.apiToken
-          },
-          body: JSON.stringify({
-            content: mensagem,
-            message_type: 'outgoing',
-            private: false
-          })
-        }
-      );
+      const response = await fetch('/api/chatwoot/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinica_id: CLINICA_ID,
+          conversation_id: conversaSelecionada.id,
+          content: mensagem
+        })
+      });
 
       if (response.ok) {
         setMensagem('');
-        // Recarrega mensagens
         await fetchMensagens(conversaSelecionada.id);
       }
     } catch (error) {
@@ -276,26 +228,23 @@ export default function Conversas() {
   };
 
   const toggleHumano = async () => {
-    if (!conversaSelecionada || !chatwootConfig) return;
+    if (!conversaSelecionada || !CLINICA_ID) return;
     
     const novoEstado = !conversaSelecionada.humano;
     
     try {
-      // Atualiza labels no Chatwoot
       const labelsAtuais = conversaSelecionada.chatwootLabels.filter(l => l !== 'humano');
       const novosLabels = novoEstado ? [...labelsAtuais, 'humano'] : labelsAtuais;
       
-      await fetch(
-        `${chatwootConfig.url}/api/v1/accounts/${chatwootConfig.accountId}/conversations/${conversaSelecionada.id}/labels`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'api_access_token': chatwootConfig.apiToken
-          },
-          body: JSON.stringify({ labels: novosLabels })
-        }
-      );
+      await fetch('/api/chatwoot/labels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinica_id: CLINICA_ID,
+          conversation_id: conversaSelecionada.id,
+          labels: novosLabels
+        })
+      });
 
       setConversaSelecionada(prev => prev ? { ...prev, humano: novoEstado, chatwootLabels: novosLabels } : null);
       setConversas(prev => prev.map(c => 
@@ -406,7 +355,7 @@ export default function Conversas() {
   );
 
   // Se não tem Chatwoot configurado
-  if (!loadingConversas && !chatwootConfig) {
+  if (!loadingConversas && !chatwootConfigurado) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-48px)] -m-4 lg:-m-6">
         <div className="text-center p-8">
@@ -415,13 +364,9 @@ export default function Conversas() {
           </div>
           <h2 className="text-xl font-semibold mb-2">Chatwoot não configurado</h2>
           <p className="text-[#64748b] mb-4">Configure a integração com o Chatwoot para ver as conversas.</p>
-          <a 
-            href="#" 
-            onClick={() => window.location.reload()}
-            className="text-[#10b981] hover:underline"
-          >
-            Ir para Configurações → Integrações
-          </a>
+          <p className="text-[#10b981]">
+            Vá em Configurações → Integrações
+          </p>
         </div>
       </div>
     );
