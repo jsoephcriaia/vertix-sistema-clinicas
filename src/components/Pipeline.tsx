@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Phone, Plus, X, Save, Loader2, Trash2 } from 'lucide-react';
+import { Phone, Plus, X, Save, Loader2, Trash2, MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { useAlert } from '@/components/Alert';
 import {
   DndContext,
   DragOverlay,
@@ -27,6 +28,10 @@ interface Lead {
   created_at: string;
 }
 
+interface PipelineProps {
+  onAbrirConversa?: (telefone: string, nome: string) => void;
+}
+
 const etapas = [
   { id: 'novo', label: 'Novos', cor: 'bg-blue-500' },
   { id: 'atendimento', label: 'Em Atendimento', cor: 'bg-yellow-500' },
@@ -34,7 +39,15 @@ const etapas = [
   { id: 'convertido', label: 'Convertido', cor: 'bg-green-500' },
 ];
 
-function LeadCard({ lead, onDelete }: { lead: Lead; onDelete: (id: string) => void }) {
+function LeadCard({ 
+  lead, 
+  onDelete, 
+  onMensagem 
+}: { 
+  lead: Lead; 
+  onDelete: (id: string) => void;
+  onMensagem: (lead: Lead) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.id,
     data: lead,
@@ -55,39 +68,54 @@ function LeadCard({ lead, onDelete }: { lead: Lead; onDelete: (id: string) => vo
     <div
       ref={setNodeRef}
       style={style}
-      {...listeners}
-      {...attributes}
-      className={`bg-[#0f172a] rounded-lg p-4 border border-[#334155] hover:border-[#10b981] transition-colors cursor-grab active:cursor-grabbing ${
+      className={`bg-[#0f172a] rounded-lg p-4 border border-[#334155] hover:border-[#10b981] transition-colors ${
         isDragging ? 'shadow-lg' : ''
       }`}
     >
-      <div className="flex items-start justify-between mb-2">
-        <h4 className="font-medium">{lead.nome}</h4>
+      {/* Área arrastável */}
+      <div {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing">
+        <div className="flex items-start justify-between mb-2">
+          <h4 className="font-medium">{lead.nome}</h4>
+        </div>
+
+        <p className="text-sm text-[#10b981] mb-2">{lead.interesse}</p>
+
+        <div className="flex items-center gap-2 text-xs text-[#64748b] mb-2">
+          <Phone size={12} />
+          <span>{lead.telefone || 'Sem telefone'}</span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-[#10b981]">
+            R$ {Number(lead.valor_estimado || 0).toLocaleString('pt-BR')}
+          </span>
+          <span className="text-xs text-[#64748b]">{formatarData(lead.created_at)}</span>
+        </div>
+      </div>
+
+      {/* Botões de ação - fora da área arrastável */}
+      <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-[#334155]">
         <button
           onClick={(e) => {
             e.stopPropagation();
-            e.preventDefault();
+            onMensagem(lead);
+          }}
+          disabled={!lead.telefone}
+          className="p-1.5 hover:bg-[#10b981]/20 rounded transition-colors disabled:opacity-50"
+          title={lead.telefone ? 'Enviar mensagem' : 'Sem telefone'}
+        >
+          <MessageSquare size={14} className="text-[#10b981]" />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
             onDelete(lead.id);
           }}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="p-1 hover:bg-red-500/20 rounded transition-colors"
+          className="p-1.5 hover:bg-red-500/20 rounded transition-colors"
+          title="Excluir lead"
         >
           <Trash2 size={14} className="text-red-400" />
         </button>
-      </div>
-
-      <p className="text-sm text-[#10b981] mb-2">{lead.interesse}</p>
-
-      <div className="flex items-center gap-2 text-xs text-[#64748b] mb-2">
-        <Phone size={12} />
-        <span>{lead.telefone}</span>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-[#10b981]">
-          R$ {Number(lead.valor_estimado || 0).toLocaleString('pt-BR')}
-        </span>
-        <span className="text-xs text-[#64748b]">{formatarData(lead.created_at)}</span>
       </div>
     </div>
   );
@@ -98,11 +126,13 @@ function Coluna({
   leads,
   total,
   onDelete,
+  onMensagem,
 }: {
   etapa: { id: string; label: string; cor: string };
   leads: Lead[];
   total: number;
   onDelete: (id: string) => void;
+  onMensagem: (lead: Lead) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: etapa.id,
@@ -128,7 +158,7 @@ function Coluna({
         }`}
       >
         {leads.map((lead) => (
-          <LeadCard key={lead.id} lead={lead} onDelete={onDelete} />
+          <LeadCard key={lead.id} lead={lead} onDelete={onDelete} onMensagem={onMensagem} />
         ))}
 
         {leads.length === 0 && (
@@ -141,8 +171,9 @@ function Coluna({
   );
 }
 
-export default function Pipeline() {
+export default function Pipeline({ onAbrirConversa }: PipelineProps) {
   const { clinica } = useAuth();
+  const { showConfirm, showSuccess, showError } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -218,7 +249,9 @@ export default function Pipeline() {
 
       if (error) {
         console.error('Erro ao atualizar:', error);
-        alert('Erro ao salvar lead');
+        showError('Erro ao salvar lead');
+      } else {
+        showSuccess('Lead atualizado com sucesso!');
       }
     } else {
       const { error } = await supabase
@@ -234,7 +267,9 @@ export default function Pipeline() {
 
       if (error) {
         console.error('Erro ao criar:', error);
-        alert('Erro ao criar lead');
+        showError('Erro ao criar lead');
+      } else {
+        showSuccess('Lead criado com sucesso!');
       }
     }
 
@@ -245,14 +280,32 @@ export default function Pipeline() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Excluir este lead?')) return;
+    const lead = leads.find(l => l.id === id);
+    showConfirm(
+      `Excluir o lead "${lead?.nome}"?`,
+      async () => {
+        const { error } = await supabase.from('pipeline').delete().eq('id', id);
 
-    const { error } = await supabase.from('pipeline').delete().eq('id', id);
+        if (error) {
+          console.error('Erro ao excluir:', error);
+          showError('Erro ao excluir lead');
+        } else {
+          showSuccess('Lead excluído!');
+          fetchLeads();
+        }
+      },
+      'Excluir lead'
+    );
+  };
 
-    if (error) {
-      console.error('Erro ao excluir:', error);
-    } else {
-      fetchLeads();
+  const handleMensagem = (lead: Lead) => {
+    if (!lead.telefone) {
+      showError('Este lead não possui telefone cadastrado');
+      return;
+    }
+
+    if (onAbrirConversa) {
+      onAbrirConversa(lead.telefone, lead.nome);
     }
   };
 
@@ -335,6 +388,7 @@ export default function Pipeline() {
               leads={getLeadsPorEtapa(etapa.id)}
               total={getTotalPorEtapa(etapa.id)}
               onDelete={handleDelete}
+              onMensagem={handleMensagem}
             />
           ))}
         </div>

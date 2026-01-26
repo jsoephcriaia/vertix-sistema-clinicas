@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Phone, Clock, AlertTriangle, CheckCircle, Loader2, Search } from 'lucide-react';
+import { Calendar, Phone, Clock, AlertTriangle, CheckCircle, Loader2, Search, MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { useAlert } from '@/components/Alert';
 
 interface Cliente {
   id: string;
@@ -15,8 +16,13 @@ interface Cliente {
   observacoes: string;
 }
 
-export default function Retornos() {
+interface RetornosProps {
+  onAbrirConversa?: (telefone: string, nome: string) => void;
+}
+
+export default function Retornos({ onAbrirConversa }: RetornosProps) {
   const { clinica } = useAuth();
+  const { showSuccess, showError } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -61,15 +67,22 @@ export default function Retornos() {
 
     if (error) {
       console.error('Erro ao atualizar:', error);
-      alert('Erro ao atualizar cliente');
+      showError('Erro ao atualizar cliente');
     } else {
+      showSuccess('Próximo retorno reagendado para 30 dias!');
       fetchClientes();
     }
   };
 
-  const abrirWhatsApp = (telefone: string) => {
-    const numero = telefone.replace(/\D/g, '');
-    window.open('https://wa.me/55' + numero, '_blank');
+  const handleEnviarMensagem = (cliente: Cliente) => {
+    if (!cliente.telefone) {
+      showError('Este cliente não possui telefone cadastrado');
+      return;
+    }
+
+    if (onAbrirConversa) {
+      onAbrirConversa(cliente.telefone, cliente.nome);
+    }
   };
 
   const formatarData = (data: string | null) => {
@@ -224,7 +237,7 @@ export default function Retornos() {
                       <h3 className="font-semibold">{cliente.nome}</h3>
                       <div className="flex items-center gap-2 text-sm text-[#64748b]">
                         <Phone size={14} />
-                        <span>{cliente.telefone}</span>
+                        <span>{cliente.telefone || 'Sem telefone'}</span>
                       </div>
                     </div>
                   </div>
@@ -241,11 +254,13 @@ export default function Retornos() {
 
                   <div className="flex gap-2">
                     <button
-                      onClick={() => abrirWhatsApp(cliente.telefone)}
-                      className="px-4 py-2 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-lg text-sm flex items-center gap-2 transition-colors"
+                      onClick={() => handleEnviarMensagem(cliente)}
+                      disabled={!cliente.telefone}
+                      className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] disabled:text-[#64748b] text-white rounded-lg text-sm flex items-center gap-2 transition-colors"
+                      title={cliente.telefone ? 'Enviar mensagem' : 'Sem telefone'}
                     >
-                      <Phone size={16} />
-                      WhatsApp
+                      <MessageSquare size={16} />
+                      Mensagem
                     </button>
                     <button
                       onClick={() => marcarContatado(cliente.id)}

@@ -57,7 +57,12 @@ interface Lead {
 
 type AbaConversa = 'abertas' | 'resolvidas';
 
-export default function Conversas() {
+interface ConversasProps {
+  conversaInicial?: { telefone: string; nome: string } | null;
+  onConversaIniciada?: () => void;
+}
+
+export default function Conversas({ conversaInicial, onConversaIniciada }: ConversasProps) {
   const { clinica } = useAuth();
   const { showConfirm, showSuccess, showError } = useAlert();
   const CLINICA_ID = clinica?.id || '';
@@ -112,6 +117,9 @@ export default function Conversas() {
   const [loadingClientes, setLoadingClientes] = useState(false);
   const [iniciandoConversa, setIniciandoConversa] = useState(false);
   const [abaNovaConversa, setAbaNovaConversa] = useState<'clientes' | 'leads'>('clientes');
+  
+  // Controle para conversa inicial de outras telas
+  const conversaInicialProcessada = useRef(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -126,6 +134,24 @@ export default function Conversas() {
       return () => clearInterval(interval);
     }
   }, [CLINICA_ID]);
+
+  // Processar conversa inicial quando vier de outra tela
+  useEffect(() => {
+    if (conversaInicial && !conversaInicialProcessada.current && !loadingConversas && CLINICA_ID) {
+      conversaInicialProcessada.current = true;
+      iniciarConversa(conversaInicial.telefone, conversaInicial.nome);
+      if (onConversaIniciada) {
+        onConversaIniciada();
+      }
+    }
+  }, [conversaInicial, loadingConversas, CLINICA_ID]);
+
+  // Reset do controle quando mudar a conversa inicial
+  useEffect(() => {
+    if (!conversaInicial) {
+      conversaInicialProcessada.current = false;
+    }
+  }, [conversaInicial]);
 
   // Polling de mensagens (a cada 3 segundos, sem loading visual)
   useEffect(() => {
@@ -336,7 +362,7 @@ export default function Conversas() {
         method: 'POST',
         body: formData
       });
-  
+
       setMensagem('');
       setSelectedFiles([]);
       setReplyingTo(null);

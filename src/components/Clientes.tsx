@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit, Trash2, Phone, Mail, DollarSign, Calendar, Star, X, Save, Loader2, User } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Phone, Mail, DollarSign, Calendar, Star, X, Save, Loader2, User, MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { useAlert } from '@/components/Alert';
 
 interface Cliente {
   id: string;
@@ -18,8 +19,13 @@ interface Cliente {
   observacoes: string;
 }
 
-export default function Clientes() {
+interface ClientesProps {
+  onAbrirConversa?: (telefone: string, nome: string) => void;
+}
+
+export default function Clientes({ onAbrirConversa }: ClientesProps) {
   const { clinica } = useAuth();
+  const { showConfirm, showSuccess, showError } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -96,7 +102,9 @@ export default function Clientes() {
 
       if (error) {
         console.error('Erro ao atualizar:', error);
-        alert('Erro ao salvar cliente');
+        showError('Erro ao salvar cliente');
+      } else {
+        showSuccess('Cliente atualizado com sucesso!');
       }
     } else {
       const { error } = await supabase
@@ -113,7 +121,9 @@ export default function Clientes() {
 
       if (error) {
         console.error('Erro ao criar:', error);
-        alert('Erro ao criar cliente');
+        showError('Erro ao criar cliente');
+      } else {
+        showSuccess('Cliente criado com sucesso!');
       }
     }
 
@@ -123,19 +133,35 @@ export default function Clientes() {
     fetchClientes();
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
+  const handleDelete = async (id: string, nome: string) => {
+    showConfirm(
+      `Tem certeza que deseja excluir o cliente "${nome}"?`,
+      async () => {
+        const { error } = await supabase
+          .from('clientes')
+          .delete()
+          .eq('id', id);
 
-    const { error } = await supabase
-      .from('clientes')
-      .delete()
-      .eq('id', id);
+        if (error) {
+          console.error('Erro ao excluir:', error);
+          showError('Erro ao excluir cliente');
+        } else {
+          showSuccess('Cliente excluído com sucesso!');
+          fetchClientes();
+        }
+      },
+      'Excluir cliente'
+    );
+  };
 
-    if (error) {
-      console.error('Erro ao excluir:', error);
-      alert('Erro ao excluir cliente');
-    } else {
-      fetchClientes();
+  const handleEnviarMensagem = (cliente: Cliente) => {
+    if (!cliente.telefone) {
+      showError('Este cliente não possui telefone cadastrado');
+      return;
+    }
+
+    if (onAbrirConversa) {
+      onAbrirConversa(cliente.telefone, cliente.nome);
     }
   };
 
@@ -240,7 +266,7 @@ export default function Clientes() {
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#64748b]">
                       <span className="flex items-center gap-1">
                         <Phone size={14} />
-                        {cliente.telefone}
+                        {cliente.telefone || 'Sem telefone'}
                       </span>
                       {cliente.email && (
                         <span className="flex items-center gap-1">
@@ -279,14 +305,24 @@ export default function Clientes() {
                 {/* Ações */}
                 <div className="flex gap-2">
                   <button
+                    onClick={() => handleEnviarMensagem(cliente)}
+                    disabled={!cliente.telefone}
+                    className="p-2 hover:bg-[#10b981]/20 rounded-lg transition-colors disabled:opacity-50"
+                    title={cliente.telefone ? 'Enviar mensagem' : 'Sem telefone'}
+                  >
+                    <MessageSquare size={18} className="text-[#10b981]" />
+                  </button>
+                  <button
                     onClick={() => handleEdit(cliente)}
                     className="p-2 hover:bg-[#334155] rounded-lg transition-colors"
+                    title="Editar"
                   >
                     <Edit size={18} className="text-[#64748b]" />
                   </button>
                   <button
-                    onClick={() => handleDelete(cliente.id)}
+                    onClick={() => handleDelete(cliente.id, cliente.nome)}
                     className="p-2 hover:bg-red-500/20 rounded-lg transition-colors"
+                    title="Excluir"
                   >
                     <Trash2 size={18} className="text-red-400" />
                   </button>
