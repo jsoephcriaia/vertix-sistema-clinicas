@@ -2,45 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg-primary: #FDF8F4;
-  --bg-secondary: #FFFFFF;
-  --bg-tertiary: #F5EFE9;
-  --bg-hover: #EDE6DF;
-  --card-bg: #FFFFFF;
-  --card-border: #E8DFD5;
-  --sidebar-bg: #1A3A4A;
-  --sidebar-text: #FFFFFF;
-  --sidebar-hover: #254B5E;
-  --text-primary: #1A3A4A;
-  --text-secondary: #5A7A8A;
-  --text-muted: #8AA0AD;
-  --primary: #10b981;
-  --primary-hover: #059669;
-  --input-bg: #FFFFFF;
-  --input-border: #E8DFD5;
-}
-
-[data-theme="dark"] {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --bg-hover: #475569;
-  --card-bg: #1e293b;
-  --card-border: #334155;
-  --sidebar-bg: #1e293b;
-  --sidebar-text: #FFFFFF;
-  --sidebar-hover: #334155;
-  --text-primary: #FFFFFF;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --primary: #10b981;
-  --primary-hover: #059669;
-  --input-bg: #0f172a;
-  --input-border: #334155;
-}
-
 body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: #0f172a;
+  color: #ffffff;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }

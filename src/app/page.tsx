@@ -16,21 +16,18 @@ export default function Home() {
   const { usuario, clinica, loading } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
 
-  // Loading inicial
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
-        <Loader2 size={40} className="animate-spin" style={{ color: 'var(--primary)' }} />
+      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
+        <Loader2 size={40} className="animate-spin text-[#10b981]" />
       </div>
     );
   }
 
-  // Não autenticado - mostra login
   if (!usuario || !clinica) {
     return <Login onSuccess={() => window.location.reload()} />;
   }
 
-  // Autenticado - mostra painel
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
@@ -51,7 +48,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div className="flex h-screen bg-[#0f172a]">
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
       <main className="flex-1 overflow-auto p-4 lg:p-6 pt-16 lg:pt-6">
         {renderPage()}

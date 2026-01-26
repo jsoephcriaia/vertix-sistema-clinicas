@@ -10,12 +10,9 @@ import {
   Settings,
   LogOut,
   Menu,
-  X,
-  Sun,
-  Moon
+  X
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-import { useTheme } from '@/lib/theme';
 import { useAlert } from '@/components/Alert';
 
 interface SidebarProps {
@@ -34,7 +31,6 @@ const menuItems = [
 
 export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
   const { usuario, clinica, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const { showConfirm } = useAlert();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -52,16 +48,13 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
 
   return (
     <>
-      {/* Botão hamburguer mobile */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg text-white"
-        style={{ backgroundColor: 'var(--sidebar-bg)', border: '1px solid var(--sidebar-hover)' }}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-[#1e293b] rounded-lg border border-[#334155]"
       >
         <Menu size={24} />
       </button>
 
-      {/* Overlay mobile */}
       {mobileOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/50 z-40"
@@ -69,34 +62,27 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar */}
-      <aside 
-        className={`
-          fixed lg:static inset-y-0 left-0 z-50
-          w-56 flex flex-col
-          transform transition-transform duration-300 ease-in-out
-          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}
-        style={{ backgroundColor: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-hover)' }}
-      >
-        {/* Header com logo e botão fechar */}
-        <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--sidebar-hover)' }}>
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        w-56 bg-[#1e293b] border-r border-[#334155] flex flex-col
+        transform transition-transform duration-300 ease-in-out
+        ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="p-4 border-b border-[#334155] flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold" style={{ color: 'var(--primary)' }}>VERTIX</h1>
-            <p className="text-xs opacity-70 truncate text-white" title={clinica?.nome}>
+            <h1 className="text-xl font-bold text-[#10b981]">VERTIX</h1>
+            <p className="text-xs text-[#64748b] truncate" title={clinica?.nome}>
               {clinica?.nome || 'Painel da Clínica'}
             </p>
           </div>
           <button
             onClick={() => setMobileOpen(false)}
-            className="lg:hidden p-1 rounded text-white"
-            style={{ backgroundColor: 'var(--sidebar-hover)' }}
+            className="lg:hidden p-1 hover:bg-[#334155] rounded"
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* Menu */}
         <nav className="flex-1 p-3">
           <ul className="space-y-1">
             {menuItems.map((item) => {
@@ -107,18 +93,11 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
                 <li key={item.id}>
                   <button
                     onClick={() => handleNavigation(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-white ${
-                      isActive ? '' : 'opacity-80 hover:opacity-100'
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                      isActive 
+                        ? 'bg-[#10b981] text-white' 
+                        : 'text-[#94a3b8] hover:bg-[#334155] hover:text-white'
                     }`}
-                    style={{ 
-                      backgroundColor: isActive ? 'var(--primary)' : 'transparent',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
                   >
                     <Icon size={20} />
                     <span className="font-medium">{item.label}</span>
@@ -129,50 +108,19 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
           </ul>
         </nav>
 
-        {/* Toggle de tema */}
-        <div className="px-3 pb-2">
-          <button
-            onClick={toggleTheme}
-            className="w-full flex items-center justify-between px-3 py-2 text-white opacity-80 hover:opacity-100 rounded-lg transition-colors"
-            style={{ backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            <div className="flex items-center gap-3">
-              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-              <span className="text-sm">{theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}</span>
-            </div>
-            <div 
-              className="w-10 h-5 rounded-full relative transition-colors"
-              style={{ backgroundColor: theme === 'dark' ? 'var(--primary)' : 'var(--sidebar-hover)' }}
-            >
-              <div 
-                className="absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform"
-                style={{ transform: theme === 'dark' ? 'translateX(20px)' : 'translateX(2px)' }}
-              />
-            </div>
-          </button>
-        </div>
-
-        {/* Usuário */}
-        <div className="p-3" style={{ borderTop: '1px solid var(--sidebar-hover)' }}>
+        <div className="p-3 border-t border-[#334155]">
           <div className="flex items-center gap-3 px-3 py-2">
-            <div 
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
-              style={{ backgroundColor: 'var(--primary)' }}
-            >
+            <div className="w-8 h-8 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold">
               {usuario?.nome?.charAt(0) || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{usuario?.nome || 'Usuário'}</p>
-              <p className="text-xs text-white opacity-60 truncate">{usuario?.email}</p>
+              <p className="text-sm font-medium truncate">{usuario?.nome || 'Usuário'}</p>
+              <p className="text-xs text-[#64748b] truncate">{usuario?.email}</p>
             </div>
           </div>
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 mt-1 text-white opacity-70 hover:text-red-400 rounded-lg transition-colors"
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            className="w-full flex items-center gap-3 px-3 py-2 mt-1 text-[#64748b] hover:text-red-400 hover:bg-[#334155] rounded-lg transition-colors"
           >
             <LogOut size={18} />
             <span className="text-sm">Sair</span>
