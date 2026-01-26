@@ -564,7 +564,7 @@ const animationFrameRef = useRef<number | null>(null);
     } finally {
       setIniciandoConversa(false);
     }
-  }
+  };
   const clientesFiltrados = useMemo(() => {
     if (!buscaCliente.trim()) return clientes;
     const busca = buscaCliente.toLowerCase();
