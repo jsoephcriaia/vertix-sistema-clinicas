@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Smartphone, RefreshCw, CheckCircle, XCircle, Loader2, Unplug } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface ConfigWhatsAppProps {
   onBack: () => void;
@@ -11,56 +12,151 @@ interface ConfigWhatsAppProps {
 const UAZAPI_URL = 'https://iaparanegocios.uazapi.com';
 const UAZAPI_ADMIN_TOKEN = 'OH50xrHALaPO3SG69UjJD0npdG5aw7NhmVeky4l4pKa2Qn32F6';
 
-type Status = 'disconnected' | 'loading' | 'qrcode' | 'connected' | 'error';
+type Status = 'loading' | 'disconnected' | 'generating' | 'qrcode' | 'connected' | 'error';
 
 export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
-  const [status, setStatus] = useState<Status>('disconnected');
+  const [status, setStatus] = useState<Status>('loading');
   const [qrcode, setQrcode] = useState<string>('');
   const [instanceToken, setInstanceToken] = useState<string>('');
   const [instanceName, setInstanceName] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [countdown, setCountdown] = useState(30);
+  const [clinicaId, setClinicaId] = useState<string>('');
+  const [pollingInterval, setPollingIntervalState] = useState<NodeJS.Timeout | null>(null);
+  const [countdownInterval, setCountdownIntervalState] = useState<NodeJS.Timeout | null>(null);
 
-  const connectWhatsApp = async () => {
-    setStatus('loading');
+  // Carregar configuração da instância ao montar
+  useEffect(() => {
+    loadInstanceConfig();
+    return () => {
+      // Limpar intervalos ao desmontar
+      if (pollingInterval) clearInterval(pollingInterval);
+      if (countdownInterval) clearInterval(countdownInterval);
+    };
+  }, []);
 
+  const loadInstanceConfig = async () => {
     try {
-      // 1. Criar instância
-      const instName = 'vertix-' + Date.now();
-      const createResponse = await fetch(`${UAZAPI_URL}/instance/init`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'admintoken': UAZAPI_ADMIN_TOKEN,
-        },
-        body: JSON.stringify({ name: instName }),
-      });
-
-      const createData = await createResponse.json();
-
-      if (!createData.token) {
-        throw new Error('Erro ao criar instância');
+      const sessao = localStorage.getItem('vertix_sessao');
+      const clinica = sessao ? JSON.parse(sessao).clinica : null;
+      
+      if (!clinica?.id) {
+        setStatus('error');
+        setErrorMessage('Clínica não encontrada');
+        return;
       }
 
-      setInstanceToken(createData.token);
-      setInstanceName(instName);
+      setClinicaId(clinica.id);
 
-      // 2. Conectar (gerar QR)
+      // Buscar dados da instância no banco
+      const { data, error } = await supabase
+        .from('clinicas')
+        .select('uazapi_instance_token, uazapi_instance_name')
+        .eq('id', clinica.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data?.uazapi_instance_token) {
+        setInstanceToken(data.uazapi_instance_token);
+        setInstanceName(data.uazapi_instance_name || '');
+        
+        // Verificar status atual da instância
+        await checkInstanceStatus(data.uazapi_instance_token);
+      } else {
+        // Não tem instância configurada
+        setStatus('disconnected');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar config:', error);
+      setStatus('error');
+      setErrorMessage('Erro ao carregar configurações');
+    }
+  };
+
+  const checkInstanceStatus = async (token: string) => {
+    try {
+      const response = await fetch(`${UAZAPI_URL}/instance/status`, {
+        method: 'GET',
+        headers: {
+          'token': token,
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.instance?.status === 'connected') {
+        setStatus('connected');
+        setPhoneNumber(data.instance?.phone || '');
+        return true;
+      } else {
+        setStatus('disconnected');
+        return false;
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status:', error);
+      setStatus('disconnected');
+      return false;
+    }
+  };
+
+  const connectWhatsApp = async () => {
+    setStatus('generating');
+
+    try {
+      let token = instanceToken;
+
+      // Se não tem instância, criar uma nova
+      if (!token) {
+        const instName = 'vertix-' + Date.now();
+        const createResponse = await fetch(`${UAZAPI_URL}/instance/init`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'admintoken': UAZAPI_ADMIN_TOKEN,
+          },
+          body: JSON.stringify({ name: instName }),
+        });
+
+        const createData = await createResponse.json();
+
+        if (!createData.token) {
+          throw new Error('Erro ao criar instância');
+        }
+
+        token = createData.token;
+        setInstanceToken(token);
+        setInstanceName(instName);
+
+        // Salvar no banco
+        await supabase
+          .from('clinicas')
+          .update({
+            uazapi_instance_token: token,
+            uazapi_instance_name: instName,
+          })
+          .eq('id', clinicaId);
+      }
+
+      // Gerar QR Code (conectar)
       await fetch(`${UAZAPI_URL}/instance/connect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'token': createData.token,
+          'token': token,
         },
         body: JSON.stringify({}),
       });
 
-      // 3. Buscar QR Code
-      await fetchQRCode(createData.token);
+      // Aguardar um pouco para o QR Code ser gerado
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // 4. Iniciar polling
-      startPolling(createData.token);
+      // Buscar QR Code
+      await fetchQRCode(token);
+
+      // Iniciar polling
+      startPolling(token);
     } catch (error) {
       console.error('Erro:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Erro desconhecido');
@@ -82,6 +178,7 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       if (data.instance?.status === 'connected') {
         setStatus('connected');
         setPhoneNumber(data.instance?.phone || '');
+        stopPolling();
         return true;
       }
 
@@ -100,42 +197,60 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
   const startPolling = (token: string) => {
     let count = 30;
     
-    const countdownInterval = setInterval(() => {
+    const countInterval = setInterval(() => {
       count--;
       setCountdown(count);
       if (count <= 0) count = 30;
     }, 1000);
+    setCountdownIntervalState(countInterval);
 
-    const pollingInterval = setInterval(async () => {
+    const pollInterval = setInterval(async () => {
       const isConnected = await fetchQRCode(token);
       if (isConnected) {
-        clearInterval(pollingInterval);
-        clearInterval(countdownInterval);
+        stopPolling();
       }
       setCountdown(30);
     }, 30000);
+    setPollingIntervalState(pollInterval);
 
     // Limpar após 5 minutos
     setTimeout(() => {
-      clearInterval(pollingInterval);
-      clearInterval(countdownInterval);
+      stopPolling();
     }, 300000);
+  };
+
+  const stopPolling = () => {
+    if (pollingInterval) clearInterval(pollingInterval);
+    if (countdownInterval) clearInterval(countdownInterval);
+    setPollingIntervalState(null);
+    setCountdownIntervalState(null);
   };
 
   const disconnect = async () => {
     if (!confirm('Tem certeza que deseja desconectar o WhatsApp?')) return;
     
-    // Aqui você chamaria a API para desconectar
+    try {
+      if (instanceToken) {
+        await fetch(`${UAZAPI_URL}/instance/logout`, {
+          method: 'POST',
+          headers: {
+            'token': instanceToken,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao desconectar:', error);
+    }
+
     setStatus('disconnected');
     setQrcode('');
-    setInstanceToken('');
     setPhoneNumber('');
   };
 
   const resetAndRetry = () => {
+    stopPolling();
     setStatus('disconnected');
     setQrcode('');
-    setInstanceToken('');
     setErrorMessage('');
   };
 
@@ -152,6 +267,15 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       </div>
 
       <div className="max-w-xl mx-auto">
+        {/* Status: Carregando inicial */}
+        {status === 'loading' && (
+          <div className="bg-[#1e293b] rounded-xl p-8 text-center border border-[#334155]">
+            <Loader2 size={48} className="animate-spin text-[#10b981] mx-auto mb-6" />
+            <h2 className="text-xl font-semibold mb-2">Verificando conexão...</h2>
+            <p className="text-[#64748b]">Aguarde um momento</p>
+          </div>
+        )}
+
         {/* Status: Desconectado */}
         {status === 'disconnected' && (
           <div className="bg-[#1e293b] rounded-xl p-8 text-center border border-[#334155]">
@@ -162,17 +286,22 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
             <p className="text-[#64748b] mb-6">
               Conecte seu WhatsApp para que a Secretária de IA possa atender seus clientes automaticamente
             </p>
+            {instanceToken && (
+              <p className="text-xs text-[#64748b] mb-4">
+                Instância: <span className="text-[#10b981]">{instanceName}</span>
+              </p>
+            )}
             <button
               onClick={connectWhatsApp}
               className="bg-[#10b981] hover:bg-[#059669] text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
-              Conectar WhatsApp
+              {instanceToken ? 'Reconectar WhatsApp' : 'Conectar WhatsApp'}
             </button>
           </div>
         )}
 
-        {/* Status: Carregando */}
-        {status === 'loading' && (
+        {/* Status: Gerando QR */}
+        {status === 'generating' && (
           <div className="bg-[#1e293b] rounded-xl p-8 text-center border border-[#334155]">
             <Loader2 size={48} className="animate-spin text-[#10b981] mx-auto mb-6" />
             <h2 className="text-xl font-semibold mb-2">Gerando QR Code...</h2>
@@ -243,17 +372,6 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
                     ● Online
                   </span>
                 </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-[#0f172a] rounded-lg p-4 text-center">
-                <p className="text-2xl font-bold text-[#10b981]">24</p>
-                <p className="text-xs text-[#64748b]">Mensagens hoje</p>
-              </div>
-              <div className="bg-[#0f172a] rounded-lg p-4 text-center">
-                <p className="text-2xl font-bold">156</p>
-                <p className="text-xs text-[#64748b]">Este mês</p>
               </div>
             </div>
 
