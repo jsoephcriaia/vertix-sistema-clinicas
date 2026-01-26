@@ -15,8 +15,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" data-theme="light">
-      <body className="antialiased">
+    <html lang="pt-BR" data-theme="light" suppressHydrationWarning>
+      <body className="antialiased bg-[var(--bg-primary)] text-[var(--text-primary)]">
         <ThemeProvider>
           <AuthProvider>
             <AlertProvider>
