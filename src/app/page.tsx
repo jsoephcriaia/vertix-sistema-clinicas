@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
 import Login from '@/components/Login';
 import Sidebar from '@/components/Sidebar';
@@ -15,6 +15,9 @@ import { Loader2 } from 'lucide-react';
 export default function Home() {
   const { usuario, clinica, loading } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
+  
+  // Dados para iniciar conversa a partir de outras telas
+  const conversaInicialRef = useRef<{ telefone: string; nome: string } | null>(null);
 
   if (loading) {
     return (
@@ -28,18 +31,24 @@ export default function Home() {
     return <Login onSuccess={() => window.location.reload()} />;
   }
 
+  // Função para navegar para Conversas e iniciar conversa
+  const handleAbrirConversa = (telefone: string, nome: string) => {
+    conversaInicialRef.current = { telefone, nome };
+    setCurrentPage('conversas');
+  };
+
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard />;
       case 'conversas':
-        return <Conversas />;
+        return <Conversas conversaInicial={conversaInicialRef.current} onConversaIniciada={() => { conversaInicialRef.current = null; }} />;
       case 'pipeline':
-        return <Pipeline />;
+        return <Pipeline onAbrirConversa={handleAbrirConversa} />;
       case 'clientes':
-        return <Clientes />;
+        return <Clientes onAbrirConversa={handleAbrirConversa} />;
       case 'retornos':
-        return <Retornos />;
+        return <Retornos onAbrirConversa={handleAbrirConversa} />;
       case 'configuracoes':
         return <Configuracoes />;
       default:
