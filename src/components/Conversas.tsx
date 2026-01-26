@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, Send, User, Tag, StickyNote, X, Check, Trash2, ChevronRight, Settings, Loader2, RefreshCw } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, Play, FileText, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 
-interface Etiqueta {
-  id: string;
-  nome: string;
-  cor: string;
+interface Attachment {
+  id: number;
+  file_type: string;
+  data_url: string;
+  thumb_url?: string;
+  file_name?: string;
 }
 
 interface Conversa {
@@ -19,7 +20,6 @@ interface Conversa {
   tempo: string;
   naoLida: boolean;
   humano: boolean;
-  etiquetas: string[];
   anotacao: string;
   chatwootLabels: string[];
 }
@@ -29,20 +29,8 @@ interface Mensagem {
   tipo: 'recebida' | 'enviada';
   texto: string;
   hora: string;
+  attachments?: Attachment[];
 }
-
-const coresDisponiveis = [
-  'bg-green-500',
-  'bg-blue-500',
-  'bg-purple-500',
-  'bg-cyan-500',
-  'bg-pink-500',
-  'bg-yellow-500',
-  'bg-orange-500',
-  'bg-red-500',
-  'bg-indigo-500',
-  'bg-teal-500',
-];
 
 export default function Conversas() {
   const { clinica } = useAuth();
@@ -51,34 +39,24 @@ export default function Conversas() {
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [conversaSelecionada, setConversaSelecionada] = useState<Conversa | null>(null);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
-  const [etiquetas, setEtiquetas] = useState<Etiqueta[]>([]);
   
   const [loadingConversas, setLoadingConversas] = useState(true);
   const [loadingMensagens, setLoadingMensagens] = useState(false);
-  const [loadingEtiquetas, setLoadingEtiquetas] = useState(true);
   const [enviandoMensagem, setEnviandoMensagem] = useState(false);
   const [chatwootConfigurado, setChatwootConfigurado] = useState(true);
   
   const [mensagem, setMensagem] = useState('');
   const [busca, setBusca] = useState('');
   
-  const [showEtiquetas, setShowEtiquetas] = useState(false);
   const [showAnotacao, setShowAnotacao] = useState(false);
-  const [showGerenciarEtiquetas, setShowGerenciarEtiquetas] = useState(false);
-  
   const [anotacaoTemp, setAnotacaoTemp] = useState('');
-  
-  const [novaEtiquetaNome, setNovaEtiquetaNome] = useState('');
-  const [novaEtiquetaCor, setNovaEtiquetaCor] = useState('bg-green-500');
-  const [salvandoEtiqueta, setSalvandoEtiqueta] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Carrega conversas e etiquetas
+  // Carrega conversas
   useEffect(() => {
     if (CLINICA_ID) {
       fetchConversas();
-      fetchEtiquetas();
       const interval = setInterval(fetchConversas, 30000);
       return () => clearInterval(interval);
     }
@@ -111,15 +89,25 @@ export default function Conversas() {
           const tempoPassado = formatarTempo(conv.timestamp || conv.last_activity_at);
           const labels = conv.labels || [];
           
+          // Verifica se última mensagem tem attachment
+          let ultimaMsg = lastMessage?.content || 'Nova conversa';
+          if (!ultimaMsg && lastMessage?.attachments?.length > 0) {
+            const tipo = lastMessage.attachments[0].file_type;
+            if (tipo === 'image') ultimaMsg = '📷 Imagem';
+            else if (tipo === 'audio') ultimaMsg = '🎵 Áudio';
+            else if (tipo === 'video') ultimaMsg = '🎥 Vídeo';
+            else if (tipo === 'file') ultimaMsg = '📄 Arquivo';
+            else ultimaMsg = '📎 Anexo';
+          }
+          
           return {
             id: conv.id,
             nome: sender.name || 'Cliente',
             telefone: sender.phone_number || '',
-            ultima: lastMessage?.content || 'Nova conversa',
+            ultima: ultimaMsg,
             tempo: tempoPassado,
             naoLida: conv.unread_count > 0,
             humano: labels.includes('humano'),
-            etiquetas: [],
             anotacao: '',
             chatwootLabels: labels,
           };
@@ -151,13 +139,14 @@ export default function Conversas() {
       
       if (data.payload) {
         const mensagensFormatadas: Mensagem[] = data.payload
-          .filter((msg: any) => msg.content && msg.message_type !== 2)
+          .filter((msg: any) => (msg.content || msg.attachments?.length > 0) && msg.message_type !== 2)
           .map((msg: any) => ({
             id: msg.id,
             tipo: msg.message_type === 0 ? 'recebida' : 'enviada',
-            texto: msg.content,
+            texto: msg.content || '',
             hora: formatarHora(msg.created_at),
-          }))
+            attachments: msg.attachments || [],
+          }));
 
         setMensagens(mensagensFormatadas);
       }
@@ -210,22 +199,6 @@ export default function Conversas() {
     return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const fetchEtiquetas = async () => {
-    setLoadingEtiquetas(true);
-    const { data, error } = await supabase
-      .from('etiquetas')
-      .select('*')
-      .eq('clinica_id', CLINICA_ID)
-      .order('nome');
-
-    if (error) {
-      console.error('Erro ao buscar etiquetas:', error);
-    } else {
-      setEtiquetas(data || []);
-    }
-    setLoadingEtiquetas(false);
-  };
-
   const toggleHumano = async () => {
     if (!conversaSelecionada || !CLINICA_ID) return;
     
@@ -254,75 +227,6 @@ export default function Conversas() {
     }
   };
 
-  const toggleEtiqueta = (etiquetaId: string) => {
-    if (!conversaSelecionada) return;
-    
-    const temEtiqueta = conversaSelecionada.etiquetas.includes(etiquetaId);
-    const novasEtiquetas = temEtiqueta
-      ? conversaSelecionada.etiquetas.filter(id => id !== etiquetaId)
-      : [...conversaSelecionada.etiquetas, etiquetaId];
-    
-    setConversaSelecionada(prev => prev ? { ...prev, etiquetas: novasEtiquetas } : null);
-    setConversas(prev => prev.map(c => 
-      c.id === conversaSelecionada.id ? { ...c, etiquetas: novasEtiquetas } : c
-    ));
-  };
-
-  const criarEtiqueta = async () => {
-    if (!novaEtiquetaNome.trim()) return;
-    
-    setSalvandoEtiqueta(true);
-    
-    const { data, error } = await supabase
-      .from('etiquetas')
-      .insert({
-        clinica_id: CLINICA_ID,
-        nome: novaEtiquetaNome.trim(),
-        cor: novaEtiquetaCor,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Erro ao criar etiqueta:', error);
-      alert('Erro ao criar etiqueta');
-    } else {
-      setEtiquetas(prev => [...prev, data]);
-      setNovaEtiquetaNome('');
-      setNovaEtiquetaCor('bg-green-500');
-    }
-    
-    setSalvandoEtiqueta(false);
-  };
-
-  const excluirEtiqueta = async (etiquetaId: string) => {
-    if (!confirm('Excluir esta etiqueta? Ela será removida de todas as conversas.')) return;
-    
-    const { error } = await supabase
-      .from('etiquetas')
-      .delete()
-      .eq('id', etiquetaId);
-
-    if (error) {
-      console.error('Erro ao excluir etiqueta:', error);
-      alert('Erro ao excluir etiqueta');
-    } else {
-      setEtiquetas(prev => prev.filter(e => e.id !== etiquetaId));
-      
-      setConversas(prev => prev.map(c => ({
-        ...c,
-        etiquetas: c.etiquetas.filter(id => id !== etiquetaId)
-      })));
-      
-      if (conversaSelecionada?.etiquetas.includes(etiquetaId)) {
-        setConversaSelecionada(prev => prev ? {
-          ...prev,
-          etiquetas: prev.etiquetas.filter(id => id !== etiquetaId)
-        } : null);
-      }
-    }
-  };
-
   const abrirAnotacao = () => {
     if (!conversaSelecionada) return;
     setAnotacaoTemp(conversaSelecionada.anotacao);
@@ -341,9 +245,7 @@ export default function Conversas() {
 
   const selecionarConversa = (conv: Conversa) => {
     setConversaSelecionada(conv);
-    setShowEtiquetas(false);
     setShowAnotacao(false);
-    setShowGerenciarEtiquetas(false);
     fetchMensagens(conv.id);
   };
 
@@ -352,6 +254,71 @@ export default function Conversas() {
     c.telefone.includes(busca) ||
     c.ultima.toLowerCase().includes(busca.toLowerCase())
   );
+
+  // Componente para renderizar anexos
+  const renderAttachment = (attachment: Attachment, isEnviada: boolean) => {
+    const { file_type, data_url, thumb_url, file_name } = attachment;
+
+    // Imagem
+    if (file_type === 'image') {
+      return (
+        <a href={data_url} target="_blank" rel="noopener noreferrer" className="block">
+          <img 
+            src={data_url} 
+            alt="Imagem" 
+            className="max-w-full rounded-lg max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+          />
+        </a>
+      );
+    }
+
+    // Áudio
+    if (file_type === 'audio') {
+      return (
+        <audio controls className="max-w-full">
+          <source src={data_url} />
+          Seu navegador não suporta áudio.
+        </audio>
+      );
+    }
+
+    // Vídeo
+    if (file_type === 'video') {
+      return (
+        <video controls className="max-w-full rounded-lg max-h-64">
+          <source src={data_url} />
+          Seu navegador não suporta vídeo.
+        </video>
+      );
+    }
+
+    // Sticker/GIF (webp)
+    if (file_type === 'image' || data_url?.includes('.webp') || data_url?.includes('.gif')) {
+      return (
+        <img 
+          src={data_url} 
+          alt="Sticker" 
+          className="max-w-32 max-h-32 object-contain"
+        />
+      );
+    }
+
+    // Arquivo/Documento
+    return (
+      <a 
+        href={data_url} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+          isEnviada ? 'bg-[#059669]' : 'bg-[#334155]'
+        } hover:opacity-80 transition-opacity`}
+      >
+        <FileText size={20} />
+        <span className="text-sm truncate max-w-[150px]">{file_name || 'Arquivo'}</span>
+        <Download size={16} />
+      </a>
+    );
+  };
 
   // Se não tem Chatwoot configurado
   if (!loadingConversas && !chatwootConfigurado) {
@@ -473,18 +440,6 @@ export default function Conversas() {
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></span>
                   )}
                 </button>
-
-                <button
-                  onClick={() => setShowEtiquetas(!showEtiquetas)}
-                  className={`p-2 rounded-lg transition-colors ${
-                    showEtiquetas 
-                      ? 'bg-[#10b981] text-white' 
-                      : 'bg-[#334155] text-[#94a3b8] hover:bg-[#475569]'
-                  }`}
-                  title="Etiquetas"
-                >
-                  <Tag size={20} />
-                </button>
                 
                 <button
                   onClick={toggleHumano}
@@ -499,127 +454,7 @@ export default function Conversas() {
                 </button>
               </div>
             </div>
-
-            {conversaSelecionada.chatwootLabels.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t border-[#334155]">
-                {conversaSelecionada.chatwootLabels.map(label => (
-                  <span 
-                    key={label} 
-                    className={`px-2 py-0.5 rounded text-xs text-white ${
-                      label === 'humano' ? 'bg-orange-500' : 'bg-blue-500'
-                    }`}
-                  >
-                    {label}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
-
-          {/* Dropdown de etiquetas */}
-          {showEtiquetas && (
-            <div className="bg-[#1e293b] border-b border-[#334155] p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium">Etiquetas</p>
-                <button
-                  onClick={() => setShowGerenciarEtiquetas(!showGerenciarEtiquetas)}
-                  className="text-xs text-[#10b981] hover:underline flex items-center gap-1"
-                >
-                  <Settings size={12} />
-                  Gerenciar
-                </button>
-              </div>
-              
-              {loadingEtiquetas ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 size={20} className="animate-spin text-[#10b981]" />
-                </div>
-              ) : etiquetas.length === 0 ? (
-                <p className="text-sm text-[#64748b] text-center py-4">
-                  Nenhuma etiqueta cadastrada. Clique em "Gerenciar" para criar.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {etiquetas.map(etq => {
-                    const selecionada = conversaSelecionada.etiquetas.includes(etq.id);
-                    return (
-                      <button
-                        key={etq.id}
-                        onClick={() => toggleEtiqueta(etq.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
-                          selecionada 
-                            ? `${etq.cor} text-white` 
-                            : 'bg-[#334155] text-[#94a3b8] hover:bg-[#475569]'
-                        }`}
-                      >
-                        <span className={`w-2 h-2 rounded-full ${selecionada ? 'bg-white' : etq.cor}`}></span>
-                        {etq.nome}
-                        {selecionada && <Check size={14} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {showGerenciarEtiquetas && (
-                <div className="mt-4 pt-4 border-t border-[#334155]">
-                  <p className="text-sm font-medium mb-3">Criar nova etiqueta</p>
-                  <div className="flex gap-2 mb-4">
-                    <input
-                      type="text"
-                      value={novaEtiquetaNome}
-                      onChange={(e) => setNovaEtiquetaNome(e.target.value)}
-                      placeholder="Nome da etiqueta"
-                      className="flex-1 bg-[#0f172a] border border-[#334155] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#10b981]"
-                    />
-                    <div className="relative">
-                      <button
-                        className={`w-10 h-10 rounded-lg ${novaEtiquetaCor} flex items-center justify-center`}
-                        onClick={() => {
-                          const currentIndex = coresDisponiveis.indexOf(novaEtiquetaCor);
-                          const nextIndex = (currentIndex + 1) % coresDisponiveis.length;
-                          setNovaEtiquetaCor(coresDisponiveis[nextIndex]);
-                        }}
-                        title="Clique para mudar a cor"
-                      >
-                        <ChevronRight size={16} className="text-white" />
-                      </button>
-                    </div>
-                    <button
-                      onClick={criarEtiqueta}
-                      disabled={!novaEtiquetaNome.trim() || salvandoEtiqueta}
-                      className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] disabled:text-[#64748b] rounded-lg text-sm transition-colors flex items-center gap-2"
-                    >
-                      {salvandoEtiqueta ? <Loader2 size={16} className="animate-spin" /> : null}
-                      Criar
-                    </button>
-                  </div>
-
-                  <p className="text-sm font-medium mb-2">Etiquetas existentes</p>
-                  {etiquetas.length === 0 ? (
-                    <p className="text-sm text-[#64748b] text-center py-4">Nenhuma etiqueta cadastrada</p>
-                  ) : (
-                    <div className="space-y-2 max-h-40 overflow-auto">
-                      {etiquetas.map(etq => (
-                        <div key={etq.id} className="flex items-center justify-between bg-[#0f172a] rounded-lg px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-3 h-3 rounded-full ${etq.cor}`}></span>
-                            <span className="text-sm">{etq.nome}</span>
-                          </div>
-                          <button
-                            onClick={() => excluirEtiqueta(etq.id)}
-                            className="p-1 hover:bg-red-500/20 rounded transition-colors"
-                          >
-                            <Trash2 size={14} className="text-red-400" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Mensagens */}
           <div className="flex-1 overflow-auto p-4 space-y-4">
@@ -645,7 +480,20 @@ export default function Conversas() {
                           : 'bg-[#1e293b] text-white rounded-bl-md'
                       }`}
                     >
-                      <p>{msg.texto}</p>
+                      {/* Renderiza anexos */}
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="space-y-2 mb-2">
+                          {msg.attachments.map((att, idx) => (
+                            <div key={idx}>
+                              {renderAttachment(att, msg.tipo === 'enviada')}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Texto da mensagem */}
+                      {msg.texto && <p>{msg.texto}</p>}
+                      
                       <p className={`text-xs mt-1 ${msg.tipo === 'enviada' ? 'text-green-200' : 'text-[#64748b]'}`}>
                         {msg.hora}
                       </p>
