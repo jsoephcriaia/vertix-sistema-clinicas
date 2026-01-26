@@ -1,38 +1,147 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --card: #1e293b;
-  --card-hover: #334155;
-  --border: #334155;
+:root,
+[data-theme="light"] {
+  /* Fundos */
+  --bg-primary: #FDF8F4;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #F5EFE9;
+  --bg-hover: #EDE6DF;
+  
+  /* Cards */
+  --card-bg: #FFFFFF;
+  --card-border: #E8DFD5;
+  
+  /* Sidebar */
+  --sidebar-bg: #1A3A4A;
+  --sidebar-text: #FFFFFF;
+  --sidebar-hover: #254B5E;
+  --sidebar-active: #10b981;
+  
+  /* Textos */
+  --text-primary: #1A3A4A;
+  --text-secondary: #5A7A8A;
+  --text-muted: #8AA0AD;
+  
+  /* Cores principais */
   --primary: #10b981;
   --primary-hover: #059669;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --muted: #64748b;
+  --primary-light: #D1FAE5;
+  
+  /* Status */
+  --success: #10b981;
+  --error: #EF4444;
+  --warning: #F59E0B;
+  --info: #3B82F6;
+  
+  /* Especiais */
+  --coral: #E57373;
+  --cream: #FDF8F4;
+  --navy: #1A3A4A;
+  
+  /* Inputs */
+  --input-bg: #FFFFFF;
+  --input-border: #E8DFD5;
+  --input-focus: #10b981;
+  
+  /* Chat */
+  --chat-received: #F5EFE9;
+  --chat-sent: #10b981;
+  --chat-text-received: #1A3A4A;
+  --chat-text-sent: #FFFFFF;
+}
+
+[data-theme="dark"] {
+  /* Fundos */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-hover: #475569;
+  
+  /* Cards */
+  --card-bg: #1e293b;
+  --card-border: #334155;
+  
+  /* Sidebar */
+  --sidebar-bg: #1e293b;
+  --sidebar-text: #FFFFFF;
+  --sidebar-hover: #334155;
+  --sidebar-active: #10b981;
+  
+  /* Textos */
+  --text-primary: #FFFFFF;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  /* Cores principais */
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --primary-light: #064E3B;
+  
+  /* Status */
+  --success: #10b981;
+  --error: #EF4444;
+  --warning: #F59E0B;
+  --info: #3B82F6;
+  
+  /* Especiais */
+  --coral: #E57373;
+  --cream: #FDF8F4;
+  --navy: #1A3A4A;
+  
+  /* Inputs */
+  --input-bg: #0f172a;
+  --input-border: #334155;
+  --input-focus: #10b981;
+  
+  /* Chat */
+  --chat-received: #1e293b;
+  --chat-sent: #10b981;
+  --chat-text-received: #FFFFFF;
+  --chat-text-sent: #FFFFFF;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 /* Scrollbar personalizada */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background: var(--bg-tertiary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
+  background: var(--text-muted);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
+  background: var(--text-secondary);
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.2s ease-out;
 }

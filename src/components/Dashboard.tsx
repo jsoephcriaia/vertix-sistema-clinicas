@@ -156,7 +156,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={32} className="animate-spin text-[#10b981]" />
+        <Loader2 size={32} className="animate-spin text-[var(--primary)]" />
       </div>
     );
   }
@@ -166,72 +166,72 @@ export default function Dashboard() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-[#64748b] text-sm">Visão geral da sua clínica</p>
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Dashboard</h1>
+        <p className="text-[var(--text-secondary)] text-sm">Visão geral da sua clínica</p>
       </div>
 
       {/* Cards de Métricas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
+        <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--card-border)] p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Users size={24} className="text-blue-400" />
+              <Users size={24} className="text-blue-500" />
             </div>
-            <span className="text-xs text-[#64748b]">Total</span>
+            <span className="text-xs text-[var(--text-muted)]">Total</span>
           </div>
-          <p className="text-2xl font-bold">{metricas.totalClientes}</p>
-          <p className="text-sm text-[#64748b]">Clientes cadastrados</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)]">{metricas.totalClientes}</p>
+          <p className="text-sm text-[var(--text-secondary)]">Clientes cadastrados</p>
           <div className="flex gap-2 mt-2">
-            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">{metricas.clientesAtivos} ativos</span>
-            <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">{metricas.clientesVip} VIP</span>
+            <span className="text-xs bg-green-500/20 text-green-600 px-2 py-0.5 rounded">{metricas.clientesAtivos} ativos</span>
+            <span className="text-xs bg-yellow-500/20 text-yellow-600 px-2 py-0.5 rounded">{metricas.clientesVip} VIP</span>
           </div>
         </div>
 
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
+        <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--card-border)] p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 bg-green-500/20 rounded-lg">
-              <DollarSign size={24} className="text-green-400" />
+              <DollarSign size={24} className="text-green-500" />
             </div>
-            <span className="text-xs text-[#64748b]">Pipeline</span>
+            <span className="text-xs text-[var(--text-muted)]">Pipeline</span>
           </div>
-          <p className="text-2xl font-bold">R$ {metricas.valorPipeline.toLocaleString('pt-BR')}</p>
-          <p className="text-sm text-[#64748b]">Em negociação</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)]">R$ {metricas.valorPipeline.toLocaleString('pt-BR')}</p>
+          <p className="text-sm text-[var(--text-secondary)]">Em negociação</p>
           <div className="flex gap-2 mt-2">
-            <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">{metricas.leadsNovos} novos</span>
-            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">{metricas.leadsConvertidos} convertidos</span>
+            <span className="text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded">{metricas.leadsNovos} novos</span>
+            <span className="text-xs bg-green-500/20 text-green-600 px-2 py-0.5 rounded">{metricas.leadsConvertidos} convertidos</span>
           </div>
         </div>
 
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
+        <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--card-border)] p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 bg-purple-500/20 rounded-lg">
-              <Calendar size={24} className="text-purple-400" />
+              <Calendar size={24} className="text-purple-500" />
             </div>
-            <span className="text-xs text-[#64748b]">Retornos</span>
+            <span className="text-xs text-[var(--text-muted)]">Retornos</span>
           </div>
-          <p className="text-2xl font-bold">{metricas.retornosSemana}</p>
-          <p className="text-sm text-[#64748b]">Esta semana</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)]">{metricas.retornosSemana}</p>
+          <p className="text-sm text-[var(--text-secondary)]">Esta semana</p>
           <div className="flex gap-2 mt-2">
             {metricas.retornosAtrasados > 0 && (
-              <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">{metricas.retornosAtrasados} atrasados</span>
+              <span className="text-xs bg-red-500/20 text-red-600 px-2 py-0.5 rounded">{metricas.retornosAtrasados} atrasados</span>
             )}
             {metricas.retornosHoje > 0 && (
-              <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">{metricas.retornosHoje} hoje</span>
+              <span className="text-xs bg-yellow-500/20 text-yellow-600 px-2 py-0.5 rounded">{metricas.retornosHoje} hoje</span>
             )}
           </div>
         </div>
 
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
+        <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--card-border)] p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 bg-cyan-500/20 rounded-lg">
-              <TrendingUp size={24} className="text-cyan-400" />
+              <TrendingUp size={24} className="text-cyan-500" />
             </div>
-            <span className="text-xs text-[#64748b]">Faturamento</span>
+            <span className="text-xs text-[var(--text-muted)]">Faturamento</span>
           </div>
-          <p className="text-2xl font-bold">R$ {metricas.faturamentoTotal.toLocaleString('pt-BR')}</p>
-          <p className="text-sm text-[#64748b]">Total acumulado</p>
+          <p className="text-2xl font-bold text-[var(--text-primary)]">R$ {metricas.faturamentoTotal.toLocaleString('pt-BR')}</p>
+          <p className="text-sm text-[var(--text-secondary)]">Total acumulado</p>
           <div className="flex gap-2 mt-2">
-            <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">{metricas.totalProcedimentos} procedimentos</span>
+            <span className="text-xs bg-purple-500/20 text-purple-600 px-2 py-0.5 rounded">{metricas.totalProcedimentos} procedimentos</span>
           </div>
         </div>
       </div>
@@ -239,31 +239,31 @@ export default function Dashboard() {
       {/* Seções inferiores */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Leads Recentes */}
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
-          <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <TrendingUp size={20} className="text-[#10b981]" />
+        <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--card-border)] p-5 shadow-sm">
+          <h2 className="font-semibold mb-4 flex items-center gap-2 text-[var(--text-primary)]">
+            <TrendingUp size={20} className="text-[var(--primary)]" />
             Leads Recentes
           </h2>
           {leadsRecentes.length === 0 ? (
-            <p className="text-[#64748b] text-sm text-center py-4">Nenhum lead no pipeline</p>
+            <p className="text-[var(--text-secondary)] text-sm text-center py-4">Nenhum lead no pipeline</p>
           ) : (
             <div className="space-y-3">
               {leadsRecentes.map((lead) => (
-                <div key={lead.id} className="flex items-center justify-between p-3 bg-[#0f172a] rounded-lg">
+                <div key={lead.id} className="flex items-center justify-between p-3 bg-[var(--bg-tertiary)] rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold">
+                    <div className="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-bold">
                       {lead.nome.charAt(0)}
                     </div>
                     <div>
-                      <p className="font-medium">{lead.nome}</p>
-                      <p className="text-xs text-[#64748b]">{lead.interesse}</p>
+                      <p className="font-medium text-[var(--text-primary)]">{lead.nome}</p>
+                      <p className="text-xs text-[var(--text-secondary)]">{lead.interesse}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <span className={`text-xs px-2 py-0.5 rounded ${getEtapaCor(lead.etapa)} bg-opacity-20`}>
                       {getEtapaLabel(lead.etapa)}
                     </span>
-                    <p className="text-sm font-medium text-[#10b981] mt-1">
+                    <p className="text-sm font-medium text-[var(--primary)] mt-1">
                       R$ {Number(lead.valor_estimado || 0).toLocaleString('pt-BR')}
                     </p>
                   </div>
@@ -274,13 +274,13 @@ export default function Dashboard() {
         </div>
 
         {/* Próximos Retornos */}
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
-          <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <Calendar size={20} className="text-[#10b981]" />
+        <div className="bg-[var(--card-bg)] rounded-xl border border-[var(--card-border)] p-5 shadow-sm">
+          <h2 className="font-semibold mb-4 flex items-center gap-2 text-[var(--text-primary)]">
+            <Calendar size={20} className="text-[var(--primary)]" />
             Próximos Retornos
           </h2>
           {retornosProximos.length === 0 ? (
-            <p className="text-[#64748b] text-sm text-center py-4">Nenhum retorno agendado</p>
+            <p className="text-[var(--text-secondary)] text-sm text-center py-4">Nenhum retorno agendado</p>
           ) : (
             <div className="space-y-3">
               {retornosProximos.map((cliente) => {
@@ -290,19 +290,19 @@ export default function Dashboard() {
                 const diffDias = Math.ceil((dataRetorno.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
 
                 return (
-                  <div key={cliente.id} className="flex items-center justify-between p-3 bg-[#0f172a] rounded-lg">
+                  <div key={cliente.id} className="flex items-center justify-between p-3 bg-[var(--bg-tertiary)] rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold">
+                      <div className="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-bold">
                         {cliente.nome.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-medium">{cliente.nome}</p>
-                        <p className="text-xs text-[#64748b]">{cliente.telefone}</p>
+                        <p className="font-medium text-[var(--text-primary)]">{cliente.nome}</p>
+                        <p className="text-xs text-[var(--text-secondary)]">{cliente.telefone}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">{formatarData(cliente.proximo_retorno)}</p>
-                      <p className={`text-xs ${diffDias === 0 ? 'text-yellow-400' : 'text-[#64748b]'}`}>
+                      <p className="text-sm font-medium text-[var(--text-primary)]">{formatarData(cliente.proximo_retorno)}</p>
+                      <p className={`text-xs ${diffDias === 0 ? 'text-yellow-600' : 'text-[var(--text-secondary)]'}`}>
                         {diffDias === 0 ? 'Hoje!' : `em ${diffDias} dias`}
                       </p>
                     </div>
@@ -318,10 +318,10 @@ export default function Dashboard() {
       {metricas.retornosAtrasados > 0 && (
         <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-xl p-4">
           <div className="flex items-center gap-3">
-            <AlertTriangle size={24} className="text-red-400" />
+            <AlertTriangle size={24} className="text-red-500" />
             <div>
-              <p className="font-medium text-red-400">Atenção: {metricas.retornosAtrasados} retornos atrasados!</p>
-              <p className="text-sm text-[#94a3b8]">Acesse a tela de Retornos para entrar em contato com esses clientes.</p>
+              <p className="font-medium text-red-500">Atenção: {metricas.retornosAtrasados} retornos atrasados!</p>
+              <p className="text-sm text-[var(--text-secondary)]">Acesse a tela de Retornos para entrar em contato com esses clientes.</p>
             </div>
           </div>
         </div>

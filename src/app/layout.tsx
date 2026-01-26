@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/lib/auth";
+import { AlertProvider } from "@/components/Alert";
+import { ThemeProvider } from "@/lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,11 +15,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
-      <body className="bg-[#0f172a] text-white antialiased">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+    <html lang="pt-BR" data-theme="light">
+      <body className="antialiased">
+        <ThemeProvider>
+          <AuthProvider>
+            <AlertProvider>
+              {children}
+            </AlertProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
