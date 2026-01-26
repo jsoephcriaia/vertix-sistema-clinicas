@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Search, Send, User, Tag, StickyNote, X, Plus, Check, Trash2, ChevronRight, Settings, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, Send, User, Tag, StickyNote, X, Plus, Check, Trash2, ChevronRight, Settings, Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 
@@ -21,6 +21,7 @@ interface Conversa {
   humano: boolean;
   etiquetas: string[];
   anotacao: string;
+  chatwootLabels: string[];
 }
 
 interface Mensagem {
@@ -28,6 +29,13 @@ interface Mensagem {
   tipo: 'recebida' | 'enviada';
   texto: string;
   hora: string;
+}
+
+interface ChatwootConfig {
+  url: string;
+  accountId: string;
+  inboxId: string;
+  apiToken: string;
 }
 
 const coresDisponiveis = [
@@ -43,32 +51,23 @@ const coresDisponiveis = [
   'bg-teal-500',
 ];
 
-// Conversas demo (depois virão do Chatwoot)
-const conversasDemo: Conversa[] = [
-  { id: 1, nome: 'Maria Silva', telefone: '(11) 99999-1111', ultima: 'Olá, gostaria de agendar uma limpeza de pele', tempo: '2min', naoLida: true, humano: false, etiquetas: [], anotacao: '' },
-  { id: 2, nome: 'João Santos', telefone: '(11) 99999-2222', ultima: 'Qual o valor da harmonização?', tempo: '15min', naoLida: true, humano: true, etiquetas: [], anotacao: 'Cliente quer desconto de 10%. Falar com a gerente Maria antes de fechar.' },
-  { id: 3, nome: 'Ana Paula', telefone: '(11) 99999-3333', ultima: 'Obrigada! Vou confirmar amanhã', tempo: '1h', naoLida: false, humano: false, etiquetas: [], anotacao: '' },
-  { id: 4, nome: 'Carlos Oliveira', telefone: '(11) 99999-4444', ultima: 'Vocês atendem no sábado?', tempo: '2h', naoLida: false, humano: false, etiquetas: [], anotacao: '' },
-  { id: 5, nome: 'Fernanda Lima', telefone: '(11) 99999-5555', ultima: 'Perfeito, está agendado então!', tempo: '3h', naoLida: false, humano: false, etiquetas: [], anotacao: 'Agendado para sexta 14h. Cliente VIP.' },
-];
-
-const mensagensDemo: Mensagem[] = [
-  { id: 1, tipo: 'recebida', texto: 'Olá, boa tarde!', hora: '14:30' },
-  { id: 2, tipo: 'recebida', texto: 'Gostaria de agendar uma limpeza de pele', hora: '14:30' },
-  { id: 3, tipo: 'enviada', texto: 'Olá Maria! Tudo bem? 😊', hora: '14:32' },
-  { id: 4, tipo: 'enviada', texto: 'Claro! Temos horários disponíveis amanhã às 10h, 14h ou 16h. Qual prefere?', hora: '14:32' },
-  { id: 5, tipo: 'recebida', texto: 'O de 14h seria perfeito!', hora: '14:35' },
-];
-
 export default function Conversas() {
   const { clinica } = useAuth();
   const CLINICA_ID = clinica?.id || '';
 
-  const [conversas, setConversas] = useState<Conversa[]>(conversasDemo);
-  const [conversaSelecionada, setConversaSelecionada] = useState<Conversa>(conversasDemo[0]);
+  const [conversas, setConversas] = useState<Conversa[]>([]);
+  const [conversaSelecionada, setConversaSelecionada] = useState<Conversa | null>(null);
+  const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [etiquetas, setEtiquetas] = useState<Etiqueta[]>([]);
+  const [chatwootConfig, setChatwootConfig] = useState<ChatwootConfig | null>(null);
+  
+  const [loadingConversas, setLoadingConversas] = useState(true);
+  const [loadingMensagens, setLoadingMensagens] = useState(false);
   const [loadingEtiquetas, setLoadingEtiquetas] = useState(true);
+  const [enviandoMensagem, setEnviandoMensagem] = useState(false);
+  
   const [mensagem, setMensagem] = useState('');
+  const [busca, setBusca] = useState('');
   
   const [showEtiquetas, setShowEtiquetas] = useState(false);
   const [showAnotacao, setShowAnotacao] = useState(false);
@@ -80,11 +79,185 @@ export default function Conversas() {
   const [novaEtiquetaCor, setNovaEtiquetaCor] = useState('bg-green-500');
   const [salvandoEtiqueta, setSalvandoEtiqueta] = useState(false);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Carrega configurações do Chatwoot
   useEffect(() => {
     if (CLINICA_ID) {
+      fetchChatwootConfig();
       fetchEtiquetas();
     }
   }, [CLINICA_ID]);
+
+  // Carrega conversas quando tiver config
+  useEffect(() => {
+    if (chatwootConfig) {
+      fetchConversas();
+      // Atualiza a cada 30 segundos
+      const interval = setInterval(fetchConversas, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [chatwootConfig]);
+
+  // Scroll para última mensagem
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [mensagens]);
+
+  const fetchChatwootConfig = async () => {
+    const { data, error } = await supabase
+      .from('clinicas')
+      .select('chatwoot_url, chatwoot_account_id, chatwoot_inbox_id, chatwoot_api_token')
+      .eq('id', CLINICA_ID)
+      .single();
+
+    if (data && data.chatwoot_url && data.chatwoot_api_token) {
+      setChatwootConfig({
+        url: data.chatwoot_url,
+        accountId: data.chatwoot_account_id,
+        inboxId: data.chatwoot_inbox_id || '1',
+        apiToken: data.chatwoot_api_token,
+      });
+    } else {
+      setLoadingConversas(false);
+    }
+  };
+
+  const fetchConversas = async () => {
+    if (!chatwootConfig) return;
+    
+    try {
+      const response = await fetch(
+        `${chatwootConfig.url}/api/v1/accounts/${chatwootConfig.accountId}/conversations?inbox_id=${chatwootConfig.inboxId}&status=open`,
+        {
+          headers: {
+            'api_access_token': chatwootConfig.apiToken
+          }
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.data?.payload) {
+        const conversasFormatadas: Conversa[] = data.data.payload.map((conv: any) => {
+          const sender = conv.meta?.sender || {};
+          const lastMessage = conv.last_non_activity_message;
+          const tempoPassado = formatarTempo(conv.timestamp || conv.last_activity_at);
+          const labels = conv.labels || [];
+          
+          return {
+            id: conv.id,
+            nome: sender.name || 'Cliente',
+            telefone: sender.phone_number || '',
+            ultima: lastMessage?.content || 'Nova conversa',
+            tempo: tempoPassado,
+            naoLida: conv.unread_count > 0,
+            humano: labels.includes('humano'),
+            etiquetas: [],
+            anotacao: '',
+            chatwootLabels: labels,
+          };
+        });
+
+        setConversas(conversasFormatadas);
+        
+        // Se não tem conversa selecionada, seleciona a primeira
+        if (!conversaSelecionada && conversasFormatadas.length > 0) {
+          selecionarConversa(conversasFormatadas[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar conversas:', error);
+    } finally {
+      setLoadingConversas(false);
+    }
+  };
+
+  const fetchMensagens = async (conversaId: number) => {
+    if (!chatwootConfig) return;
+    
+    setLoadingMensagens(true);
+    
+    try {
+      const response = await fetch(
+        `${chatwootConfig.url}/api/v1/accounts/${chatwootConfig.accountId}/conversations/${conversaId}/messages`,
+        {
+          headers: {
+            'api_access_token': chatwootConfig.apiToken
+          }
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.payload) {
+        const mensagensFormatadas: Mensagem[] = data.payload
+          .filter((msg: any) => msg.content && msg.message_type !== 2) // Filtra mensagens de atividade
+          .map((msg: any) => ({
+            id: msg.id,
+            tipo: msg.message_type === 0 ? 'recebida' : 'enviada',
+            texto: msg.content,
+            hora: formatarHora(msg.created_at),
+          }))
+          .reverse(); // Ordena do mais antigo para o mais recente
+
+        setMensagens(mensagensFormatadas);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar mensagens:', error);
+    } finally {
+      setLoadingMensagens(false);
+    }
+  };
+
+  const enviarMensagem = async () => {
+    if (!mensagem.trim() || !conversaSelecionada || !chatwootConfig) return;
+    
+    setEnviandoMensagem(true);
+    
+    try {
+      const response = await fetch(
+        `${chatwootConfig.url}/api/v1/accounts/${chatwootConfig.accountId}/conversations/${conversaSelecionada.id}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'api_access_token': chatwootConfig.apiToken
+          },
+          body: JSON.stringify({
+            content: mensagem,
+            message_type: 'outgoing',
+            private: false
+          })
+        }
+      );
+
+      if (response.ok) {
+        setMensagem('');
+        // Recarrega mensagens
+        await fetchMensagens(conversaSelecionada.id);
+      }
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+    } finally {
+      setEnviandoMensagem(false);
+    }
+  };
+
+  const formatarTempo = (timestamp: number) => {
+    const agora = Date.now() / 1000;
+    const diff = agora - timestamp;
+    
+    if (diff < 60) return 'agora';
+    if (diff < 3600) return `${Math.floor(diff / 60)}min`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+    return `${Math.floor(diff / 86400)}d`;
+  };
+
+  const formatarHora = (timestamp: number) => {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  };
 
   const fetchEtiquetas = async () => {
     setLoadingEtiquetas(true);
@@ -102,27 +275,49 @@ export default function Conversas() {
     setLoadingEtiquetas(false);
   };
 
-  const toggleHumano = () => {
+  const toggleHumano = async () => {
+    if (!conversaSelecionada || !chatwootConfig) return;
+    
     const novoEstado = !conversaSelecionada.humano;
-    setConversaSelecionada(prev => ({ ...prev, humano: novoEstado }));
-    setConversas(prev => prev.map(c => 
-      c.id === conversaSelecionada.id ? { ...c, humano: novoEstado } : c
-    ));
-    console.log(`${novoEstado ? 'Adicionando' : 'Removendo'} etiqueta HUMANO no Chatwoot`);
+    
+    try {
+      // Atualiza labels no Chatwoot
+      const labelsAtuais = conversaSelecionada.chatwootLabels.filter(l => l !== 'humano');
+      const novosLabels = novoEstado ? [...labelsAtuais, 'humano'] : labelsAtuais;
+      
+      await fetch(
+        `${chatwootConfig.url}/api/v1/accounts/${chatwootConfig.accountId}/conversations/${conversaSelecionada.id}/labels`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'api_access_token': chatwootConfig.apiToken
+          },
+          body: JSON.stringify({ labels: novosLabels })
+        }
+      );
+
+      setConversaSelecionada(prev => prev ? { ...prev, humano: novoEstado, chatwootLabels: novosLabels } : null);
+      setConversas(prev => prev.map(c => 
+        c.id === conversaSelecionada.id ? { ...c, humano: novoEstado, chatwootLabels: novosLabels } : c
+      ));
+    } catch (error) {
+      console.error('Erro ao atualizar etiqueta humano:', error);
+    }
   };
 
   const toggleEtiqueta = (etiquetaId: string) => {
+    if (!conversaSelecionada) return;
+    
     const temEtiqueta = conversaSelecionada.etiquetas.includes(etiquetaId);
     const novasEtiquetas = temEtiqueta
       ? conversaSelecionada.etiquetas.filter(id => id !== etiquetaId)
       : [...conversaSelecionada.etiquetas, etiquetaId];
     
-    setConversaSelecionada(prev => ({ ...prev, etiquetas: novasEtiquetas }));
+    setConversaSelecionada(prev => prev ? { ...prev, etiquetas: novasEtiquetas } : null);
     setConversas(prev => prev.map(c => 
       c.id === conversaSelecionada.id ? { ...c, etiquetas: novasEtiquetas } : c
     ));
-    
-    console.log('Sincronizando etiquetas com Chatwoot:', novasEtiquetas);
   };
 
   const criarEtiqueta = async () => {
@@ -147,7 +342,6 @@ export default function Conversas() {
       setEtiquetas(prev => [...prev, data]);
       setNovaEtiquetaNome('');
       setNovaEtiquetaCor('bg-green-500');
-      console.log('Criando etiqueta no Chatwoot:', data);
     }
     
     setSalvandoEtiqueta(false);
@@ -172,24 +366,25 @@ export default function Conversas() {
         etiquetas: c.etiquetas.filter(id => id !== etiquetaId)
       })));
       
-      if (conversaSelecionada.etiquetas.includes(etiquetaId)) {
-        setConversaSelecionada(prev => ({
+      if (conversaSelecionada?.etiquetas.includes(etiquetaId)) {
+        setConversaSelecionada(prev => prev ? {
           ...prev,
           etiquetas: prev.etiquetas.filter(id => id !== etiquetaId)
-        }));
+        } : null);
       }
-      
-      console.log('Excluindo etiqueta do Chatwoot:', etiquetaId);
     }
   };
 
   const abrirAnotacao = () => {
+    if (!conversaSelecionada) return;
     setAnotacaoTemp(conversaSelecionada.anotacao);
     setShowAnotacao(true);
   };
 
   const salvarAnotacao = () => {
-    setConversaSelecionada(prev => ({ ...prev, anotacao: anotacaoTemp }));
+    if (!conversaSelecionada) return;
+    
+    setConversaSelecionada(prev => prev ? { ...prev, anotacao: anotacaoTemp } : null);
     setConversas(prev => prev.map(c => 
       c.id === conversaSelecionada.id ? { ...c, anotacao: anotacaoTemp } : c
     ));
@@ -201,18 +396,58 @@ export default function Conversas() {
     setShowEtiquetas(false);
     setShowAnotacao(false);
     setShowGerenciarEtiquetas(false);
+    fetchMensagens(conv.id);
   };
+
+  const conversasFiltradas = conversas.filter(c => 
+    c.nome.toLowerCase().includes(busca.toLowerCase()) ||
+    c.telefone.includes(busca) ||
+    c.ultima.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  // Se não tem Chatwoot configurado
+  if (!loadingConversas && !chatwootConfig) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-48px)] -m-4 lg:-m-6">
+        <div className="text-center p-8">
+          <div className="w-20 h-20 bg-[#334155] rounded-full flex items-center justify-center mx-auto mb-4">
+            <Settings size={40} className="text-[#64748b]" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Chatwoot não configurado</h2>
+          <p className="text-[#64748b] mb-4">Configure a integração com o Chatwoot para ver as conversas.</p>
+          <a 
+            href="#" 
+            onClick={() => window.location.reload()}
+            className="text-[#10b981] hover:underline"
+          >
+            Ir para Configurações → Integrações
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-48px)] -m-4 lg:-m-6">
       {/* Lista de conversas */}
       <div className="w-80 bg-[#1e293b] border-r border-[#334155] flex flex-col flex-shrink-0">
         <div className="p-4 border-b border-[#334155]">
-          <h2 className="text-lg font-semibold mb-3">Conversas</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold">Conversas</h2>
+            <button 
+              onClick={fetchConversas}
+              className="p-2 hover:bg-[#334155] rounded-lg transition-colors"
+              title="Atualizar"
+            >
+              <RefreshCw size={16} className={loadingConversas ? 'animate-spin' : ''} />
+            </button>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" size={18} />
             <input
               type="text"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar conversa..."
               className="w-full bg-[#0f172a] border border-[#334155] rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-[#10b981]"
             />
@@ -220,283 +455,315 @@ export default function Conversas() {
         </div>
         
         <div className="flex-1 overflow-auto">
-          {conversas.map((conv) => (
-            <button
-              key={conv.id}
-              onClick={() => selecionarConversa(conv)}
-              className={`w-full flex items-center gap-3 p-4 border-b border-[#334155] hover:bg-[#334155] transition-colors text-left ${
-                conversaSelecionada.id === conv.id ? 'bg-[#334155]' : ''
-              }`}
-            >
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold flex-shrink-0">
-                  {conv.nome.charAt(0)}
-                </div>
-                {conv.humano && (
-                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
-                    <User size={12} className="text-white" />
+          {loadingConversas ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 size={24} className="animate-spin text-[#10b981]" />
+            </div>
+          ) : conversasFiltradas.length === 0 ? (
+            <div className="text-center py-8 text-[#64748b]">
+              <p>Nenhuma conversa encontrada</p>
+            </div>
+          ) : (
+            conversasFiltradas.map((conv) => (
+              <button
+                key={conv.id}
+                onClick={() => selecionarConversa(conv)}
+                className={`w-full flex items-center gap-3 p-4 border-b border-[#334155] hover:bg-[#334155] transition-colors text-left ${
+                  conversaSelecionada?.id === conv.id ? 'bg-[#334155]' : ''
+                }`}
+              >
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold flex-shrink-0">
+                    {conv.nome.charAt(0).toUpperCase()}
                   </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium truncate">{conv.nome}</p>
-                  <span className="text-xs text-[#64748b]">{conv.tempo}</span>
+                  {conv.humano && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
+                      <User size={12} className="text-white" />
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm text-[#64748b] truncate">{conv.ultima}</p>
-                {conv.etiquetas.length > 0 && (
-                  <div className="flex gap-1 mt-1">
-                    {conv.etiquetas.slice(0, 3).map(etqId => {
-                      const etq = etiquetas.find(e => e.id === etqId);
-                      return etq ? (
-                        <span key={etqId} className={`w-2 h-2 rounded-full ${etq.cor}`} title={etq.nome}></span>
-                      ) : null;
-                    })}
-                    {conv.etiquetas.length > 3 && (
-                      <span className="text-xs text-[#64748b]">+{conv.etiquetas.length - 3}</span>
-                    )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium truncate">{conv.nome}</p>
+                    <span className="text-xs text-[#64748b]">{conv.tempo}</span>
                   </div>
+                  <p className="text-sm text-[#64748b] truncate">{conv.ultima}</p>
+                </div>
+                {conv.naoLida && (
+                  <div className="w-3 h-3 rounded-full bg-[#10b981] flex-shrink-0"></div>
                 )}
-              </div>
-              {conv.naoLida && (
-                <div className="w-3 h-3 rounded-full bg-[#10b981] flex-shrink-0"></div>
-              )}
-            </button>
-          ))}
+              </button>
+            ))
+          )}
         </div>
       </div>
 
       {/* Área de chat */}
-      <div className="flex-1 flex flex-col bg-[#0f172a] min-w-0">
-        {/* Header do chat */}
-        <div className="bg-[#1e293b] border-b border-[#334155] p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold flex-shrink-0">
-                {conversaSelecionada.nome.charAt(0)}
+      {conversaSelecionada ? (
+        <div className="flex-1 flex flex-col bg-[#0f172a] min-w-0">
+          {/* Header do chat */}
+          <div className="bg-[#1e293b] border-b border-[#334155] p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold flex-shrink-0">
+                  {conversaSelecionada.nome.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{conversaSelecionada.nome}</p>
+                  <p className="text-xs text-[#64748b]">{conversaSelecionada.telefone}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="font-medium truncate">{conversaSelecionada.nome}</p>
-                <p className="text-xs text-[#64748b]">{conversaSelecionada.telefone}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={abrirAnotacao}
-                className={`p-2 rounded-lg transition-colors relative ${
-                  conversaSelecionada.anotacao 
-                    ? 'bg-yellow-500/20 text-yellow-400' 
-                    : 'bg-[#334155] text-[#94a3b8] hover:bg-[#475569]'
-                }`}
-                title="Anotações"
-              >
-                <StickyNote size={20} />
-                {conversaSelecionada.anotacao && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></span>
-                )}
-              </button>
-
-              <button
-                onClick={() => setShowEtiquetas(!showEtiquetas)}
-                className={`p-2 rounded-lg transition-colors ${
-                  showEtiquetas 
-                    ? 'bg-[#10b981] text-white' 
-                    : 'bg-[#334155] text-[#94a3b8] hover:bg-[#475569]'
-                }`}
-                title="Etiquetas"
-              >
-                <Tag size={20} />
-              </button>
               
-              <button
-                onClick={toggleHumano}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  conversaSelecionada.humano
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-[#334155] text-[#94a3b8] hover:bg-[#475569]'
-                }`}
-              >
-                <User size={18} />
-                <span className="hidden sm:inline">HUMANO</span>
-              </button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={abrirAnotacao}
+                  className={`p-2 rounded-lg transition-colors relative ${
+                    conversaSelecionada.anotacao 
+                      ? 'bg-yellow-500/20 text-yellow-400' 
+                      : 'bg-[#334155] text-[#94a3b8] hover:bg-[#475569]'
+                  }`}
+                  title="Anotações"
+                >
+                  <StickyNote size={20} />
+                  {conversaSelecionada.anotacao && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setShowEtiquetas(!showEtiquetas)}
+                  className={`p-2 rounded-lg transition-colors ${
+                    showEtiquetas 
+                      ? 'bg-[#10b981] text-white' 
+                      : 'bg-[#334155] text-[#94a3b8] hover:bg-[#475569]'
+                  }`}
+                  title="Etiquetas"
+                >
+                  <Tag size={20} />
+                </button>
+                
+                <button
+                  onClick={toggleHumano}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    conversaSelecionada.humano
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-[#334155] text-[#94a3b8] hover:bg-[#475569]'
+                  }`}
+                >
+                  <User size={18} />
+                  <span className="hidden sm:inline">HUMANO</span>
+                </button>
+              </div>
             </div>
+
+            {conversaSelecionada.chatwootLabels.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t border-[#334155]">
+                {conversaSelecionada.chatwootLabels.map(label => (
+                  <span 
+                    key={label} 
+                    className={`px-2 py-0.5 rounded text-xs text-white ${
+                      label === 'humano' ? 'bg-orange-500' : 'bg-blue-500'
+                    }`}
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
-          {conversaSelecionada.etiquetas.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t border-[#334155]">
-              {conversaSelecionada.etiquetas.map(etqId => {
-                const etq = etiquetas.find(e => e.id === etqId);
-                return etq ? (
-                  <span 
-                    key={etqId} 
-                    className={`${etq.cor} px-2 py-0.5 rounded text-xs text-white`}
-                  >
-                    {etq.nome}
-                  </span>
-                ) : null;
-              })}
+          {/* Dropdown de etiquetas */}
+          {showEtiquetas && (
+            <div className="bg-[#1e293b] border-b border-[#334155] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium">Etiquetas</p>
+                <button
+                  onClick={() => setShowGerenciarEtiquetas(!showGerenciarEtiquetas)}
+                  className="text-xs text-[#10b981] hover:underline flex items-center gap-1"
+                >
+                  <Settings size={12} />
+                  Gerenciar
+                </button>
+              </div>
+              
+              {loadingEtiquetas ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 size={20} className="animate-spin text-[#10b981]" />
+                </div>
+              ) : etiquetas.length === 0 ? (
+                <p className="text-sm text-[#64748b] text-center py-4">
+                  Nenhuma etiqueta cadastrada. Clique em "Gerenciar" para criar.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {etiquetas.map(etq => {
+                    const selecionada = conversaSelecionada.etiquetas.includes(etq.id);
+                    return (
+                      <button
+                        key={etq.id}
+                        onClick={() => toggleEtiqueta(etq.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
+                          selecionada 
+                            ? `${etq.cor} text-white` 
+                            : 'bg-[#334155] text-[#94a3b8] hover:bg-[#475569]'
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${selecionada ? 'bg-white' : etq.cor}`}></span>
+                        {etq.nome}
+                        {selecionada && <Check size={14} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {showGerenciarEtiquetas && (
+                <div className="mt-4 pt-4 border-t border-[#334155]">
+                  <p className="text-sm font-medium mb-3">Criar nova etiqueta</p>
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={novaEtiquetaNome}
+                      onChange={(e) => setNovaEtiquetaNome(e.target.value)}
+                      placeholder="Nome da etiqueta"
+                      className="flex-1 bg-[#0f172a] border border-[#334155] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#10b981]"
+                    />
+                    <div className="relative">
+                      <button
+                        className={`w-10 h-10 rounded-lg ${novaEtiquetaCor} flex items-center justify-center`}
+                        onClick={() => {
+                          const currentIndex = coresDisponiveis.indexOf(novaEtiquetaCor);
+                          const nextIndex = (currentIndex + 1) % coresDisponiveis.length;
+                          setNovaEtiquetaCor(coresDisponiveis[nextIndex]);
+                        }}
+                        title="Clique para mudar a cor"
+                      >
+                        <ChevronRight size={16} className="text-white" />
+                      </button>
+                    </div>
+                    <button
+                      onClick={criarEtiqueta}
+                      disabled={!novaEtiquetaNome.trim() || salvandoEtiqueta}
+                      className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] disabled:text-[#64748b] rounded-lg text-sm transition-colors flex items-center gap-2"
+                    >
+                      {salvandoEtiqueta ? <Loader2 size={16} className="animate-spin" /> : null}
+                      Criar
+                    </button>
+                  </div>
+
+                  <p className="text-sm font-medium mb-2">Etiquetas existentes</p>
+                  {etiquetas.length === 0 ? (
+                    <p className="text-sm text-[#64748b] text-center py-4">Nenhuma etiqueta cadastrada</p>
+                  ) : (
+                    <div className="space-y-2 max-h-40 overflow-auto">
+                      {etiquetas.map(etq => (
+                        <div key={etq.id} className="flex items-center justify-between bg-[#0f172a] rounded-lg px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-3 h-3 rounded-full ${etq.cor}`}></span>
+                            <span className="text-sm">{etq.nome}</span>
+                          </div>
+                          <button
+                            onClick={() => excluirEtiqueta(etq.id)}
+                            className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                          >
+                            <Trash2 size={14} className="text-red-400" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
-        </div>
 
-        {/* Dropdown de etiquetas */}
-        {showEtiquetas && (
-          <div className="bg-[#1e293b] border-b border-[#334155] p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-medium">Etiquetas</p>
-              <button
-                onClick={() => setShowGerenciarEtiquetas(!showGerenciarEtiquetas)}
-                className="text-xs text-[#10b981] hover:underline flex items-center gap-1"
-              >
-                <Settings size={12} />
-                Gerenciar
-              </button>
-            </div>
-            
-            {loadingEtiquetas ? (
-              <div className="flex justify-center py-4">
-                <Loader2 size={20} className="animate-spin text-[#10b981]" />
+          {/* Mensagens */}
+          <div className="flex-1 overflow-auto p-4 space-y-4">
+            {loadingMensagens ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 size={32} className="animate-spin text-[#10b981]" />
               </div>
-            ) : etiquetas.length === 0 ? (
-              <p className="text-sm text-[#64748b] text-center py-4">
-                Nenhuma etiqueta cadastrada. Clique em "Gerenciar" para criar.
-              </p>
+            ) : mensagens.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-[#64748b]">
+                <p>Nenhuma mensagem ainda</p>
+              </div>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                {etiquetas.map(etq => {
-                  const selecionada = conversaSelecionada.etiquetas.includes(etq.id);
-                  return (
-                    <button
-                      key={etq.id}
-                      onClick={() => toggleEtiqueta(etq.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
-                        selecionada 
-                          ? `${etq.cor} text-white` 
-                          : 'bg-[#334155] text-[#94a3b8] hover:bg-[#475569]'
+              <>
+                {mensagens.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.tipo === 'enviada' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                        msg.tipo === 'enviada'
+                          ? 'bg-[#10b981] text-white rounded-br-md'
+                          : 'bg-[#1e293b] text-white rounded-bl-md'
                       }`}
                     >
-                      <span className={`w-2 h-2 rounded-full ${selecionada ? 'bg-white' : etq.cor}`}></span>
-                      {etq.nome}
-                      {selecionada && <Check size={14} />}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {showGerenciarEtiquetas && (
-              <div className="mt-4 pt-4 border-t border-[#334155]">
-                <p className="text-sm font-medium mb-3">Criar nova etiqueta</p>
-                <div className="flex gap-2 mb-4">
-                  <input
-                    type="text"
-                    value={novaEtiquetaNome}
-                    onChange={(e) => setNovaEtiquetaNome(e.target.value)}
-                    placeholder="Nome da etiqueta"
-                    className="flex-1 bg-[#0f172a] border border-[#334155] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#10b981]"
-                  />
-                  <div className="relative">
-                    <button
-                      className={`w-10 h-10 rounded-lg ${novaEtiquetaCor} flex items-center justify-center`}
-                      onClick={() => {
-                        const currentIndex = coresDisponiveis.indexOf(novaEtiquetaCor);
-                        const nextIndex = (currentIndex + 1) % coresDisponiveis.length;
-                        setNovaEtiquetaCor(coresDisponiveis[nextIndex]);
-                      }}
-                      title="Clique para mudar a cor"
-                    >
-                      <ChevronRight size={16} className="text-white" />
-                    </button>
+                      <p>{msg.texto}</p>
+                      <p className={`text-xs mt-1 ${msg.tipo === 'enviada' ? 'text-green-200' : 'text-[#64748b]'}`}>
+                        {msg.hora}
+                      </p>
+                    </div>
                   </div>
-                  <button
-                    onClick={criarEtiqueta}
-                    disabled={!novaEtiquetaNome.trim() || salvandoEtiqueta}
-                    className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] disabled:text-[#64748b] rounded-lg text-sm transition-colors flex items-center gap-2"
-                  >
-                    {salvandoEtiqueta ? <Loader2 size={16} className="animate-spin" /> : null}
-                    Criar
-                  </button>
-                </div>
-
-                <p className="text-sm font-medium mb-2">Etiquetas existentes</p>
-                {etiquetas.length === 0 ? (
-                  <p className="text-sm text-[#64748b] text-center py-4">Nenhuma etiqueta cadastrada</p>
-                ) : (
-                  <div className="space-y-2 max-h-40 overflow-auto">
-                    {etiquetas.map(etq => (
-                      <div key={etq.id} className="flex items-center justify-between bg-[#0f172a] rounded-lg px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-3 h-3 rounded-full ${etq.cor}`}></span>
-                          <span className="text-sm">{etq.nome}</span>
-                        </div>
-                        <button
-                          onClick={() => excluirEtiqueta(etq.id)}
-                          className="p-1 hover:bg-red-500/20 rounded transition-colors"
-                        >
-                          <Trash2 size={14} className="text-red-400" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </>
             )}
           </div>
-        )}
 
-        {/* Mensagens */}
-        <div className="flex-1 overflow-auto p-4 space-y-4">
-          {mensagensDemo.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.tipo === 'enviada' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                  msg.tipo === 'enviada'
-                    ? 'bg-[#10b981] text-white rounded-br-md'
-                    : 'bg-[#1e293b] text-white rounded-bl-md'
-                }`}
-              >
-                <p>{msg.texto}</p>
-                <p className={`text-xs mt-1 ${msg.tipo === 'enviada' ? 'text-green-200' : 'text-[#64748b]'}`}>
-                  {msg.hora}
-                </p>
-              </div>
+          {/* Aviso de modo humano */}
+          {conversaSelecionada.humano && (
+            <div className="bg-orange-500/20 border-t border-orange-500/30 px-4 py-2">
+              <p className="text-orange-400 text-sm text-center">
+                <User size={14} className="inline mr-1" />
+                Modo humano ativo - A IA não responderá esta conversa
+              </p>
             </div>
-          ))}
-        </div>
+          )}
 
-        {/* Aviso de modo humano */}
-        {conversaSelecionada.humano && (
-          <div className="bg-orange-500/20 border-t border-orange-500/30 px-4 py-2">
-            <p className="text-orange-400 text-sm text-center">
-              <User size={14} className="inline mr-1" />
-              Modo humano ativo - A IA não responderá esta conversa
-            </p>
-          </div>
-        )}
-
-        {/* Input de mensagem */}
-        <div className="bg-[#1e293b] border-t border-[#334155] p-4">
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              value={mensagem}
-              onChange={(e) => setMensagem(e.target.value)}
-              placeholder="Digite sua mensagem..."
-              className="flex-1 bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
-            />
-            <button className="bg-[#10b981] hover:bg-[#059669] text-white p-3 rounded-lg transition-colors">
-              <Send size={20} />
-            </button>
+          {/* Input de mensagem */}
+          <div className="bg-[#1e293b] border-t border-[#334155] p-4">
+            <form 
+              onSubmit={(e) => { e.preventDefault(); enviarMensagem(); }}
+              className="flex items-center gap-3"
+            >
+              <input
+                type="text"
+                value={mensagem}
+                onChange={(e) => setMensagem(e.target.value)}
+                placeholder="Digite sua mensagem..."
+                className="flex-1 bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                disabled={enviandoMensagem}
+              />
+              <button 
+                type="submit"
+                disabled={enviandoMensagem || !mensagem.trim()}
+                className="bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] text-white p-3 rounded-lg transition-colors"
+              >
+                {enviandoMensagem ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <Send size={20} />
+                )}
+              </button>
+            </form>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center bg-[#0f172a]">
+          <div className="text-center text-[#64748b]">
+            <div className="w-20 h-20 bg-[#1e293b] rounded-full flex items-center justify-center mx-auto mb-4">
+              <Send size={32} />
+            </div>
+            <p>Selecione uma conversa para começar</p>
+          </div>
+        </div>
+      )}
 
       {/* Painel lateral de anotações */}
-      {showAnotacao && (
+      {showAnotacao && conversaSelecionada && (
         <>
           <div 
             className="fixed inset-0 bg-black/50 z-40"
