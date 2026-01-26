@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,11 +25,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, ignored: true })
     }
     
-    // Configurações do Chatwoot
-    const CHATWOOT_URL = 'https://vertix-chatwoot-clilnicas.bkbfzi.easypanel.host'
-    const CHATWOOT_API_TOKEN = '6FteJEEmTswtPNMW66q7WWZS'
-    const ACCOUNT_ID = '2'
-    const INBOX_ID = '1'
+    // Pega o token da instância do header ou body
+    const instanceToken = request.headers.get('token') || body.instanceToken || body.token
+    
+    if (!instanceToken) {
+      console.log('Token da instância não encontrado')
+      return NextResponse.json({ success: false, error: 'Token não encontrado' }, { status: 400 })
+    }
+    
+    console.log('Instance Token:', instanceToken)
+    
+    // Busca a clínica pelo token da instância UAZAPI
+    const { data: clinica, error: clinicaError } = await supabase
+      .from('clinicas')
+      .select('id, nome, chatwoot_url, chatwoot_account_id, chatwoot_inbox_id, chatwoot_api_token')
+      .eq('uazapi_instance_token', instanceToken)
+      .single()
+    
+    if (clinicaError || !clinica) {
+      console.log('Clínica não encontrada para o token:', instanceToken)
+      return NextResponse.json({ success: false, error: 'Clínica não encontrada' }, { status: 404 })
+    }
+    
+    console.log('Clínica encontrada:', clinica.nome)
+    
+    // Verifica se tem configuração do Chatwoot
+    if (!clinica.chatwoot_url || !clinica.chatwoot_api_token || !clinica.chatwoot_account_id) {
+      console.log('Chatwoot não configurado para esta clínica')
+      return NextResponse.json({ success: false, error: 'Chatwoot não configurado' }, { status: 400 })
+    }
+    
+    const CHATWOOT_URL = clinica.chatwoot_url
+    const CHATWOOT_API_TOKEN = clinica.chatwoot_api_token
+    const ACCOUNT_ID = clinica.chatwoot_account_id
+    const INBOX_ID = clinica.chatwoot_inbox_id || '1'
     
     // Extrai dados da mensagem do UAZAPI
     const messageData = body.message || body
@@ -48,7 +83,7 @@ export async function POST(request: NextRequest) {
     
     console.log('Dados extraídos:', { phoneNumber, senderName, messageText, messageId })
     
-    // 1. Primeiro, busca ou cria o contato no Chatwoot
+    // 1. Busca ou cria o contato no Chatwoot
     const searchResponse = await fetch(
       `${CHATWOOT_URL}/api/v1/accounts/${ACCOUNT_ID}/contacts/search?q=${phoneNumber}`,
       {
@@ -64,7 +99,6 @@ export async function POST(request: NextRequest) {
     let contactId: number
     
     if (searchResult.payload && searchResult.payload.length > 0) {
-      // Contato existe
       contactId = searchResult.payload[0].id
       console.log('Contato encontrado:', contactId)
     } else {
@@ -107,7 +141,6 @@ export async function POST(request: NextRequest) {
     
     let conversationId: number
     
-    // Procura conversa aberta na inbox correta
     const existingConversation = conversationsResult.payload?.find(
       (conv: any) => conv.inbox_id === parseInt(INBOX_ID) && conv.status !== 'resolved'
     )
@@ -157,10 +190,11 @@ export async function POST(request: NextRequest) {
     )
     
     const messageResult = await messageResponse.json()
-    console.log('Mensagem enviada:', JSON.stringify(messageResult, null, 2))
+    console.log('Mensagem enviada ao Chatwoot:', JSON.stringify(messageResult, null, 2))
     
     return NextResponse.json({ 
       success: true, 
+      clinica: clinica.nome,
       contactId,
       conversationId,
       messageResult 
