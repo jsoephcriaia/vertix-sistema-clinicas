@@ -295,6 +295,25 @@ export default function Conversas() {
     setEnviandoMensagem(true);
     
     try {
+      // Se a conversa está resolvida, reabre automaticamente
+      if (conversaSelecionada.status === 'resolved') {
+        await fetch('/api/chatwoot/conversations/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clinica_id: CLINICA_ID,
+            conversation_id: conversaSelecionada.id,
+            status: 'open'
+          })
+        });
+        
+        // Atualiza o estado local
+        setConversaSelecionada(prev => prev ? { ...prev, status: 'open' } : null);
+        setConversas(prev => prev.map(c => 
+          c.id === conversaSelecionada.id ? { ...c, status: 'open' } : c
+        ));
+      }
+      
       const formData = new FormData();
       formData.append('clinica_id', CLINICA_ID);
       formData.append('conversation_id', conversaSelecionada.id.toString());
@@ -317,7 +336,7 @@ export default function Conversas() {
         method: 'POST',
         body: formData
       });
-
+  
       setMensagem('');
       setSelectedFiles([]);
       setReplyingTo(null);
