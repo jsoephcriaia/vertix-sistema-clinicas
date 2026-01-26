@@ -511,13 +511,52 @@ const animationFrameRef = useRef<number | null>(null);
         setShowNovaConversa(false);
         setBuscaCliente('');
         setNovoContato({ nome: '', telefone: '' });
-        await fetchConversas();
         
-        // Seleciona a nova conversa
-        const novaConversa = conversas.find(c => c.id === data.conversation_id);
-        if (novaConversa) {
-          selecionarConversa(novaConversa);
+        // Busca as conversas atualizadas
+        const conversasResponse = await fetch(`/api/chatwoot/conversations?clinica_id=${CLINICA_ID}`);
+        const conversasData = await conversasResponse.json();
+        
+        if (conversasData.data?.payload) {
+          const conversasFormatadas: Conversa[] = conversasData.data.payload.map((conv: any) => {
+            const sender = conv.meta?.sender || {};
+            const lastMessage = conv.last_non_activity_message;
+            const tempoPassado = formatarTempo(conv.timestamp || conv.last_activity_at);
+            const labels = conv.labels || [];
+            
+            let ultimaMsg = lastMessage?.content || 'Nova conversa';
+            if (!ultimaMsg && lastMessage?.attachments?.length > 0) {
+              const tipo = lastMessage.attachments[0].file_type;
+              if (tipo === 'image') ultimaMsg = '📷 Imagem';
+              else if (tipo === 'audio') ultimaMsg = '🎵 Áudio';
+              else if (tipo === 'video') ultimaMsg = '🎥 Vídeo';
+              else if (tipo === 'file') ultimaMsg = '📄 Arquivo';
+              else ultimaMsg = '📎 Anexo';
+            }
+            
+            return {
+              id: conv.id,
+              nome: sender.name || nome,
+              telefone: sender.phone_number || telefone,
+              ultima: ultimaMsg,
+              tempo: tempoPassado,
+              naoLida: conv.unread_count > 0,
+              humano: labels.includes('humano'),
+              anotacao: '',
+              chatwootLabels: labels,
+              avatar: sender.thumbnail || sender.avatar_url || '',
+            };
+          });
+  
+          setConversas(conversasFormatadas);
+          
+          // Encontra e seleciona a nova conversa
+          const novaConversa = conversasFormatadas.find(c => c.id === data.conversation_id);
+          if (novaConversa) {
+            selecionarConversa(novaConversa);
+          }
         }
+      } else {
+        alert('Erro ao criar conversa');
       }
     } catch (error) {
       console.error('Erro ao iniciar conversa:', error);
@@ -525,8 +564,7 @@ const animationFrameRef = useRef<number | null>(null);
     } finally {
       setIniciandoConversa(false);
     }
-  };
-
+  }
   const clientesFiltrados = useMemo(() => {
     if (!buscaCliente.trim()) return clientes;
     const busca = buscaCliente.toLowerCase();
