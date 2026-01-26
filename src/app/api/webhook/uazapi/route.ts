@@ -6,6 +6,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+const UAZAPI_URL = 'https://uazapi.com.br'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -60,7 +62,7 @@ export async function POST(request: NextRequest) {
     const ACCOUNT_ID = clinica.chatwoot_account_id
     const INBOX_ID = clinica.chatwoot_inbox_id || '1'
     
-    // Extrai dados da mensagem do UAZAPI (estrutura correta)
+    // Extrai dados da mensagem do UAZAPI
     const phoneNumber = body.chat?.phone?.replace(/\D/g, '') || 
                         body.message?.chatid?.replace('@s.whatsapp.net', '').replace('@c.us', '') ||
                         body.chat?.wa_chatid?.replace('@s.whatsapp.net', '').replace('@c.us', '') || ''
@@ -70,16 +72,28 @@ export async function POST(request: NextRequest) {
                        body.chat?.name || 
                        'Cliente'
     
-    const messageText = body.message?.text || 
-                        body.message?.content || 
-                        body.chat?.wa_lastMessageTextVote ||
-                        '[Mídia recebida]'
-    
     const messageId = body.message?.messageid || 
                       body.message?.id || 
                       Date.now().toString()
     
-    console.log('Dados extraídos:', { phoneNumber, senderName, messageText, messageId })
+    // Detecta tipo de mídia
+    const messageData = body.message || {}
+    const hasImage = messageData.image || messageData.imageMessage
+    const hasAudio = messageData.audio || messageData.audioMessage || messageData.ptt
+    const hasVideo = messageData.video || messageData.videoMessage
+    const hasDocument = messageData.document || messageData.documentMessage
+    const hasSticker = messageData.sticker || messageData.stickerMessage
+    
+    const isMedia = hasImage || hasAudio || hasVideo || hasDocument || hasSticker
+    
+    // Texto da mensagem
+    let messageText = messageData.text || 
+                      messageData.content || 
+                      messageData.caption ||
+                      messageData.conversation ||
+                      body.chat?.wa_lastMessageTextVote || ''
+    
+    console.log('Dados extraídos:', { phoneNumber, senderName, messageText, messageId, isMedia })
     
     if (!phoneNumber) {
       console.log('Número de telefone não encontrado')
@@ -97,15 +111,12 @@ export async function POST(request: NextRequest) {
     )
     
     const searchResult = await searchResponse.json()
-    console.log('Busca de contato:', JSON.stringify(searchResult, null, 2))
-    
     let contactId: number
     
     if (searchResult.payload && searchResult.payload.length > 0) {
       contactId = searchResult.payload[0].id
       console.log('Contato encontrado:', contactId)
     } else {
-      // Criar novo contato
       const createContactResponse = await fetch(
         `${CHATWOOT_URL}/api/v1/accounts/${ACCOUNT_ID}/contacts`,
         {
@@ -124,7 +135,6 @@ export async function POST(request: NextRequest) {
       )
       
       const createContactResult = await createContactResponse.json()
-      console.log('Contato criado:', JSON.stringify(createContactResult, null, 2))
       
       if (createContactResult.payload?.contact?.id) {
         contactId = createContactResult.payload.contact.id
@@ -132,7 +142,7 @@ export async function POST(request: NextRequest) {
         contactId = createContactResult.id
       } else {
         console.log('Erro ao criar contato:', createContactResult)
-        return NextResponse.json({ success: false, error: 'Erro ao criar contato', details: createContactResult }, { status: 400 })
+        return NextResponse.json({ success: false, error: 'Erro ao criar contato' }, { status: 400 })
       }
     }
     
@@ -147,8 +157,6 @@ export async function POST(request: NextRequest) {
     )
     
     const conversationsResult = await conversationsResponse.json()
-    console.log('Conversas do contato:', JSON.stringify(conversationsResult, null, 2))
-    
     let conversationId: number
     
     const existingConversation = conversationsResult.payload?.find(
@@ -159,7 +167,6 @@ export async function POST(request: NextRequest) {
       conversationId = existingConversation.id
       console.log('Conversa existente:', conversationId)
     } else {
-      // Criar nova conversa
       const createConvResponse = await fetch(
         `${CHATWOOT_URL}/api/v1/accounts/${ACCOUNT_ID}/conversations`,
         {
@@ -177,12 +184,105 @@ export async function POST(request: NextRequest) {
       )
       
       const createConvResult = await createConvResponse.json()
-      console.log('Conversa criada:', JSON.stringify(createConvResult, null, 2))
-      
       conversationId = createConvResult.id
     }
     
-    // 3. Envia a mensagem na conversa
+    // 3. Envia a mensagem (com ou sem mídia)
+    if (isMedia) {
+      // Tenta baixar a mídia da UAZAPI
+      try {
+        const mediaResponse = await fetch(
+          `${UAZAPI_URL}/message/download-media/${messageId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${instanceToken}`
+            }
+          }
+        )
+        
+        if (mediaResponse.ok) {
+          const mediaBuffer = await mediaResponse.arrayBuffer()
+          const mediaBase64 = Buffer.from(mediaBuffer).toString('base64')
+          
+          // Determina o tipo de mídia
+          let mimeType = 'application/octet-stream'
+          let fileName = 'arquivo'
+          
+          if (hasImage) {
+            mimeType = messageData.image?.mimetype || messageData.imageMessage?.mimetype || 'image/jpeg'
+            fileName = 'imagem.jpg'
+          } else if (hasAudio) {
+            mimeType = messageData.audio?.mimetype || messageData.audioMessage?.mimetype || 'audio/ogg'
+            fileName = 'audio.ogg'
+          } else if (hasVideo) {
+            mimeType = messageData.video?.mimetype || messageData.videoMessage?.mimetype || 'video/mp4'
+            fileName = 'video.mp4'
+          } else if (hasSticker) {
+            mimeType = messageData.sticker?.mimetype || messageData.stickerMessage?.mimetype || 'image/webp'
+            fileName = 'sticker.webp'
+          } else if (hasDocument) {
+            mimeType = messageData.document?.mimetype || messageData.documentMessage?.mimetype || 'application/pdf'
+            fileName = messageData.document?.fileName || messageData.documentMessage?.fileName || 'documento'
+          }
+          
+          // Envia para o Chatwoot com attachment
+          const formData = new FormData()
+          formData.append('content', messageText || '')
+          formData.append('message_type', 'incoming')
+          formData.append('private', 'false')
+          
+          // Converte base64 para Blob
+          const byteCharacters = atob(mediaBase64)
+          const byteNumbers = new Array(byteCharacters.length)
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i)
+          }
+          const byteArray = new Uint8Array(byteNumbers)
+          const blob = new Blob([byteArray], { type: mimeType })
+          
+          formData.append('attachments[]', blob, fileName)
+          
+          const messageResponse = await fetch(
+            `${CHATWOOT_URL}/api/v1/accounts/${ACCOUNT_ID}/conversations/${conversationId}/messages`,
+            {
+              method: 'POST',
+              headers: {
+                'api_access_token': CHATWOOT_API_TOKEN
+              },
+              body: formData
+            }
+          )
+          
+          const messageResult = await messageResponse.json()
+          console.log('Mensagem com mídia enviada:', JSON.stringify(messageResult, null, 2))
+          
+          return NextResponse.json({ 
+            success: true, 
+            clinica: clinica.nome,
+            contactId,
+            conversationId,
+            messageResult,
+            mediaType: mimeType
+          })
+        } else {
+          console.log('Erro ao baixar mídia, enviando como texto')
+        }
+      } catch (mediaError) {
+        console.log('Erro ao processar mídia:', mediaError)
+      }
+      
+      // Fallback: se não conseguiu baixar a mídia, envia descrição
+      let mediaDescription = '[Mídia recebida]'
+      if (hasImage) mediaDescription = '📷 [Imagem]'
+      if (hasAudio) mediaDescription = '🎵 [Áudio]'
+      if (hasVideo) mediaDescription = '🎥 [Vídeo]'
+      if (hasSticker) mediaDescription = '🎭 [Sticker]'
+      if (hasDocument) mediaDescription = '📄 [Documento]'
+      
+      messageText = messageText ? `${mediaDescription}\n${messageText}` : mediaDescription
+    }
+    
+    // Envia mensagem de texto
     const messageResponse = await fetch(
       `${CHATWOOT_URL}/api/v1/accounts/${ACCOUNT_ID}/conversations/${conversationId}/messages`,
       {
@@ -192,7 +292,7 @@ export async function POST(request: NextRequest) {
           'api_access_token': CHATWOOT_API_TOKEN
         },
         body: JSON.stringify({
-          content: messageText,
+          content: messageText || '[Mensagem sem texto]',
           message_type: 'incoming',
           private: false
         })
