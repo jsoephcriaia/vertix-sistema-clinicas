@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply, Plus, Phone, MessageSquare, Play, Pause } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import EmojiPicker from './EmojiPicker';
 
@@ -23,6 +23,7 @@ interface Conversa {
   humano: boolean;
   anotacao: string;
   chatwootLabels: string[];
+  avatar?: string;
 }
 
 interface Mensagem {
@@ -35,6 +36,13 @@ interface Mensagem {
     id: number;
     content: string;
   };
+}
+
+interface Cliente {
+  id: string;
+  nome: string;
+  telefone: string;
+  email?: string;
 }
 
 export default function Conversas() {
@@ -65,13 +73,26 @@ export default function Conversas() {
   // Gravação de áudio
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   
   // Anexos
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Nova conversa
+  const [showNovaConversa, setShowNovaConversa] = useState(false);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [buscaCliente, setBuscaCliente] = useState('');
+  const [novoContato, setNovoContato] = useState({ nome: '', telefone: '' });
+  const [loadingClientes, setLoadingClientes] = useState(false);
+  const [iniciandoConversa, setIniciandoConversa] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -91,7 +112,7 @@ export default function Conversas() {
   useEffect(() => {
     if (conversaSelecionada && CLINICA_ID) {
       const interval = setInterval(() => {
-        fetchMensagenssilent(conversaSelecionada.id);
+        fetchMensagensSilent(conversaSelecionada.id);
       }, 3000);
       return () => clearInterval(interval);
     }
@@ -103,7 +124,6 @@ export default function Conversas() {
       const lastMsg = mensagens[mensagens.length - 1];
       if (lastMsg.id !== lastMessageIdRef.current) {
         lastMessageIdRef.current = lastMsg.id;
-        // Scroll suave apenas se não for primeira carga
         if (!isFirstLoadRef.current) {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         } else {
@@ -113,6 +133,15 @@ export default function Conversas() {
       }
     }
   }, [mensagens]);
+
+  // Cleanup audio URL
+  useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
 
   const fetchConversas = async () => {
     if (!CLINICA_ID) return;
@@ -156,6 +185,7 @@ export default function Conversas() {
             humano: labels.includes('humano'),
             anotacao: '',
             chatwootLabels: labels,
+            avatar: sender.thumbnail || sender.avatar_url || '',
           };
         });
 
@@ -195,8 +225,7 @@ export default function Conversas() {
     }
   };
 
-  // Busca mensagens sem loading visual (para polling)
-  const fetchMensagenssilent = async (conversaId: number) => {
+  const fetchMensagensSilent = async (conversaId: number) => {
     if (!CLINICA_ID) return;
     
     try {
@@ -208,7 +237,6 @@ export default function Conversas() {
       if (data.payload) {
         const mensagensFormatadas = formatarMensagens(data.payload);
         
-        // Só atualiza se tiver mensagens novas
         if (mensagensFormatadas.length !== mensagens.length || 
             (mensagensFormatadas.length > 0 && mensagensFormatadas[mensagensFormatadas.length - 1].id !== lastMessageIdRef.current)) {
           setMensagens(mensagensFormatadas);
@@ -236,46 +264,41 @@ export default function Conversas() {
   };
 
   const enviarMensagem = async () => {
-    if ((!mensagem.trim() && selectedFiles.length === 0) || !conversaSelecionada || !CLINICA_ID) return;
+    if ((!mensagem.trim() && selectedFiles.length === 0 && !audioBlob) || !conversaSelecionada || !CLINICA_ID) return;
     
     setEnviandoMensagem(true);
     
     try {
-      // Se tem arquivos, envia com FormData
-      if (selectedFiles.length > 0) {
-        const formData = new FormData();
-        formData.append('clinica_id', CLINICA_ID);
-        formData.append('conversation_id', conversaSelecionada.id.toString());
-        formData.append('content', mensagem);
-        if (replyingTo) {
-          formData.append('reply_to', replyingTo.id.toString());
-        }
-        selectedFiles.forEach(file => {
-          formData.append('attachments[]', file);
-        });
-        
-        await fetch('/api/chatwoot/messages', {
-          method: 'POST',
-          body: formData
-        });
-      } else {
-        // Envia só texto
-        await fetch('/api/chatwoot/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            clinica_id: CLINICA_ID,
-            conversation_id: conversaSelecionada.id,
-            content: mensagem,
-            reply_to: replyingTo?.id
-          })
-        });
+      const formData = new FormData();
+      formData.append('clinica_id', CLINICA_ID);
+      formData.append('conversation_id', conversaSelecionada.id.toString());
+      formData.append('content', mensagem);
+      
+      if (replyingTo) {
+        formData.append('reply_to', replyingTo.id.toString());
       }
+      
+      // Adiciona áudio se tiver
+      if (audioBlob) {
+        const audioFile = new File([audioBlob], 'audio.webm', { type: 'audio/webm' });
+        formData.append('attachments[]', audioFile);
+      }
+      
+      // Adiciona arquivos
+      selectedFiles.forEach(file => {
+        formData.append('attachments[]', file);
+      });
+      
+      await fetch('/api/chatwoot/messages', {
+        method: 'POST',
+        body: formData
+      });
 
       setMensagem('');
       setSelectedFiles([]);
       setReplyingTo(null);
-      await fetchMensagenssilent(conversaSelecionada.id);
+      limparAudio();
+      await fetchMensagensSilent(conversaSelecionada.id);
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
     } finally {
@@ -287,6 +310,7 @@ export default function Conversas() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -295,34 +319,11 @@ export default function Conversas() {
         audioChunksRef.current.push(event.data);
       };
 
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioFile = new File([audioBlob], 'audio.webm', { type: 'audio/webm' });
-        
-        // Envia o áudio
-        if (conversaSelecionada && CLINICA_ID) {
-          setEnviandoMensagem(true);
-          const formData = new FormData();
-          formData.append('clinica_id', CLINICA_ID);
-          formData.append('conversation_id', conversaSelecionada.id.toString());
-          formData.append('content', '');
-          formData.append('attachments[]', audioFile);
-          
-          try {
-            await fetch('/api/chatwoot/messages', {
-              method: 'POST',
-              body: formData
-            });
-            await fetchMensagenssilent(conversaSelecionada.id);
-          } catch (error) {
-            console.error('Erro ao enviar áudio:', error);
-          } finally {
-            setEnviandoMensagem(false);
-          }
-        }
-        
-        // Para as tracks do stream
-        stream.getTracks().forEach(track => track.stop());
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        const url = URL.createObjectURL(blob);
+        setAudioUrl(url);
       };
 
       mediaRecorder.start();
@@ -345,17 +346,45 @@ export default function Conversas() {
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
       }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
     }
   };
 
   const cancelRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = null;
       mediaRecorderRef.current.stop();
-      audioChunksRef.current = [];
       setIsRecording(false);
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
       }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      audioChunksRef.current = [];
+    }
+  };
+
+  const limparAudio = () => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setIsPlayingPreview(false);
+  };
+
+  const togglePlayPreview = () => {
+    if (audioPreviewRef.current) {
+      if (isPlayingPreview) {
+        audioPreviewRef.current.pause();
+      } else {
+        audioPreviewRef.current.play();
+      }
+      setIsPlayingPreview(!isPlayingPreview);
     }
   };
 
@@ -377,6 +406,82 @@ export default function Conversas() {
   const removeFile = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
+
+  // Nova conversa
+  const fetchClientes = async () => {
+    if (!CLINICA_ID) return;
+    
+    setLoadingClientes(true);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data, error } = await supabase
+        .from('clientes')
+        .select('id, nome, telefone, email')
+        .eq('clinica_id', CLINICA_ID)
+        .order('nome');
+      
+      if (!error && data) {
+        setClientes(data);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar clientes:', error);
+    } finally {
+      setLoadingClientes(false);
+    }
+  };
+
+  const abrirNovaConversa = () => {
+    setShowNovaConversa(true);
+    fetchClientes();
+  };
+
+  const iniciarConversa = async (telefone: string, nome: string) => {
+    if (!CLINICA_ID || !telefone) return;
+    
+    setIniciandoConversa(true);
+    
+    try {
+      const response = await fetch('/api/chatwoot/new-conversation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinica_id: CLINICA_ID,
+          phone_number: telefone.replace(/\D/g, ''),
+          name: nome
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.conversation_id) {
+        setShowNovaConversa(false);
+        setBuscaCliente('');
+        setNovoContato({ nome: '', telefone: '' });
+        await fetchConversas();
+        
+        // Seleciona a nova conversa
+        const novaConversa = conversas.find(c => c.id === data.conversation_id);
+        if (novaConversa) {
+          selecionarConversa(novaConversa);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao iniciar conversa:', error);
+      alert('Erro ao iniciar conversa');
+    } finally {
+      setIniciandoConversa(false);
+    }
+  };
+
+  const clientesFiltrados = useMemo(() => {
+    if (!buscaCliente.trim()) return clientes;
+    const busca = buscaCliente.toLowerCase();
+    return clientes.filter(c => 
+      c.nome.toLowerCase().includes(busca) ||
+      c.telefone.includes(busca) ||
+      c.email?.toLowerCase().includes(busca)
+    );
+  }, [clientes, buscaCliente]);
 
   const formatarTempo = (timestamp: number) => {
     const agora = Date.now() / 1000;
@@ -442,6 +547,7 @@ export default function Conversas() {
     setShowAnotacao(false);
     setReplyingTo(null);
     setSelectedFiles([]);
+    limparAudio();
     lastMessageIdRef.current = 0;
     fetchMensagens(conv.id);
   };
@@ -502,6 +608,31 @@ export default function Conversas() {
     );
   };
 
+  // Renderiza avatar
+  const renderAvatar = (conversa: Conversa, size: 'sm' | 'md' | 'lg' = 'md') => {
+    const sizeClasses = {
+      sm: 'w-8 h-8 text-sm',
+      md: 'w-10 h-10 text-base',
+      lg: 'w-12 h-12 text-lg'
+    };
+    
+    if (conversa.avatar) {
+      return (
+        <img 
+          src={conversa.avatar} 
+          alt={conversa.nome}
+          className={`${sizeClasses[size]} rounded-full object-cover`}
+        />
+      );
+    }
+    
+    return (
+      <div className={`${sizeClasses[size]} rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold`}>
+        {conversa.nome.charAt(0).toUpperCase()}
+      </div>
+    );
+  };
+
   // Se não tem Chatwoot configurado
   if (!loadingConversas && !chatwootConfigurado) {
     return (
@@ -519,7 +650,6 @@ export default function Conversas() {
       </div>
     );
   }
-
   return (
     <div className="flex h-[calc(100vh-48px)] -m-4 lg:-m-6 overflow-hidden">
       {/* Lista de conversas */}
@@ -527,13 +657,22 @@ export default function Conversas() {
         <div className="p-4 border-b border-[#334155]">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Conversas</h2>
-            <button 
-              onClick={fetchConversas}
-              className="p-2 hover:bg-[#334155] rounded-lg transition-colors"
-              title="Atualizar"
-            >
-              <RefreshCw size={16} className={loadingConversas ? 'animate-spin' : ''} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={abrirNovaConversa}
+                className="p-2 hover:bg-[#334155] rounded-lg transition-colors text-[#10b981]"
+                title="Nova conversa"
+              >
+                <Plus size={18} />
+              </button>
+              <button 
+                onClick={fetchConversas}
+                className="p-2 hover:bg-[#334155] rounded-lg transition-colors"
+                title="Atualizar"
+              >
+                <RefreshCw size={16} className={loadingConversas ? 'animate-spin' : ''} />
+              </button>
+            </div>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" size={18} />
@@ -566,9 +705,7 @@ export default function Conversas() {
                 }`}
               >
                 <div className="relative flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold">
-                    {conv.nome.charAt(0).toUpperCase()}
-                  </div>
+                  {renderAvatar(conv, 'lg')}
                   {conv.humano && (
                     <div className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
                       <User size={12} className="text-white" />
@@ -598,9 +735,7 @@ export default function Conversas() {
           <div className="bg-[#1e293b] border-b border-[#334155] p-4 flex-shrink-0">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold flex-shrink-0">
-                  {conversaSelecionada.nome.charAt(0).toUpperCase()}
-                </div>
+                {renderAvatar(conversaSelecionada, 'md')}
                 <div className="min-w-0">
                   <p className="font-medium truncate">{conversaSelecionada.nome}</p>
                   <p className="text-xs text-[#64748b]">{conversaSelecionada.telefone}</p>
@@ -659,7 +794,6 @@ export default function Conversas() {
                     className={`flex ${msg.tipo === 'enviada' ? 'justify-end' : 'justify-start'} group`}
                   >
                     <div className="flex items-start gap-1 max-w-[70%]">
-                      {/* Botão de reply (aparece no hover) */}
                       {msg.tipo === 'recebida' && (
                         <button
                           onClick={() => setReplyingTo(msg)}
@@ -677,7 +811,6 @@ export default function Conversas() {
                             : 'bg-[#1e293b] text-white rounded-bl-md'
                         }`}
                       >
-                        {/* Reply quote */}
                         {msg.replyTo && (
                           <div className={`text-xs mb-2 p-2 rounded border-l-2 ${
                             msg.tipo === 'enviada' 
@@ -688,7 +821,6 @@ export default function Conversas() {
                           </div>
                         )}
                         
-                        {/* Anexos */}
                         {msg.attachments && msg.attachments.length > 0 && (
                           <div className="space-y-2 mb-2">
                             {msg.attachments.map((att, idx) => (
@@ -706,7 +838,6 @@ export default function Conversas() {
                         </p>
                       </div>
                       
-                      {/* Botão de reply para mensagens enviadas */}
                       {msg.tipo === 'enviada' && (
                         <button
                           onClick={() => setReplyingTo(msg)}
@@ -750,6 +881,36 @@ export default function Conversas() {
             </div>
           )}
 
+          {/* Preview de áudio gravado */}
+          {audioUrl && !isRecording && (
+            <div className="bg-[#1e293b] border-t border-[#334155] px-4 py-3 flex items-center gap-3 flex-shrink-0">
+              <button
+                onClick={togglePlayPreview}
+                className="p-2 bg-[#10b981] hover:bg-[#059669] rounded-full transition-colors"
+              >
+                {isPlayingPreview ? <Pause size={18} /> : <Play size={18} />}
+              </button>
+              <audio 
+                ref={audioPreviewRef} 
+                src={audioUrl} 
+                onEnded={() => setIsPlayingPreview(false)}
+                className="hidden"
+              />
+              <div className="flex-1">
+                <div className="h-1 bg-[#334155] rounded-full">
+                  <div className="h-1 bg-[#10b981] rounded-full w-full"></div>
+                </div>
+              </div>
+              <button
+                onClick={limparAudio}
+                className="p-1 hover:bg-[#334155] rounded text-red-400"
+                title="Descartar áudio"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          )}
+
           {/* Preview de arquivos selecionados */}
           {selectedFiles.length > 0 && (
             <div className="bg-[#1e293b] border-t border-[#334155] px-4 py-2 flex-shrink-0">
@@ -769,7 +930,6 @@ export default function Conversas() {
           {/* Input de mensagem */}
           <div className="bg-[#1e293b] border-t border-[#334155] p-4 flex-shrink-0">
             {isRecording ? (
-              // Interface de gravação
               <div className="flex items-center gap-3">
                 <button
                   onClick={cancelRecording}
@@ -786,19 +946,17 @@ export default function Conversas() {
                 
                 <button
                   onClick={stopRecording}
-                  className="p-3 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg transition-colors"
-                  title="Enviar áudio"
+                  className="p-3 bg-[#334155] hover:bg-[#475569] text-white rounded-lg transition-colors"
+                  title="Parar gravação"
                 >
-                  <Send size={20} />
+                  <Square size={20} />
                 </button>
               </div>
             ) : (
-              // Interface normal
               <form 
                 onSubmit={(e) => { e.preventDefault(); enviarMensagem(); }}
                 className="flex items-center gap-2"
               >
-                {/* Emoji picker */}
                 <div className="relative">
                   <button
                     type="button"
@@ -818,7 +976,6 @@ export default function Conversas() {
                   )}
                 </div>
                 
-                {/* Anexar arquivo */}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -835,7 +992,6 @@ export default function Conversas() {
                   accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"
                 />
                 
-                {/* Input de texto */}
                 <input
                   type="text"
                   value={mensagem}
@@ -845,8 +1001,7 @@ export default function Conversas() {
                   disabled={enviandoMensagem}
                 />
                 
-                {/* Botão de gravar áudio ou enviar */}
-                {mensagem.trim() || selectedFiles.length > 0 ? (
+                {mensagem.trim() || selectedFiles.length > 0 || audioBlob ? (
                   <button 
                     type="submit"
                     disabled={enviandoMensagem}
@@ -881,6 +1036,107 @@ export default function Conversas() {
             <p>Selecione uma conversa para começar</p>
           </div>
         </div>
+      )}
+
+      {/* Modal Nova Conversa */}
+      {showNovaConversa && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setShowNovaConversa(false)}
+          ></div>
+          
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-[#1e293b] rounded-xl w-full max-w-md max-h-[80vh] flex flex-col">
+              <div className="p-4 border-b border-[#334155] flex items-center justify-between">
+                <h3 className="font-semibold text-lg">Nova Conversa</h3>
+                <button
+                  onClick={() => setShowNovaConversa(false)}
+                  className="p-2 hover:bg-[#334155] rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="p-4 border-b border-[#334155]">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" size={18} />
+                  <input
+                    type="text"
+                    value={buscaCliente}
+                    onChange={(e) => setBuscaCliente(e.target.value)}
+                    placeholder="Buscar cliente..."
+                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-[#10b981]"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex-1 overflow-auto">
+                {loadingClientes ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 size={24} className="animate-spin text-[#10b981]" />
+                  </div>
+                ) : clientesFiltrados.length === 0 ? (
+                  <div className="text-center py-8 text-[#64748b]">
+                    <p>Nenhum cliente encontrado</p>
+                  </div>
+                ) : (
+                  clientesFiltrados.map((cliente) => (
+                    <button
+                      key={cliente.id}
+                      onClick={() => iniciarConversa(cliente.telefone, cliente.nome)}
+                      disabled={iniciandoConversa}
+                      className="w-full flex items-center gap-3 p-4 hover:bg-[#334155] transition-colors text-left border-b border-[#334155]"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold">
+                        {cliente.nome.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{cliente.nome}</p>
+                        <p className="text-sm text-[#64748b]">{cliente.telefone}</p>
+                      </div>
+                      <MessageSquare size={18} className="text-[#10b981]" />
+                    </button>
+                  ))
+                )}
+              </div>
+              
+              <div className="p-4 border-t border-[#334155]">
+                <p className="text-sm text-[#64748b] mb-3">Ou digite um novo número:</p>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={novoContato.nome}
+                    onChange={(e) => setNovoContato(prev => ({ ...prev, nome: e.target.value }))}
+                    placeholder="Nome"
+                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-[#10b981]"
+                  />
+                  <input
+                    type="text"
+                    value={novoContato.telefone}
+                    onChange={(e) => setNovoContato(prev => ({ ...prev, telefone: e.target.value }))}
+                    placeholder="Telefone (ex: 5511999999999)"
+                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-[#10b981]"
+                  />
+                  <button
+                    onClick={() => iniciarConversa(novoContato.telefone, novoContato.nome || 'Novo contato')}
+                    disabled={!novoContato.telefone || iniciandoConversa}
+                    className="w-full bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] disabled:text-[#64748b] text-white py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    {iniciandoConversa ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <>
+                        <MessageSquare size={18} />
+                        Iniciar Conversa
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Painel lateral de anotações */}
