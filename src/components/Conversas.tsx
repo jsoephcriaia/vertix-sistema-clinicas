@@ -70,17 +70,20 @@ export default function Conversas() {
   // Reply
   const [replyingTo, setReplyingTo] = useState<Mensagem | null>(null);
   
-  // Gravação de áudio
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+// Gravação de áudio
+const [isRecording, setIsRecording] = useState(false);
+const [recordingTime, setRecordingTime] = useState(0);
+const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+const [audioUrl, setAudioUrl] = useState<string | null>(null);
+const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+const [audioWaveform, setAudioWaveform] = useState<number[]>([]);
+const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+const audioChunksRef = useRef<Blob[]>([]);
+const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+const streamRef = useRef<MediaStream | null>(null);
+const analyserRef = useRef<AnalyserNode | null>(null);
+const animationFrameRef = useRef<number | null>(null);
   
   // Anexos
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -311,28 +314,69 @@ export default function Conversas() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      
+      // Configurar AudioContext para visualização
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+      
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-
+  
       mediaRecorder.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
       };
-
+  
       mediaRecorder.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         setAudioBlob(blob);
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
+        audioContext.close();
       };
-
+  
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingTime(0);
+      setAudioWaveform([]);
       
+      // Timer
       recordingIntervalRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
+      
+      // Visualização das ondas
+      const updateWaveform = () => {
+        if (analyserRef.current && isRecording) {
+          const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+          analyserRef.current.getByteFrequencyData(dataArray);
+          
+          // Pega uma média dos valores para criar uma barra
+          const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+          const normalized = average / 255; // Normaliza entre 0 e 1
+          
+          setAudioWaveform(prev => {
+            const newWaveform = [...prev, normalized];
+            // Mantém no máximo 100 barras
+            if (newWaveform.length > 100) {
+              return newWaveform.slice(-100);
+            }
+            return newWaveform;
+          });
+          
+          animationFrameRef.current = requestAnimationFrame(updateWaveform);
+        }
+      };
+      
+      // Inicia a visualização após um pequeno delay
+      setTimeout(() => {
+        animationFrameRef.current = requestAnimationFrame(updateWaveform);
+      }, 100);
+      
     } catch (error) {
       console.error('Erro ao iniciar gravação:', error);
       alert('Não foi possível acessar o microfone');
@@ -343,8 +387,12 @@ export default function Conversas() {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -358,8 +406,13 @@ export default function Conversas() {
       mediaRecorderRef.current.onstop = null;
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      setAudioWaveform([]);
+      
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -375,6 +428,7 @@ export default function Conversas() {
     setAudioBlob(null);
     setAudioUrl(null);
     setIsPlayingPreview(false);
+    setAudioWaveform([]);
   };
 
   const togglePlayPreview = () => {
@@ -881,33 +935,74 @@ export default function Conversas() {
             </div>
           )}
 
-          {/* Preview de áudio gravado */}
-          {audioUrl && !isRecording && (
-            <div className="bg-[#1e293b] border-t border-[#334155] px-4 py-3 flex items-center gap-3 flex-shrink-0">
-              <button
-                onClick={togglePlayPreview}
-                className="p-2 bg-[#10b981] hover:bg-[#059669] rounded-full transition-colors"
-              >
-                {isPlayingPreview ? <Pause size={18} /> : <Play size={18} />}
-              </button>
-              <audio 
-                ref={audioPreviewRef} 
-                src={audioUrl} 
-                onEnded={() => setIsPlayingPreview(false)}
-                className="hidden"
-              />
-              <div className="flex-1">
-                <div className="h-1 bg-[#334155] rounded-full">
-                  <div className="h-1 bg-[#10b981] rounded-full w-full"></div>
+         {/* Preview de áudio gravado */}
+         {audioUrl && !isRecording && (
+            <div className="bg-[#1e293b] border-t border-[#334155] px-4 py-3 flex-shrink-0">
+              <div className="flex flex-col gap-2">
+                {/* Visualização das ondas gravadas */}
+                <div className="flex items-center h-12 bg-[#0f172a] rounded-lg overflow-hidden px-2">
+                  <div className="flex items-center gap-[2px] h-full w-full justify-center">
+                    {audioWaveform.length > 0 ? (
+                      audioWaveform.map((value, i) => (
+                        <div 
+                          key={i} 
+                          className="w-1 bg-[#10b981] rounded-full"
+                          style={{ height: `${Math.max(4, value * 40)}px` }}
+                        />
+                      ))
+                    ) : (
+                      <div className="flex items-center gap-[2px]">
+                        {[...Array(50)].map((_, i) => (
+                          <div 
+                            key={i} 
+                            className="w-1 bg-[#10b981] rounded-full"
+                            style={{ height: '8px' }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Controles */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={togglePlayPreview}
+                    className="p-2 bg-[#10b981] hover:bg-[#059669] rounded-full transition-colors"
+                  >
+                    {isPlayingPreview ? <Pause size={18} /> : <Play size={18} />}
+                  </button>
+                  <audio 
+                    ref={audioPreviewRef} 
+                    src={audioUrl} 
+                    onEnded={() => setIsPlayingPreview(false)}
+                    className="hidden"
+                  />
+                  <span className="text-sm text-[#64748b]">{formatRecordingTime(recordingTime)}</span>
+                  <div className="flex-1"></div>
+                  <button
+                    onClick={limparAudio}
+                    className="p-2 hover:bg-[#334155] rounded-lg text-red-400 transition-colors"
+                    title="Descartar áudio"
+                  >
+                    <X size={18} />
+                  </button>
+                  <button
+                    onClick={enviarMensagem}
+                    disabled={enviandoMensagem}
+                    className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    {enviandoMensagem ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <>
+                        <Send size={18} />
+                        Enviar
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
-              <button
-                onClick={limparAudio}
-                className="p-1 hover:bg-[#334155] rounded text-red-400"
-                title="Descartar áudio"
-              >
-                <X size={18} />
-              </button>
             </div>
           )}
 
@@ -930,27 +1025,58 @@ export default function Conversas() {
           {/* Input de mensagem */}
           <div className="bg-[#1e293b] border-t border-[#334155] p-4 flex-shrink-0">
             {isRecording ? (
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={cancelRecording}
-                  className="p-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
-                  title="Cancelar"
-                >
-                  <X size={20} />
-                </button>
-                
-                <div className="flex-1 flex items-center justify-center gap-3">
-                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                  <span className="text-white font-medium">{formatRecordingTime(recordingTime)}</span>
+              <div className="flex flex-col gap-3">
+                {/* Visualização das ondas */}
+                <div className="flex items-center justify-center h-16 bg-[#0f172a] rounded-lg overflow-hidden px-2">
+                  <div className="flex items-center gap-[2px] h-full">
+                    {audioWaveform.length === 0 ? (
+                      <div className="flex items-center gap-[2px]">
+                        {[...Array(50)].map((_, i) => (
+                          <div 
+                            key={i} 
+                            className="w-1 bg-[#10b981] rounded-full animate-pulse"
+                            style={{ 
+                              height: `${Math.random() * 20 + 5}px`,
+                              animationDelay: `${i * 50}ms`
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      audioWaveform.map((value, i) => (
+                        <div 
+                          key={i} 
+                          className="w-1 bg-[#10b981] rounded-full transition-all duration-75"
+                          style={{ height: `${Math.max(4, value * 50)}px` }}
+                        />
+                      ))
+                    )}
+                  </div>
                 </div>
                 
-                <button
-                  onClick={stopRecording}
-                  className="p-3 bg-[#334155] hover:bg-[#475569] text-white rounded-lg transition-colors"
-                  title="Parar gravação"
-                >
-                  <Square size={20} />
-                </button>
+                {/* Controles */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={cancelRecording}
+                    className="p-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+                    title="Cancelar"
+                  >
+                    <X size={20} />
+                  </button>
+                  
+                  <div className="flex-1 flex items-center justify-center gap-3">
+                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                    <span className="text-white font-medium">{formatRecordingTime(recordingTime)}</span>
+                  </div>
+                  
+                  <button
+                    onClick={stopRecording}
+                    className="p-3 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg transition-colors"
+                    title="Parar e revisar"
+                  >
+                    <Square size={20} />
+                  </button>
+                </div>
               </div>
             ) : (
               <form 
