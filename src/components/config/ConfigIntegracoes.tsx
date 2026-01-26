@@ -49,7 +49,8 @@ export default function ConfigIntegracoes({ onBack }: ConfigIntegracoesProps) {
   // Carregar configurações do Chatwoot da clínica
   useEffect(() => {
     const loadChatwootConfig = async () => {
-      const clinicaId = localStorage.getItem('clinica_id');
+      const sessao = localStorage.getItem('vertix_sessao');
+const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
       if (!clinicaId) return;
 
       const { data, error } = await supabase
@@ -76,7 +77,8 @@ export default function ConfigIntegracoes({ onBack }: ConfigIntegracoesProps) {
     setChatwootMessage('');
 
     try {
-      const clinicaId = localStorage.getItem('clinica_id');
+      const sessao = localStorage.getItem('vertix_sessao');
+const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
       if (!clinicaId) throw new Error('Clínica não encontrada');
 
       const { error } = await supabase
