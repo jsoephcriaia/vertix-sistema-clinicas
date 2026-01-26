@@ -55,7 +55,8 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
       {/* Botão hamburguer mobile */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-[var(--sidebar-bg)] rounded-lg border border-[var(--card-border)] text-white"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg text-white"
+        style={{ backgroundColor: 'var(--sidebar-bg)', border: '1px solid var(--sidebar-hover)' }}
       >
         <Menu size={24} />
       </button>
@@ -69,23 +70,27 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
       )}
 
       {/* Sidebar */}
-      <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50
-        w-56 bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-hover)] flex flex-col
-        transform transition-transform duration-300 ease-in-out
-        ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
+      <aside 
+        className={`
+          fixed lg:static inset-y-0 left-0 z-50
+          w-56 flex flex-col
+          transform transition-transform duration-300 ease-in-out
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+        style={{ backgroundColor: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-hover)' }}
+      >
         {/* Header com logo e botão fechar */}
-        <div className="p-4 border-b border-[var(--sidebar-hover)] flex items-center justify-between">
+        <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--sidebar-hover)' }}>
           <div>
-            <h1 className="text-xl font-bold text-[var(--primary)]">VERTIX</h1>
-            <p className="text-xs text-[var(--sidebar-text)] opacity-70 truncate" title={clinica?.nome}>
+            <h1 className="text-xl font-bold" style={{ color: 'var(--primary)' }}>VERTIX</h1>
+            <p className="text-xs opacity-70 truncate text-white" title={clinica?.nome}>
               {clinica?.nome || 'Painel da Clínica'}
             </p>
           </div>
           <button
             onClick={() => setMobileOpen(false)}
-            className="lg:hidden p-1 hover:bg-[var(--sidebar-hover)] rounded text-[var(--sidebar-text)]"
+            className="lg:hidden p-1 rounded text-white"
+            style={{ backgroundColor: 'var(--sidebar-hover)' }}
           >
             <X size={20} />
           </button>
@@ -102,11 +107,18 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
                 <li key={item.id}>
                   <button
                     onClick={() => handleNavigation(item.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                      isActive 
-                        ? 'bg-[var(--primary)] text-white' 
-                        : 'text-[var(--sidebar-text)] opacity-80 hover:bg-[var(--sidebar-hover)] hover:opacity-100'
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-white ${
+                      isActive ? '' : 'opacity-80 hover:opacity-100'
                     }`}
+                    style={{ 
+                      backgroundColor: isActive ? 'var(--primary)' : 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                   >
                     <Icon size={20} />
                     <span className="font-medium">{item.label}</span>
@@ -121,32 +133,46 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
         <div className="px-3 pb-2">
           <button
             onClick={toggleTheme}
-            className="w-full flex items-center justify-between px-3 py-2 text-[var(--sidebar-text)] opacity-80 hover:bg-[var(--sidebar-hover)] hover:opacity-100 rounded-lg transition-colors"
+            className="w-full flex items-center justify-between px-3 py-2 text-white opacity-80 hover:opacity-100 rounded-lg transition-colors"
+            style={{ backgroundColor: 'transparent' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <div className="flex items-center gap-3">
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
               <span className="text-sm">{theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}</span>
             </div>
-            <div className={`w-10 h-5 rounded-full relative transition-colors ${theme === 'dark' ? 'bg-[var(--primary)]' : 'bg-[var(--sidebar-hover)]'}`}>
-              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${theme === 'dark' ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            <div 
+              className="w-10 h-5 rounded-full relative transition-colors"
+              style={{ backgroundColor: theme === 'dark' ? 'var(--primary)' : 'var(--sidebar-hover)' }}
+            >
+              <div 
+                className="absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform"
+                style={{ transform: theme === 'dark' ? 'translateX(20px)' : 'translateX(2px)' }}
+              />
             </div>
           </button>
         </div>
 
         {/* Usuário */}
-        <div className="p-3 border-t border-[var(--sidebar-hover)]">
+        <div className="p-3" style={{ borderTop: '1px solid var(--sidebar-hover)' }}>
           <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-bold">
+            <div 
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
+              style={{ backgroundColor: 'var(--primary)' }}
+            >
               {usuario?.nome?.charAt(0) || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[var(--sidebar-text)] truncate">{usuario?.nome || 'Usuário'}</p>
-              <p className="text-xs text-[var(--sidebar-text)] opacity-60 truncate">{usuario?.email}</p>
+              <p className="text-sm font-medium text-white truncate">{usuario?.nome || 'Usuário'}</p>
+              <p className="text-xs text-white opacity-60 truncate">{usuario?.email}</p>
             </div>
           </div>
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 mt-1 text-[var(--sidebar-text)] opacity-70 hover:text-red-400 hover:bg-[var(--sidebar-hover)] rounded-lg transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2 mt-1 text-white opacity-70 hover:text-red-400 rounded-lg transition-colors"
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--sidebar-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <LogOut size={18} />
             <span className="text-sm">Sair</span>

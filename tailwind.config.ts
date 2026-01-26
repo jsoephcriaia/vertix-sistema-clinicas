@@ -1,15 +1,30 @@
-import type { Config } from "tailwindcss";
+import type { Metadata } from "next";
+import { AuthProvider } from "@/lib/auth";
+import { AlertProvider } from "@/components/Alert";
+import { ThemeProvider } from "@/lib/theme";
+import "./globals.css";
 
-const config: Config = {
-  content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
+export const metadata: Metadata = {
+  title: "Vertix - Painel da Clínica",
+  description: "Sistema de gestão para clínicas de estética",
 };
 
-export default config;
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="pt-BR" data-theme="light" suppressHydrationWarning>
+      <body className="antialiased">
+        <ThemeProvider>
+          <AuthProvider>
+            <AlertProvider>
+              {children}
+            </AlertProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+}

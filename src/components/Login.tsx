@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Loader2, LogIn, Eye, EyeOff, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
@@ -35,11 +35,16 @@ export default function Login({ onSuccess }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-4 relative">
+    <div className="min-h-screen flex items-center justify-center p-4 relative" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Toggle de tema */}
       <button
         onClick={toggleTheme}
-        className="absolute top-4 right-4 p-3 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl hover:bg-[var(--bg-hover)] transition-colors text-[var(--text-secondary)]"
+        className="absolute top-4 right-4 p-3 rounded-xl hover:opacity-80 transition-colors"
+        style={{ 
+          backgroundColor: 'var(--card-bg)', 
+          border: '1px solid var(--card-border)',
+          color: 'var(--text-secondary)'
+        }}
         title={theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
       >
         {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
@@ -48,42 +53,61 @@ export default function Login({ onSuccess }: LoginProps) {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-[var(--primary)] mb-2">VERTIX</h1>
-          <p className="text-[var(--text-secondary)]">Painel da Clínica</p>
+          <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--primary)' }}>VERTIX</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Painel da Clínica</p>
         </div>
 
         {/* Card de Login */}
-        <div className="bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)] p-8 shadow-lg">
-          <h2 className="text-xl font-semibold mb-6 text-center text-[var(--text-primary)]">Entrar na sua conta</h2>
+        <div 
+          className="rounded-2xl p-8 shadow-lg"
+          style={{ 
+            backgroundColor: 'var(--card-bg)', 
+            border: '1px solid var(--card-border)' 
+          }}
+        >
+          <h2 className="text-xl font-semibold mb-6 text-center" style={{ color: 'var(--text-primary)' }}>
+            Entrar na sua conta
+          </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm text-[var(--text-secondary)] mb-2">Email</label>
+              <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-[var(--primary)] text-[var(--text-primary)] placeholder-[var(--text-muted)]"
+                className="w-full rounded-lg px-4 py-3 focus:outline-none transition-colors"
+                style={{ 
+                  backgroundColor: 'var(--input-bg)',
+                  border: '1px solid var(--input-border)',
+                  color: 'var(--text-primary)'
+                }}
                 placeholder="seu@email.com"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm text-[var(--text-secondary)] mb-2">Senha</label>
+              <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Senha</label>
               <div className="relative">
                 <input
                   type={showSenha ? 'text' : 'password'}
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
-                  className="w-full bg-[var(--input-bg)] border border-[var(--input-border)] rounded-lg px-4 py-3 pr-12 focus:outline-none focus:border-[var(--primary)] text-[var(--text-primary)] placeholder-[var(--text-muted)]"
+                  className="w-full rounded-lg px-4 py-3 pr-12 focus:outline-none transition-colors"
+                  style={{ 
+                    backgroundColor: 'var(--input-bg)',
+                    border: '1px solid var(--input-border)',
+                    color: 'var(--text-primary)'
+                  }}
                   placeholder="••••••"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowSenha(!showSenha)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-70"
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   {showSenha ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -99,7 +123,8 @@ export default function Login({ onSuccess }: LoginProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-muted)] text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              className="w-full text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              style={{ backgroundColor: 'var(--primary)' }}
             >
               {loading ? (
                 <Loader2 size={20} className="animate-spin" />
@@ -111,9 +136,9 @@ export default function Login({ onSuccess }: LoginProps) {
           </form>
 
           {/* Credenciais de teste */}
-          <div className="mt-6 pt-6 border-t border-[var(--card-border)]">
-            <p className="text-xs text-[var(--text-muted)] text-center mb-2">Credenciais de teste:</p>
-            <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 text-xs text-[var(--text-secondary)]">
+          <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--card-border)' }}>
+            <p className="text-xs text-center mb-2" style={{ color: 'var(--text-muted)' }}>Credenciais de teste:</p>
+            <div className="rounded-lg p-3 text-xs" style={{ backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
               <p><strong>Email:</strong> admin@clinicabella.com.br</p>
               <p><strong>Senha:</strong> 123456</p>
             </div>
@@ -121,7 +146,7 @@ export default function Login({ onSuccess }: LoginProps) {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-[var(--text-muted)] text-sm mt-6">
+        <p className="text-center text-sm mt-6" style={{ color: 'var(--text-muted)' }}>
           © 2026 Vertix - Automação Inteligente
         </p>
       </div>

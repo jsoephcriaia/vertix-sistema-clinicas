@@ -19,8 +19,8 @@ export default function Home() {
   // Loading inicial
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
-        <Loader2 size={40} className="animate-spin text-[var(--primary)]" />
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <Loader2 size={40} className="animate-spin" style={{ color: 'var(--primary)' }} />
       </div>
     );
   }
@@ -51,7 +51,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen bg-[var(--bg-primary)]">
+    <div className="flex h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
       <main className="flex-1 overflow-auto p-4 lg:p-6 pt-16 lg:pt-6">
         {renderPage()}

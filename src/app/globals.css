@@ -36,11 +36,6 @@
   --warning: #F59E0B;
   --info: #3B82F6;
   
-  /* Especiais */
-  --coral: #E57373;
-  --cream: #FDF8F4;
-  --navy: #1A3A4A;
-  
   /* Inputs */
   --input-bg: #FFFFFF;
   --input-border: #E8DFD5;
@@ -86,11 +81,6 @@
   --warning: #F59E0B;
   --info: #3B82F6;
   
-  /* Especiais */
-  --coral: #E57373;
-  --cream: #FDF8F4;
-  --navy: #1A3A4A;
-  
   /* Inputs */
   --input-bg: #0f172a;
   --input-border: #334155;
@@ -103,9 +93,78 @@
   --chat-text-sent: #FFFFFF;
 }
 
-body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+/* Classes de tema */
+@layer base {
+  body {
+    @apply transition-colors duration-200;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+}
+
+@layer components {
+  /* Backgrounds */
+  .theme-bg-primary {
+    background-color: var(--bg-primary);
+  }
+  .theme-bg-secondary {
+    background-color: var(--bg-secondary);
+  }
+  .theme-bg-tertiary {
+    background-color: var(--bg-tertiary);
+  }
+  .theme-bg-hover {
+    background-color: var(--bg-hover);
+  }
+  
+  /* Cards */
+  .theme-card {
+    background-color: var(--card-bg);
+    border-color: var(--card-border);
+  }
+  
+  /* Sidebar */
+  .theme-sidebar {
+    background-color: var(--sidebar-bg);
+  }
+  .theme-sidebar-hover:hover {
+    background-color: var(--sidebar-hover);
+  }
+  
+  /* Textos */
+  .theme-text {
+    color: var(--text-primary);
+  }
+  .theme-text-secondary {
+    color: var(--text-secondary);
+  }
+  .theme-text-muted {
+    color: var(--text-muted);
+  }
+  
+  /* Primary */
+  .theme-primary {
+    background-color: var(--primary);
+  }
+  .theme-primary:hover {
+    background-color: var(--primary-hover);
+  }
+  .theme-primary-text {
+    color: var(--primary);
+  }
+  
+  /* Inputs */
+  .theme-input {
+    background-color: var(--input-bg);
+    border-color: var(--input-border);
+    color: var(--text-primary);
+  }
+  .theme-input:focus {
+    border-color: var(--input-focus);
+  }
+  .theme-input::placeholder {
+    color: var(--text-muted);
+  }
 }
 
 /* Scrollbar personalizada */
