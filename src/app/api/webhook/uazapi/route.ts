@@ -14,19 +14,19 @@ export async function POST(request: NextRequest) {
     console.log(JSON.stringify(body, null, 2))
     
     // Ignora mensagens enviadas pela API (evita loop)
-    if (body.wasSentByApi) {
+    if (body.message?.wasSentByApi) {
       console.log('Mensagem enviada pela API, ignorando...')
       return NextResponse.json({ success: true, ignored: true })
     }
     
     // Ignora mensagens de grupo
-    if (body.isGroup) {
+    if (body.message?.isGroup || body.chat?.wa_isGroup) {
       console.log('Mensagem de grupo, ignorando...')
       return NextResponse.json({ success: true, ignored: true })
     }
     
-    // Pega o token da instância do header ou body
-    const instanceToken = request.headers.get('token') || body.instanceToken || body.token
+    // Pega o token da instância
+    const instanceToken = body.token
     
     if (!instanceToken) {
       console.log('Token da instância não encontrado')
@@ -60,28 +60,31 @@ export async function POST(request: NextRequest) {
     const ACCOUNT_ID = clinica.chatwoot_account_id
     const INBOX_ID = clinica.chatwoot_inbox_id || '1'
     
-    // Extrai dados da mensagem do UAZAPI
-    const messageData = body.message || body
-    const remoteJid = messageData.key?.remoteJid || body.from || ''
-    const phoneNumber = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '')
-    const senderName = messageData.pushName || body.pushName || body.senderName || 'Cliente'
-    const messageId = messageData.key?.id || body.id || Date.now().toString()
+    // Extrai dados da mensagem do UAZAPI (estrutura correta)
+    const phoneNumber = body.chat?.phone?.replace(/\D/g, '') || 
+                        body.message?.chatid?.replace('@s.whatsapp.net', '').replace('@c.us', '') ||
+                        body.chat?.wa_chatid?.replace('@s.whatsapp.net', '').replace('@c.us', '') || ''
     
-    // Extrai o texto da mensagem
-    let messageText = ''
-    if (messageData.message?.conversation) {
-      messageText = messageData.message.conversation
-    } else if (messageData.message?.extendedTextMessage?.text) {
-      messageText = messageData.message.extendedTextMessage.text
-    } else if (body.text) {
-      messageText = body.text
-    } else if (body.body) {
-      messageText = body.body
-    } else {
-      messageText = '[Mídia recebida]'
-    }
+    const senderName = body.message?.senderName || 
+                       body.chat?.wa_name || 
+                       body.chat?.name || 
+                       'Cliente'
+    
+    const messageText = body.message?.text || 
+                        body.message?.content || 
+                        body.chat?.wa_lastMessageTextVote ||
+                        '[Mídia recebida]'
+    
+    const messageId = body.message?.messageid || 
+                      body.message?.id || 
+                      Date.now().toString()
     
     console.log('Dados extraídos:', { phoneNumber, senderName, messageText, messageId })
+    
+    if (!phoneNumber) {
+      console.log('Número de telefone não encontrado')
+      return NextResponse.json({ success: false, error: 'Telefone não encontrado' }, { status: 400 })
+    }
     
     // 1. Busca ou cria o contato no Chatwoot
     const searchResponse = await fetch(
@@ -123,7 +126,14 @@ export async function POST(request: NextRequest) {
       const createContactResult = await createContactResponse.json()
       console.log('Contato criado:', JSON.stringify(createContactResult, null, 2))
       
-      contactId = createContactResult.payload?.contact?.id || createContactResult.id
+      if (createContactResult.payload?.contact?.id) {
+        contactId = createContactResult.payload.contact.id
+      } else if (createContactResult.id) {
+        contactId = createContactResult.id
+      } else {
+        console.log('Erro ao criar contato:', createContactResult)
+        return NextResponse.json({ success: false, error: 'Erro ao criar contato', details: createContactResult }, { status: 400 })
+      }
     }
     
     // 2. Busca conversa existente ou cria uma nova
