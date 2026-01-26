@@ -16,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" data-theme="light" suppressHydrationWarning>
-      <body className="antialiased bg-[var(--bg-primary)] text-[var(--text-primary)]">
+      <body className="antialiased">
         <ThemeProvider>
           <AuthProvider>
             <AlertProvider>
