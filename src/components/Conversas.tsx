@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply, Plus, Phone, MessageSquare, Play, Pause } from 'lucide-react';
+import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply, Plus, Phone, MessageSquare, Play, Pause, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { useAlert } from '@/components/Alert';
 import EmojiPicker from './EmojiPicker';
 
 interface Attachment {
@@ -24,6 +25,7 @@ interface Conversa {
   anotacao: string;
   chatwootLabels: string[];
   avatar?: string;
+  status: 'open' | 'resolved' | 'pending';
 }
 
 interface Mensagem {
@@ -45,13 +47,25 @@ interface Cliente {
   email?: string;
 }
 
+interface Lead {
+  id: string;
+  nome: string;
+  telefone: string;
+  interesse?: string;
+  etapa: string;
+}
+
+type AbaConversa = 'abertas' | 'resolvidas';
+
 export default function Conversas() {
   const { clinica } = useAuth();
+  const { showConfirm, showSuccess, showError } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [conversaSelecionada, setConversaSelecionada] = useState<Conversa | null>(null);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
+  const [abaAtiva, setAbaAtiva] = useState<AbaConversa>('abertas');
   
   const [loadingConversas, setLoadingConversas] = useState(true);
   const [loadingMensagens, setLoadingMensagens] = useState(false);
@@ -70,20 +84,20 @@ export default function Conversas() {
   // Reply
   const [replyingTo, setReplyingTo] = useState<Mensagem | null>(null);
   
-// Gravação de áudio
-const [isRecording, setIsRecording] = useState(false);
-const [recordingTime, setRecordingTime] = useState(0);
-const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-const [audioUrl, setAudioUrl] = useState<string | null>(null);
-const [isPlayingPreview, setIsPlayingPreview] = useState(false);
-const [audioWaveform, setAudioWaveform] = useState<number[]>([]);
-const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-const audioChunksRef = useRef<Blob[]>([]);
-const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
-const streamRef = useRef<MediaStream | null>(null);
-const analyserRef = useRef<AnalyserNode | null>(null);
-const animationFrameRef = useRef<number | null>(null);
+  // Gravação de áudio
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [audioWaveform, setAudioWaveform] = useState<number[]>([]);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   
   // Anexos
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -92,10 +106,12 @@ const animationFrameRef = useRef<number | null>(null);
   // Nova conversa
   const [showNovaConversa, setShowNovaConversa] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [buscaCliente, setBuscaCliente] = useState('');
   const [novoContato, setNovoContato] = useState({ nome: '', telefone: '' });
   const [loadingClientes, setLoadingClientes] = useState(false);
   const [iniciandoConversa, setIniciandoConversa] = useState(false);
+  const [abaNovaConversa, setAbaNovaConversa] = useState<'clientes' | 'leads'>('clientes');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -189,13 +205,20 @@ const animationFrameRef = useRef<number | null>(null);
             anotacao: '',
             chatwootLabels: labels,
             avatar: sender.thumbnail || sender.avatar_url || '',
+            status: conv.status || 'open',
           };
         });
 
         setConversas(conversasFormatadas);
         
-        if (!conversaSelecionada && conversasFormatadas.length > 0) {
-          selecionarConversa(conversasFormatadas[0]);
+        // Seleciona primeira conversa da aba ativa se nenhuma selecionada
+        if (!conversaSelecionada) {
+          const conversasAba = conversasFormatadas.filter(c => 
+            abaAtiva === 'abertas' ? c.status !== 'resolved' : c.status === 'resolved'
+          );
+          if (conversasAba.length > 0) {
+            selecionarConversa(conversasAba[0]);
+          }
         }
       }
     } catch (error) {
@@ -281,13 +304,11 @@ const animationFrameRef = useRef<number | null>(null);
         formData.append('reply_to', replyingTo.id.toString());
       }
       
-      // Adiciona áudio se tiver
       if (audioBlob) {
         const audioFile = new File([audioBlob], 'audio.webm', { type: 'audio/webm' });
         formData.append('attachments[]', audioFile);
       }
       
-      // Adiciona arquivos
       selectedFiles.forEach(file => {
         formData.append('attachments[]', file);
       });
@@ -309,13 +330,77 @@ const animationFrameRef = useRef<number | null>(null);
     }
   };
 
+  // Toggle status da conversa (resolver/reabrir)
+  const toggleStatusConversa = async () => {
+    if (!conversaSelecionada || !CLINICA_ID) return;
+    
+    const novoStatus = conversaSelecionada.status === 'resolved' ? 'open' : 'resolved';
+    
+    try {
+      const response = await fetch('/api/chatwoot/conversations/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinica_id: CLINICA_ID,
+          conversation_id: conversaSelecionada.id,
+          status: novoStatus
+        })
+      });
+      
+      if (response.ok) {
+        setConversaSelecionada(prev => prev ? { ...prev, status: novoStatus } : null);
+        setConversas(prev => prev.map(c => 
+          c.id === conversaSelecionada.id ? { ...c, status: novoStatus } : c
+        ));
+        showSuccess(novoStatus === 'resolved' ? 'Conversa resolvida!' : 'Conversa reaberta!');
+      }
+    } catch (error) {
+      console.error('Erro ao alterar status:', error);
+      showError('Erro ao alterar status da conversa');
+    }
+  };
+
+  // Deletar conversa
+  const deletarConversa = async () => {
+    if (!conversaSelecionada || !CLINICA_ID) return;
+    
+    showConfirm(
+      `Tem certeza que deseja deletar a conversa com ${conversaSelecionada.nome}? Esta ação não pode ser desfeita.`,
+      async () => {
+        try {
+          const response = await fetch('/api/chatwoot/conversations/delete', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clinica_id: CLINICA_ID,
+              conversation_id: conversaSelecionada.id
+            })
+          });
+          
+          if (response.ok) {
+            const novasConversas = conversas.filter(c => c.id !== conversaSelecionada.id);
+            setConversas(novasConversas);
+            setConversaSelecionada(null);
+            setMensagens([]);
+            showSuccess('Conversa deletada com sucesso!');
+          } else {
+            showError('Erro ao deletar conversa');
+          }
+        } catch (error) {
+          console.error('Erro ao deletar conversa:', error);
+          showError('Erro ao deletar conversa');
+        }
+      },
+      'Deletar conversa'
+    );
+  };
+
   // Gravação de áudio
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       
-      // Configurar AudioContext para visualização
       const audioContext = new AudioContext();
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
@@ -344,24 +429,20 @@ const animationFrameRef = useRef<number | null>(null);
       setRecordingTime(0);
       setAudioWaveform([]);
       
-      // Timer
       recordingIntervalRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
       
-      // Visualização das ondas
       const updateWaveform = () => {
         if (analyserRef.current && isRecording) {
           const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
           analyserRef.current.getByteFrequencyData(dataArray);
           
-          // Pega uma média dos valores para criar uma barra
           const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-          const normalized = average / 255; // Normaliza entre 0 e 1
+          const normalized = average / 255;
           
           setAudioWaveform(prev => {
             const newWaveform = [...prev, normalized];
-            // Mantém no máximo 100 barras
             if (newWaveform.length > 100) {
               return newWaveform.slice(-100);
             }
@@ -372,14 +453,13 @@ const animationFrameRef = useRef<number | null>(null);
         }
       };
       
-      // Inicia a visualização após um pequeno delay
       setTimeout(() => {
         animationFrameRef.current = requestAnimationFrame(updateWaveform);
       }, 100);
       
     } catch (error) {
       console.error('Erro ao iniciar gravação:', error);
-      alert('Não foi possível acessar o microfone');
+      showError('Não foi possível acessar o microfone');
     }
   };
 
@@ -461,24 +541,38 @@ const animationFrameRef = useRef<number | null>(null);
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Nova conversa
-  const fetchClientes = async () => {
+  // Nova conversa - buscar clientes e leads
+  const fetchClientesELeads = async () => {
     if (!CLINICA_ID) return;
     
     setLoadingClientes(true);
     try {
       const { supabase } = await import('@/lib/supabase');
-      const { data, error } = await supabase
+      
+      // Buscar clientes
+      const { data: clientesData } = await supabase
         .from('clientes')
         .select('id, nome, telefone, email')
         .eq('clinica_id', CLINICA_ID)
         .order('nome');
       
-      if (!error && data) {
-        setClientes(data);
+      if (clientesData) {
+        setClientes(clientesData);
+      }
+      
+      // Buscar leads do pipeline
+      const { data: leadsData } = await supabase
+        .from('pipeline')
+        .select('id, nome, telefone, interesse, etapa')
+        .eq('clinica_id', CLINICA_ID)
+        .not('etapa', 'eq', 'convertido')
+        .order('nome');
+      
+      if (leadsData) {
+        setLeads(leadsData);
       }
     } catch (error) {
-      console.error('Erro ao buscar clientes:', error);
+      console.error('Erro ao buscar clientes e leads:', error);
     } finally {
       setLoadingClientes(false);
     }
@@ -486,7 +580,7 @@ const animationFrameRef = useRef<number | null>(null);
 
   const abrirNovaConversa = () => {
     setShowNovaConversa(true);
-    fetchClientes();
+    fetchClientesELeads();
   };
 
   const iniciarConversa = async (telefone: string, nome: string) => {
@@ -512,7 +606,6 @@ const animationFrameRef = useRef<number | null>(null);
         setBuscaCliente('');
         setNovoContato({ nome: '', telefone: '' });
         
-        // Busca as conversas atualizadas
         const conversasResponse = await fetch(`/api/chatwoot/conversations?clinica_id=${CLINICA_ID}`);
         const conversasData = await conversasResponse.json();
         
@@ -544,27 +637,29 @@ const animationFrameRef = useRef<number | null>(null);
               anotacao: '',
               chatwootLabels: labels,
               avatar: sender.thumbnail || sender.avatar_url || '',
+              status: conv.status || 'open',
             };
           });
   
           setConversas(conversasFormatadas);
+          setAbaAtiva('abertas'); // Muda para aba abertas
           
-          // Encontra e seleciona a nova conversa
           const novaConversa = conversasFormatadas.find(c => c.id === data.conversation_id);
           if (novaConversa) {
             selecionarConversa(novaConversa);
           }
         }
       } else {
-        alert('Erro ao criar conversa');
+        showError('Erro ao criar conversa');
       }
     } catch (error) {
       console.error('Erro ao iniciar conversa:', error);
-      alert('Erro ao iniciar conversa');
+      showError('Erro ao iniciar conversa');
     } finally {
       setIniciandoConversa(false);
     }
   };
+
   const clientesFiltrados = useMemo(() => {
     if (!buscaCliente.trim()) return clientes;
     const busca = buscaCliente.toLowerCase();
@@ -574,6 +669,16 @@ const animationFrameRef = useRef<number | null>(null);
       c.email?.toLowerCase().includes(busca)
     );
   }, [clientes, buscaCliente]);
+
+  const leadsFiltrados = useMemo(() => {
+    if (!buscaCliente.trim()) return leads;
+    const busca = buscaCliente.toLowerCase();
+    return leads.filter(l => 
+      l.nome.toLowerCase().includes(busca) ||
+      l.telefone?.includes(busca) ||
+      l.interesse?.toLowerCase().includes(busca)
+    );
+  }, [leads, buscaCliente]);
 
   const formatarTempo = (timestamp: number) => {
     const agora = Date.now() / 1000;
@@ -644,11 +749,33 @@ const animationFrameRef = useRef<number | null>(null);
     fetchMensagens(conv.id);
   };
 
-  const conversasFiltradas = conversas.filter(c => 
-    c.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    c.telefone.includes(busca) ||
-    c.ultima.toLowerCase().includes(busca.toLowerCase())
-  );
+  // Filtrar conversas por aba e busca
+  const conversasFiltradas = useMemo(() => {
+    let filtered = conversas;
+    
+    // Filtrar por aba
+    if (abaAtiva === 'abertas') {
+      filtered = filtered.filter(c => c.status !== 'resolved');
+    } else {
+      filtered = filtered.filter(c => c.status === 'resolved');
+    }
+    
+    // Filtrar por busca
+    if (busca.trim()) {
+      const termoBusca = busca.toLowerCase();
+      filtered = filtered.filter(c => 
+        c.nome.toLowerCase().includes(termoBusca) ||
+        c.telefone.includes(termoBusca) ||
+        c.ultima.toLowerCase().includes(termoBusca)
+      );
+    }
+    
+    return filtered;
+  }, [conversas, abaAtiva, busca]);
+
+  // Contadores para as abas
+  const contadorAbertas = conversas.filter(c => c.status !== 'resolved').length;
+  const contadorResolvidas = conversas.filter(c => c.status === 'resolved').length;
 
   // Componente para renderizar anexos
   const renderAttachment = (attachment: Attachment, isEnviada: boolean) => {
@@ -725,6 +852,24 @@ const animationFrameRef = useRef<number | null>(null);
     );
   };
 
+  const getEtapaLabel = (etapa: string) => {
+    const etapas: Record<string, string> = {
+      novo: 'Novo',
+      atendimento: 'Em Atendimento',
+      agendado: 'Agendado',
+    };
+    return etapas[etapa] || etapa;
+  };
+
+  const getEtapaCor = (etapa: string) => {
+    const cores: Record<string, string> = {
+      novo: 'bg-blue-500/20 text-blue-400',
+      atendimento: 'bg-yellow-500/20 text-yellow-400',
+      agendado: 'bg-purple-500/20 text-purple-400',
+    };
+    return cores[etapa] || 'bg-gray-500/20 text-gray-400';
+  };
+
   // Se não tem Chatwoot configurado
   if (!loadingConversas && !chatwootConfigurado) {
     return (
@@ -742,6 +887,7 @@ const animationFrameRef = useRef<number | null>(null);
       </div>
     );
   }
+
   return (
     <div className="flex h-[calc(100vh-48px)] -m-4 lg:-m-6 overflow-hidden">
       {/* Lista de conversas */}
@@ -766,6 +912,43 @@ const animationFrameRef = useRef<number | null>(null);
               </button>
             </div>
           </div>
+          
+          {/* Abas Abertas/Resolvidas */}
+          <div className="flex gap-1 mb-3 bg-[#0f172a] rounded-lg p-1">
+            <button
+              onClick={() => setAbaAtiva('abertas')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                abaAtiva === 'abertas' 
+                  ? 'bg-[#334155] text-white' 
+                  : 'text-[#64748b] hover:text-white'
+              }`}
+            >
+              <Clock size={14} />
+              Abertas
+              {contadorAbertas > 0 && (
+                <span className="bg-[#10b981] text-white text-xs px-1.5 py-0.5 rounded-full">
+                  {contadorAbertas}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setAbaAtiva('resolvidas')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                abaAtiva === 'resolvidas' 
+                  ? 'bg-[#334155] text-white' 
+                  : 'text-[#64748b] hover:text-white'
+              }`}
+            >
+              <CheckCircle size={14} />
+              Resolvidas
+              {contadorResolvidas > 0 && (
+                <span className="bg-[#64748b] text-white text-xs px-1.5 py-0.5 rounded-full">
+                  {contadorResolvidas}
+                </span>
+              )}
+            </button>
+          </div>
+          
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" size={18} />
             <input
@@ -785,7 +968,7 @@ const animationFrameRef = useRef<number | null>(null);
             </div>
           ) : conversasFiltradas.length === 0 ? (
             <div className="text-center py-8 text-[#64748b]">
-              <p>Nenhuma conversa encontrada</p>
+              <p>Nenhuma conversa {abaAtiva === 'abertas' ? 'aberta' : 'resolvida'}</p>
             </div>
           ) : (
             conversasFiltradas.map((conv) => (
@@ -835,6 +1018,32 @@ const animationFrameRef = useRef<number | null>(null);
               </div>
               
               <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Botão Resolver/Reabrir */}
+                <button
+                  onClick={toggleStatusConversa}
+                  className={`p-2 rounded-lg transition-colors ${
+                    conversaSelecionada.status === 'resolved'
+                      ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                      : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                  }`}
+                  title={conversaSelecionada.status === 'resolved' ? 'Reabrir conversa' : 'Resolver conversa'}
+                >
+                  {conversaSelecionada.status === 'resolved' ? (
+                    <Clock size={20} />
+                  ) : (
+                    <CheckCircle size={20} />
+                  )}
+                </button>
+                
+                {/* Botão Deletar */}
+                <button
+                  onClick={deletarConversa}
+                  className="p-2 rounded-lg transition-colors bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                  title="Deletar conversa"
+                >
+                  <Trash2 size={20} />
+                </button>
+                
                 <button
                   onClick={abrirAnotacao}
                   className={`p-2 rounded-lg transition-colors relative ${
@@ -973,11 +1182,10 @@ const animationFrameRef = useRef<number | null>(null);
             </div>
           )}
 
-         {/* Preview de áudio gravado */}
-         {audioUrl && !isRecording && (
+          {/* Preview de áudio gravado */}
+          {audioUrl && !isRecording && (
             <div className="bg-[#1e293b] border-t border-[#334155] px-4 py-3 flex-shrink-0">
               <div className="flex flex-col gap-2">
-                {/* Visualização das ondas gravadas */}
                 <div className="flex items-center h-12 bg-[#0f172a] rounded-lg overflow-hidden px-2">
                   <div className="flex items-center gap-[2px] h-full w-full justify-center">
                     {audioWaveform.length > 0 ? (
@@ -1002,7 +1210,6 @@ const animationFrameRef = useRef<number | null>(null);
                   </div>
                 </div>
                 
-                {/* Controles */}
                 <div className="flex items-center gap-3">
                   <button
                     onClick={togglePlayPreview}
@@ -1064,7 +1271,6 @@ const animationFrameRef = useRef<number | null>(null);
           <div className="bg-[#1e293b] border-t border-[#334155] p-4 flex-shrink-0">
             {isRecording ? (
               <div className="flex flex-col gap-3">
-                {/* Visualização das ondas */}
                 <div className="flex items-center justify-center h-16 bg-[#0f172a] rounded-lg overflow-hidden px-2">
                   <div className="flex items-center gap-[2px] h-full">
                     {audioWaveform.length === 0 ? (
@@ -1092,7 +1298,6 @@ const animationFrameRef = useRef<number | null>(null);
                   </div>
                 </div>
                 
-                {/* Controles */}
                 <div className="flex items-center gap-3">
                   <button
                     onClick={cancelRecording}
@@ -1222,14 +1427,38 @@ const animationFrameRef = useRef<number | null>(null);
                 </button>
               </div>
               
+              {/* Abas Clientes/Leads */}
               <div className="p-4 border-b border-[#334155]">
+                <div className="flex gap-1 mb-3 bg-[#0f172a] rounded-lg p-1">
+                  <button
+                    onClick={() => setAbaNovaConversa('clientes')}
+                    className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      abaNovaConversa === 'clientes' 
+                        ? 'bg-[#334155] text-white' 
+                        : 'text-[#64748b] hover:text-white'
+                    }`}
+                  >
+                    Clientes ({clientes.length})
+                  </button>
+                  <button
+                    onClick={() => setAbaNovaConversa('leads')}
+                    className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      abaNovaConversa === 'leads' 
+                        ? 'bg-[#334155] text-white' 
+                        : 'text-[#64748b] hover:text-white'
+                    }`}
+                  >
+                    Leads ({leads.length})
+                  </button>
+                </div>
+                
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" size={18} />
                   <input
                     type="text"
                     value={buscaCliente}
                     onChange={(e) => setBuscaCliente(e.target.value)}
-                    placeholder="Buscar cliente..."
+                    placeholder={abaNovaConversa === 'clientes' ? "Buscar cliente..." : "Buscar lead..."}
                     className="w-full bg-[#0f172a] border border-[#334155] rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-[#10b981]"
                   />
                 </div>
@@ -1240,28 +1469,64 @@ const animationFrameRef = useRef<number | null>(null);
                   <div className="flex items-center justify-center py-8">
                     <Loader2 size={24} className="animate-spin text-[#10b981]" />
                   </div>
-                ) : clientesFiltrados.length === 0 ? (
-                  <div className="text-center py-8 text-[#64748b]">
-                    <p>Nenhum cliente encontrado</p>
-                  </div>
+                ) : abaNovaConversa === 'clientes' ? (
+                  // Lista de Clientes
+                  clientesFiltrados.length === 0 ? (
+                    <div className="text-center py-8 text-[#64748b]">
+                      <p>Nenhum cliente encontrado</p>
+                    </div>
+                  ) : (
+                    clientesFiltrados.map((cliente) => (
+                      <button
+                        key={cliente.id}
+                        onClick={() => iniciarConversa(cliente.telefone, cliente.nome)}
+                        disabled={iniciandoConversa || !cliente.telefone}
+                        className="w-full flex items-center gap-3 p-4 hover:bg-[#334155] transition-colors text-left border-b border-[#334155] disabled:opacity-50"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold">
+                          {cliente.nome.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{cliente.nome}</p>
+                          <p className="text-sm text-[#64748b]">{cliente.telefone || 'Sem telefone'}</p>
+                        </div>
+                        <MessageSquare size={18} className="text-[#10b981]" />
+                      </button>
+                    ))
+                  )
                 ) : (
-                  clientesFiltrados.map((cliente) => (
-                    <button
-                      key={cliente.id}
-                      onClick={() => iniciarConversa(cliente.telefone, cliente.nome)}
-                      disabled={iniciandoConversa}
-                      className="w-full flex items-center gap-3 p-4 hover:bg-[#334155] transition-colors text-left border-b border-[#334155]"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold">
-                        {cliente.nome.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{cliente.nome}</p>
-                        <p className="text-sm text-[#64748b]">{cliente.telefone}</p>
-                      </div>
-                      <MessageSquare size={18} className="text-[#10b981]" />
-                    </button>
-                  ))
+                  // Lista de Leads
+                  leadsFiltrados.length === 0 ? (
+                    <div className="text-center py-8 text-[#64748b]">
+                      <p>Nenhum lead encontrado</p>
+                    </div>
+                  ) : (
+                    leadsFiltrados.map((lead) => (
+                      <button
+                        key={lead.id}
+                        onClick={() => iniciarConversa(lead.telefone, lead.nome)}
+                        disabled={iniciandoConversa || !lead.telefone}
+                        className="w-full flex items-center gap-3 p-4 hover:bg-[#334155] transition-colors text-left border-b border-[#334155] disabled:opacity-50"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                          {lead.nome.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{lead.nome}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm text-[#64748b]">{lead.telefone || 'Sem telefone'}</p>
+                            <span className={`text-xs px-2 py-0.5 rounded ${getEtapaCor(lead.etapa)}`}>
+                              {getEtapaLabel(lead.etapa)}
+                            </span>
+                          </div>
+                          {lead.interesse && (
+                            <p className="text-xs text-[#64748b] truncate">{lead.interesse}</p>
+                          )}
+                        </div>
+                        <MessageSquare size={18} className="text-blue-400" />
+                      </button>
+                    ))
+                  )
                 )}
               </div>
               
