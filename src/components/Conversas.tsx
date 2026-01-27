@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply, Plus, Phone, MessageSquare, Play, Pause, Trash2, CheckCircle, Clock, Edit3, ChevronDown } from 'lucide-react';
+import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply, Plus, Phone, MessageSquare, Play, Pause, Trash2, CheckCircle, Clock, Edit3, ChevronDown, CalendarPlus } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
 import { supabase } from '@/lib/supabase';
 import EmojiPicker from './EmojiPicker';
+import PainelAtendimento from './PainelAtendimento';
 
 interface Attachment {
   id: number;
@@ -120,6 +121,9 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   const [editandoNome, setEditandoNome] = useState(false);
   const [nomeTemp, setNomeTemp] = useState('');
   const [salvandoNome, setSalvandoNome] = useState(false);
+  
+  // Painel de atendimento
+  const [showPainelAtendimento, setShowPainelAtendimento] = useState(false);
   
   // Gravação de áudio
   const [isRecording, setIsRecording] = useState(false);
@@ -1361,6 +1365,16 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                   <Trash2 size={20} />
                 </button>
                 
+                {/* Botão Atendimento/Agendar */}
+                <button
+                  onClick={() => setShowPainelAtendimento(true)}
+                  disabled={!leadIA}
+                  className="p-2 rounded-lg transition-colors bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={leadIA ? "Atendimento / Agendar" : "Sem lead vinculado"}
+                >
+                  <CalendarPlus size={20} />
+                </button>
+                
                 <button
                   onClick={abrirAnotacao}
                   className={`p-2 rounded-lg transition-colors relative ${
@@ -1940,6 +1954,21 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           </div>
         </>
       )}
+
+      {/* Painel de Atendimento */}
+      <PainelAtendimento
+        isOpen={showPainelAtendimento}
+        onClose={() => setShowPainelAtendimento(false)}
+        leadId={leadIA?.id || null}
+        leadNome={conversaSelecionada?.nome || ''}
+        clinicaId={CLINICA_ID}
+        onAgendamentoCriado={() => {
+          // Atualizar etapa do lead localmente
+          if (leadIA) {
+            setLeadIA(prev => prev ? { ...prev, etapa: 'agendado' } : null);
+          }
+        }}
+      />
     </div>
   );
 }
