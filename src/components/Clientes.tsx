@@ -12,11 +12,13 @@ interface Cliente {
   telefone: string;
   email: string;
   status: string;
+  observacoes: string;
+  // Dados calculados
   total_gasto: number;
   total_procedimentos: number;
   ultimo_atendimento: string | null;
   proximo_retorno: string | null;
-  observacoes: string;
+  proximo_procedimento: string | null;
 }
 
 interface ClientesProps {
@@ -42,11 +44,12 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
     telefone: '',
     email: '',
     status: 'ativo',
+    observacoes: '',
     total_gasto: 0,
     total_procedimentos: 0,
     ultimo_atendimento: null,
     proximo_retorno: null,
-    observacoes: '',
+    proximo_procedimento: null,
   };
 
   useEffect(() => {
@@ -57,17 +60,108 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
 
   const fetchClientes = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    
+    // Buscar clientes
+    const { data: clientesData, error } = await supabase
       .from('clientes')
-      .select('*')
+      .select('id, nome, telefone, email, status, observacoes')
       .eq('clinica_id', CLINICA_ID)
       .order('nome');
 
     if (error) {
       console.error('Erro ao buscar clientes:', error);
-    } else {
-      setClientes(data || []);
+      setLoading(false);
+      return;
     }
+
+    if (!clientesData || clientesData.length === 0) {
+      setClientes([]);
+      setLoading(false);
+      return;
+    }
+
+    // Buscar agendamentos REALIZADOS para calcular total_gasto, total_procedimentos e ultimo_atendimento
+    const { data: agendamentosRealizados } = await supabase
+      .from('agendamentos')
+      .select('cliente_id, lead_id, valor, data_hora')
+      .eq('clinica_id', CLINICA_ID)
+      .eq('status', 'realizado');
+
+    // Buscar agendamentos PENDENTES para próximo retorno
+    const { data: agendamentosPendentes } = await supabase
+      .from('agendamentos')
+      .select('cliente_id, lead_id, data_hora, procedimento_id')
+      .eq('clinica_id', CLINICA_ID)
+      .in('status', ['agendado', 'confirmado'])
+      .gte('data_hora', new Date().toISOString())
+      .order('data_hora', { ascending: true });
+
+    // Buscar leads para mapear lead_id -> cliente (pelo telefone)
+    const { data: leadsData } = await supabase
+      .from('leads_ia')
+      .select('id, telefone')
+      .eq('clinica_id', CLINICA_ID);
+
+    // Criar mapa de telefone -> lead_id
+    const telefoneToLeadId: Record<string, string> = {};
+    leadsData?.forEach(lead => {
+      if (lead.telefone) {
+        telefoneToLeadId[lead.telefone] = lead.id;
+      }
+    });
+
+    // Buscar procedimentos para nome
+    const procedimentoIds = [...new Set(agendamentosPendentes?.filter(a => a.procedimento_id).map(a => a.procedimento_id) || [])];
+    let procedimentosMap: Record<string, string> = {};
+    if (procedimentoIds.length > 0) {
+      const { data: procsData } = await supabase
+        .from('procedimentos')
+        .select('id, nome')
+        .in('id', procedimentoIds);
+      
+      if (procsData) {
+        procsData.forEach(p => { procedimentosMap[p.id] = p.nome; });
+      }
+    }
+
+    // Calcular métricas para cada cliente
+    const clientesComMetricas = clientesData.map(cliente => {
+      // Pegar lead_id do cliente pelo telefone
+      const leadId = cliente.telefone ? telefoneToLeadId[cliente.telefone] : null;
+
+      // Filtrar agendamentos realizados deste cliente (por cliente_id OU lead_id)
+      const agRealizados = agendamentosRealizados?.filter(a => 
+        a.cliente_id === cliente.id || (leadId && a.lead_id === leadId)
+      ) || [];
+
+      // Calcular total gasto e procedimentos
+      const total_gasto = agRealizados.reduce((sum, a) => sum + (a.valor || 0), 0);
+      const total_procedimentos = agRealizados.length;
+
+      // Último atendimento (mais recente)
+      const ultimoAg = agRealizados.sort((a, b) => 
+        new Date(b.data_hora).getTime() - new Date(a.data_hora).getTime()
+      )[0];
+      const ultimo_atendimento = ultimoAg?.data_hora || null;
+
+      // Próximo retorno (primeiro pendente)
+      const proximoAg = agendamentosPendentes?.find(a => 
+        a.cliente_id === cliente.id || (leadId && a.lead_id === leadId)
+      );
+      const proximo_retorno = proximoAg?.data_hora || null;
+      const proximo_procedimento = proximoAg?.procedimento_id ? procedimentosMap[proximoAg.procedimento_id] : null;
+
+      return {
+        ...cliente,
+        total_gasto,
+        total_procedimentos,
+        ultimo_atendimento,
+        proximo_retorno,
+        proximo_procedimento,
+      };
+    });
+
+    setClientes(clientesComMetricas);
     setLoading(false);
   };
 
@@ -95,7 +189,6 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
           email: editando.email,
           status: editando.status,
           observacoes: editando.observacoes,
-          proximo_retorno: editando.proximo_retorno || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', editando.id);
@@ -116,7 +209,6 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
           email: editando.email,
           status: editando.status,
           observacoes: editando.observacoes,
-          proximo_retorno: editando.proximo_retorno || null,
         });
 
       if (error) {
@@ -167,7 +259,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
 
   const formatarData = (data: string | null) => {
     if (!data) return '-';
-    return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
+    return new Date(data).toLocaleDateString('pt-BR');
   };
 
   const clientesFiltrados = clientes.filter(cliente => {
@@ -299,6 +391,9 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                     <p className={`font-semibold ${cliente.proximo_retorno && new Date(cliente.proximo_retorno) < new Date() ? 'text-red-400' : ''}`}>
                       {formatarData(cliente.proximo_retorno)}
                     </p>
+                    {cliente.proximo_procedimento && (
+                      <p className="text-xs text-[#64748b]">{cliente.proximo_procedimento}</p>
+                    )}
                   </div>
                 </div>
 
@@ -372,7 +467,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                     value={editando.telefone}
                     onChange={(e) => setEditando({ ...editando, telefone: e.target.value })}
                     className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
-                    placeholder="(11) 99999-9999"
+                    placeholder="+5511999999999"
                   />
                 </div>
                 <div>
@@ -387,28 +482,17 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-[#64748b] mb-2">Status</label>
-                  <select
-                    value={editando.status}
-                    onChange={(e) => setEditando({ ...editando, status: e.target.value })}
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
-                  >
-                    <option value="ativo">Ativo</option>
-                    <option value="vip">VIP</option>
-                    <option value="inativo">Inativo</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-[#64748b] mb-2">Próximo Retorno</label>
-                  <input
-                    type="date"
-                    value={editando.proximo_retorno || ''}
-                    onChange={(e) => setEditando({ ...editando, proximo_retorno: e.target.value })}
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm text-[#64748b] mb-2">Status</label>
+                <select
+                  value={editando.status}
+                  onChange={(e) => setEditando({ ...editando, status: e.target.value })}
+                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                >
+                  <option value="ativo">Ativo</option>
+                  <option value="vip">VIP</option>
+                  <option value="inativo">Inativo</option>
+                </select>
               </div>
 
               <div>
