@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply, Plus, Phone, MessageSquare, Play, Pause, Trash2, CheckCircle, Clock, Edit3, ChevronDown, CalendarPlus } from 'lucide-react';
+import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply, Plus, Phone, MessageSquare, Play, Pause, Trash2, CheckCircle, Clock, Edit3, ChevronDown, CalendarPlus, Package } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
 import { supabase } from '@/lib/supabase';
 import EmojiPicker from './EmojiPicker';
-import PainelAtendimento from './PainelAtendimento';
+import PainelInteresse from './PainelInteresse';
+import PainelAgendamentos from './PainelAgendamentos';
 
 interface Attachment {
   id: number;
@@ -122,8 +123,9 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   const [nomeTemp, setNomeTemp] = useState('');
   const [salvandoNome, setSalvandoNome] = useState(false);
   
-  // Painel de atendimento
-  const [showPainelAtendimento, setShowPainelAtendimento] = useState(false);
+  // Paineis laterais
+  const [showPainelInteresse, setShowPainelInteresse] = useState(false);
+  const [showPainelAgendamentos, setShowPainelAgendamentos] = useState(false);
   
   // Gravação de áudio
   const [isRecording, setIsRecording] = useState(false);
@@ -1365,12 +1367,22 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                   <Trash2 size={20} />
                 </button>
                 
-                {/* Botão Atendimento/Agendar */}
+                {/* Botão Procedimentos de Interesse */}
                 <button
-                  onClick={() => setShowPainelAtendimento(true)}
+                  onClick={() => setShowPainelInteresse(true)}
+                  disabled={!leadIA}
+                  className="p-2 rounded-lg transition-colors bg-[#10b981]/20 text-[#10b981] hover:bg-[#10b981]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={leadIA ? "Procedimentos de Interesse" : "Sem lead vinculado"}
+                >
+                  <Package size={20} />
+                </button>
+                
+                {/* Botão Agendar */}
+                <button
+                  onClick={() => setShowPainelAgendamentos(true)}
                   disabled={!leadIA}
                   className="p-2 rounded-lg transition-colors bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={leadIA ? "Atendimento / Agendar" : "Sem lead vinculado"}
+                  title={leadIA ? "Agendamentos" : "Sem lead vinculado"}
                 >
                   <CalendarPlus size={20} />
                 </button>
@@ -1955,17 +1967,32 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         </>
       )}
 
-      {/* Painel de Atendimento */}
-      <PainelAtendimento
-        isOpen={showPainelAtendimento}
-        onClose={() => setShowPainelAtendimento(false)}
+      {/* Painel de Procedimentos de Interesse */}
+      <PainelInteresse
+        isOpen={showPainelInteresse}
+        onClose={() => setShowPainelInteresse(false)}
         leadId={leadIA?.id || null}
         leadNome={conversaSelecionada?.nome || ''}
+        clinicaId={CLINICA_ID}
+      />
+
+      {/* Painel de Agendamentos */}
+      <PainelAgendamentos
+        isOpen={showPainelAgendamentos}
+        onClose={() => setShowPainelAgendamentos(false)}
+        leadId={leadIA?.id || null}
+        leadNome={conversaSelecionada?.nome || ''}
+        leadTelefone={conversaSelecionada?.telefone}
         clinicaId={CLINICA_ID}
         onAgendamentoCriado={() => {
           // Atualizar etapa do lead localmente
           if (leadIA) {
             setLeadIA(prev => prev ? { ...prev, etapa: 'agendado' } : null);
+          }
+        }}
+        onStatusAlterado={(novaEtapa) => {
+          if (leadIA) {
+            setLeadIA(prev => prev ? { ...prev, etapa: novaEtapa } : null);
           }
         }}
       />
