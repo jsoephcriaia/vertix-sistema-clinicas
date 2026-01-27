@@ -348,6 +348,41 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
     if (error) {
       console.error('Erro ao mover lead:', error);
       fetchLeads();
+    } else {
+      // Se moveu para convertido, cria cliente automaticamente
+      if (novaEtapa === 'convertido') {
+        await converterParaCliente(lead);
+      }
+    }
+  };
+
+  // Converter lead para cliente
+  const converterParaCliente = async (lead: Lead) => {
+    if (!lead.telefone || !CLINICA_ID) return;
+    
+    try {
+      // Verificar se já existe cliente com esse telefone
+      const { data: clienteExistente } = await supabase
+        .from('clientes')
+        .select('id')
+        .eq('clinica_id', CLINICA_ID)
+        .eq('telefone', lead.telefone)
+        .single();
+      
+      if (!clienteExistente) {
+        // Criar novo cliente
+        await supabase
+          .from('clientes')
+          .insert({
+            clinica_id: CLINICA_ID,
+            nome: lead.nome,
+            telefone: lead.telefone,
+          });
+        
+        showSuccess('Lead convertido para cliente!');
+      }
+    } catch (error) {
+      console.error('Erro ao converter para cliente:', error);
     }
   };
 

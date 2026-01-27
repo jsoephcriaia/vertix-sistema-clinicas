@@ -196,14 +196,14 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     }
   }, [conversaSelecionada, CLINICA_ID]);
 
-  // Buscar lead quando selecionar conversa
+  // Buscar lead quando selecionar conversa (só quando muda o ID)
   useEffect(() => {
     if (conversaSelecionada && CLINICA_ID) {
       fetchLeadIA(conversaSelecionada.id, conversaSelecionada.telefone);
     } else {
       setLeadIA(null);
     }
-  }, [conversaSelecionada, CLINICA_ID]);
+  }, [conversaSelecionada?.id, CLINICA_ID]);
 
   // Fechar dropdown de etapa ao clicar fora
   useEffect(() => {
