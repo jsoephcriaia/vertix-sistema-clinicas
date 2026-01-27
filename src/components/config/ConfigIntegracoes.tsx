@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, HardDrive, CheckCircle, Link2, ExternalLink, AlertCircle, MessageSquare, Save, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Calendar, HardDrive, CheckCircle, Link2, ExternalLink, AlertCircle, MessageSquare, Save, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface ConfigIntegracoesProps {
@@ -15,6 +15,7 @@ interface Integracao {
   icon: React.ReactNode;
   conectado: boolean;
   conta?: string;
+  tipo: 'calendar' | 'drive';
 }
 
 export default function ConfigIntegracoes({ onBack }: ConfigIntegracoesProps) {
@@ -29,6 +30,11 @@ export default function ConfigIntegracoes({ onBack }: ConfigIntegracoesProps) {
   const [chatwootStatus, setChatwootStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [chatwootMessage, setChatwootMessage] = useState('');
 
+  // Google Status
+  const [googleMessage, setGoogleMessage] = useState('');
+  const [googleStatus, setGoogleStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [conectando, setConectando] = useState<string | null>(null);
+
   const [integracoes, setIntegracoes] = useState<Integracao[]>([
     {
       id: 'google-calendar',
@@ -36,6 +42,7 @@ export default function ConfigIntegracoes({ onBack }: ConfigIntegracoesProps) {
       descricao: 'Sincronize agendamentos com o Google Calendar',
       icon: <Calendar size={24} className="text-blue-400" />,
       conectado: false,
+      tipo: 'calendar',
     },
     {
       id: 'google-drive',
@@ -43,19 +50,65 @@ export default function ConfigIntegracoes({ onBack }: ConfigIntegracoesProps) {
       descricao: 'Armazene imagens dos procedimentos no Drive',
       icon: <HardDrive size={24} className="text-yellow-400" />,
       conectado: false,
+      tipo: 'drive',
     },
   ]);
 
-  // Carregar configurações do Chatwoot da clínica
+  // Verificar parâmetros da URL (retorno do OAuth)
   useEffect(() => {
-    const loadChatwootConfig = async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const googleResult = urlParams.get('google');
+    const message = urlParams.get('message');
+
+    if (googleResult === 'success') {
+      setGoogleStatus('success');
+      setGoogleMessage('Integração com Google realizada com sucesso!');
+      // Limpar URL
+      window.history.replaceState({}, '', window.location.pathname);
+      // Recarregar status
+      loadGoogleStatus();
+    } else if (googleResult === 'error') {
+      setGoogleStatus('error');
+      setGoogleMessage(`Erro na integração: ${message || 'Erro desconhecido'}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  // Carregar status das integrações Google
+  const loadGoogleStatus = async () => {
+    const sessao = localStorage.getItem('vertix_sessao');
+    const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
+    if (!clinicaId) return;
+
+    const { data, error } = await supabase
+      .from('clinicas')
+      .select('google_calendar_connected, google_drive_connected')
+      .eq('id', clinicaId)
+      .single();
+
+    if (data) {
+      setIntegracoes(prev => prev.map(i => {
+        if (i.id === 'google-calendar') {
+          return { ...i, conectado: data.google_calendar_connected || false };
+        }
+        if (i.id === 'google-drive') {
+          return { ...i, conectado: data.google_drive_connected || false };
+        }
+        return i;
+      }));
+    }
+  };
+
+  // Carregar configurações do Chatwoot e Google
+  useEffect(() => {
+    const loadConfig = async () => {
       const sessao = localStorage.getItem('vertix_sessao');
-const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
+      const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
       if (!clinicaId) return;
 
       const { data, error } = await supabase
         .from('clinicas')
-        .select('chatwoot_url, chatwoot_account_id, chatwoot_inbox_id, chatwoot_api_token')
+        .select('chatwoot_url, chatwoot_account_id, chatwoot_inbox_id, chatwoot_api_token, google_calendar_connected, google_drive_connected')
         .eq('id', clinicaId)
         .single();
 
@@ -64,10 +117,21 @@ const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
         setChatwootAccountId(data.chatwoot_account_id || '');
         setChatwootInboxId(data.chatwoot_inbox_id || '');
         setChatwootApiToken(data.chatwoot_api_token || '');
+
+        // Atualizar status Google
+        setIntegracoes(prev => prev.map(i => {
+          if (i.id === 'google-calendar') {
+            return { ...i, conectado: data.google_calendar_connected || false };
+          }
+          if (i.id === 'google-drive') {
+            return { ...i, conectado: data.google_drive_connected || false };
+          }
+          return i;
+        }));
       }
     };
 
-    loadChatwootConfig();
+    loadConfig();
   }, []);
 
   // Salvar configurações do Chatwoot
@@ -78,7 +142,7 @@ const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
 
     try {
       const sessao = localStorage.getItem('vertix_sessao');
-const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
+      const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
       if (!clinicaId) throw new Error('Clínica não encontrada');
 
       const { error } = await supabase
@@ -136,27 +200,57 @@ const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
     }
   };
 
+  // Conectar com Google
   const handleConnect = async (id: string) => {
-    const confirmed = confirm(
-      `Para conectar com ${id === 'google-calendar' ? 'Google Agenda' : 'Google Drive'}, você será redirecionado para fazer login na sua conta Google.\n\nDeseja continuar?`
-    );
+    const integracao = integracoes.find(i => i.id === id);
+    if (!integracao) return;
 
-    if (confirmed) {
-      setIntegracoes(prev => prev.map(i => 
-        i.id === id 
-          ? { ...i, conectado: true, conta: 'clinica@gmail.com' }
-          : i
-      ));
+    const sessao = localStorage.getItem('vertix_sessao');
+    const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
+    
+    if (!clinicaId) {
+      setGoogleStatus('error');
+      setGoogleMessage('Erro: Clínica não encontrada');
+      return;
     }
+
+    setConectando(id);
+
+    // Redirecionar para API de OAuth
+    const tipo = integracao.tipo;
+    window.location.href = `/api/google?clinicaId=${clinicaId}&tipo=${tipo}`;
   };
 
-  const handleDisconnect = (id: string) => {
-    if (confirm('Tem certeza que deseja desconectar esta integração?')) {
-      setIntegracoes(prev => prev.map(i => 
-        i.id === id 
-          ? { ...i, conectado: false, conta: undefined }
-          : i
+  // Desconectar Google
+  const handleDisconnect = async (id: string) => {
+    if (!confirm('Tem certeza que deseja desconectar esta integração?')) return;
+
+    const sessao = localStorage.getItem('vertix_sessao');
+    const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
+    if (!clinicaId) return;
+
+    const integracao = integracoes.find(i => i.id === id);
+    if (!integracao) return;
+
+    const updateData: Record<string, unknown> = {};
+    
+    if (integracao.tipo === 'calendar') {
+      updateData.google_calendar_connected = false;
+    } else if (integracao.tipo === 'drive') {
+      updateData.google_drive_connected = false;
+    }
+
+    const { error } = await supabase
+      .from('clinicas')
+      .update(updateData)
+      .eq('id', clinicaId);
+
+    if (!error) {
+      setIntegracoes(prev => prev.map(i =>
+        i.id === id ? { ...i, conectado: false } : i
       ));
+      setGoogleStatus('success');
+      setGoogleMessage('Integração desconectada com sucesso');
     }
   };
 
@@ -249,7 +343,6 @@ const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
             </div>
           </div>
 
-          {/* Status Message */}
           {chatwootMessage && (
             <div className={`p-3 rounded-lg text-sm ${
               chatwootStatus === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/30' :
@@ -278,31 +371,25 @@ const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
             </button>
           </div>
 
-          {/* Dica */}
           <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mt-4">
             <p className="text-sm text-blue-400">
-              <strong>Dica:</strong> Para encontrar o Account ID e Inbox ID, acesse o Chatwoot e veja a URL. 
+              <strong>Dica:</strong> Para encontrar o Account ID e Inbox ID, acesse o Chatwoot e veja a URL.
               Ex: <code className="bg-[#0f172a] px-1 rounded">/app/accounts/2/inbox/1</code> → Account ID: 2, Inbox ID: 1
             </p>
           </div>
         </div>
       </div>
 
-      {/* Aviso Google */}
-      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
-        <div className="flex items-start gap-3">
-          <AlertCircle size={20} className="text-yellow-400 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-yellow-400 font-medium">Configuração necessária</p>
-            <p className="text-sm text-[#94a3b8]">
-              Para ativar as integrações com Google, é necessário configurar as credenciais OAuth no Google Cloud Console. 
-              <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline ml-1">
-                Saiba mais <ExternalLink size={12} className="inline" />
-              </a>
-            </p>
-          </div>
+      {/* Google Status Message */}
+      {googleMessage && (
+        <div className={`p-4 rounded-lg mb-6 ${
+          googleStatus === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/30' :
+          googleStatus === 'error' ? 'bg-red-500/10 text-red-400 border border-red-500/30' :
+          'bg-[#334155] text-[#94a3b8]'
+        }`}>
+          {googleMessage}
         </div>
-      </div>
+      )}
 
       {/* Lista de Integrações Google */}
       <div className="space-y-4">
@@ -315,7 +402,7 @@ const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
               <div className="w-14 h-14 rounded-xl bg-[#0f172a] flex items-center justify-center">
                 {integracao.icon}
               </div>
-              
+
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold">{integracao.nome}</h3>
@@ -326,9 +413,6 @@ const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
                   )}
                 </div>
                 <p className="text-sm text-[#64748b]">{integracao.descricao}</p>
-                {integracao.conectado && integracao.conta && (
-                  <p className="text-sm text-[#10b981] mt-1">Conta: {integracao.conta}</p>
-                )}
               </div>
 
               {integracao.conectado ? (
@@ -341,10 +425,20 @@ const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
               ) : (
                 <button
                   onClick={() => handleConnect(integracao.id)}
-                  className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg transition-colors flex items-center gap-2"
+                  disabled={conectando === integracao.id}
+                  className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
-                  <Link2 size={18} />
-                  Conectar
+                  {conectando === integracao.id ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Conectando...
+                    </>
+                  ) : (
+                    <>
+                      <Link2 size={18} />
+                      Conectar
+                    </>
+                  )}
                 </button>
               )}
             </div>
@@ -353,47 +447,18 @@ const clinicaId = sessao ? JSON.parse(sessao).clinica?.id : null;
             {integracao.conectado && (
               <div className="mt-4 pt-4 border-t border-[#334155]">
                 {integracao.id === 'google-calendar' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-[#0f172a] rounded-lg p-4">
-                      <p className="text-sm font-medium mb-2">Calendário sincronizado</p>
-                      <select className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#10b981]">
-                        <option>Agenda Principal</option>
-                        <option>Clínica - Atendimentos</option>
-                        <option>Criar novo calendário...</option>
-                      </select>
-                    </div>
-                    <div className="bg-[#0f172a] rounded-lg p-4">
-                      <p className="text-sm font-medium mb-2">Opções</p>
-                      <label className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-[#334155] bg-[#0f172a] text-[#10b981]" />
-                        Criar eventos automaticamente ao agendar
-                      </label>
-                      <label className="flex items-center gap-2 text-sm cursor-pointer mt-2">
-                        <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-[#334155] bg-[#0f172a] text-[#10b981]" />
-                        Enviar lembretes por email
-                      </label>
-                    </div>
+                  <div className="bg-[#0f172a] rounded-lg p-4">
+                    <p className="text-sm text-green-400">
+                      ✓ Google Calendar conectado! A IA agora pode verificar disponibilidade e agendar consultas.
+                    </p>
                   </div>
                 )}
 
                 {integracao.id === 'google-drive' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-[#0f172a] rounded-lg p-4">
-                      <p className="text-sm font-medium mb-2">Pasta de armazenamento</p>
-                      <div className="flex items-center gap-2">
-                        <HardDrive size={16} className="text-[#64748b]" />
-                        <span className="text-sm text-[#94a3b8]">/Vertix/Procedimentos</span>
-                      </div>
-                    </div>
-                    <div className="bg-[#0f172a] rounded-lg p-4">
-                      <p className="text-sm font-medium mb-2">Espaço utilizado</p>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-[#334155] rounded-full overflow-hidden">
-                          <div className="h-full w-1/4 bg-[#10b981] rounded-full"></div>
-                        </div>
-                        <span className="text-sm text-[#64748b]">2.5 GB / 15 GB</span>
-                      </div>
-                    </div>
+                  <div className="bg-[#0f172a] rounded-lg p-4">
+                    <p className="text-sm text-green-400">
+                      ✓ Google Drive conectado! Você pode fazer upload de imagens dos procedimentos.
+                    </p>
                   </div>
                 )}
               </div>
