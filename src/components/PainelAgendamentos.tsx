@@ -22,6 +22,7 @@ interface Agendamento {
   criado_por: string;
   observacoes: string | null;
   google_calendar_event_id: string | null;
+  procedimento_id: string | null;
   procedimento?: Procedimento;
 }
 
@@ -111,7 +112,7 @@ export default function PainelAgendamentos({
           criado_por,
           observacoes,
           google_calendar_event_id,
-          procedimento:procedimentos(id, nome, preco, duracao_minutos, retorno_dias)
+          procedimento_id
         `)
         .eq('clinica_id', clinicaId)
         .order('data_hora', { ascending: false });
@@ -125,7 +126,28 @@ export default function PainelAgendamentos({
       const { data, error } = await query;
 
       if (data && !error) {
-        setAgendamentos(data as any);
+        // Buscar procedimentos para mapear
+        const procedimentoIds = [...new Set(data.filter(a => a.procedimento_id).map(a => a.procedimento_id))];
+        
+        let procedimentosMap: Record<string, Procedimento> = {};
+        if (procedimentoIds.length > 0) {
+          const { data: procsData } = await supabase
+            .from('procedimentos')
+            .select('id, nome, preco, duracao_minutos, retorno_dias')
+            .in('id', procedimentoIds);
+          
+          if (procsData) {
+            procsData.forEach(p => { procedimentosMap[p.id] = p; });
+          }
+        }
+
+        // Montar agendamentos com procedimento
+        const agendamentosCompletos = data.map(a => ({
+          ...a,
+          procedimento: a.procedimento_id ? procedimentosMap[a.procedimento_id] : undefined,
+        }));
+
+        setAgendamentos(agendamentosCompletos as any);
       }
     } catch (error) {
       console.error('Erro ao buscar agendamentos:', error);
@@ -290,6 +312,13 @@ export default function PainelAgendamentos({
 
       const leadIdParaRetorno = agendamentoCompleto?.lead_id || leadId;
       const clienteIdParaRetorno = agendamentoCompleto?.cliente_id || clienteId;
+
+      console.log('Marcando como realizado:', {
+        procedimento: agendamento.procedimento,
+        retorno_dias: agendamento.procedimento?.retorno_dias,
+        leadIdParaRetorno,
+        clienteIdParaRetorno
+      });
 
       // Se tem procedimento com retorno_dias, criar agendamento de retorno
       if (agendamento.procedimento?.retorno_dias) {
