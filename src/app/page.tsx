@@ -1,100 +1,106 @@
 'use client';
 
-import { 
-  Building2,
-  Scissors,
-  Clock,
-  Users,
-  HelpCircle,
-  FileText,
-  Smartphone,
-  Link,
-  ChevronRight
-} from 'lucide-react';
-import ConfigClinica from './config/ConfigClinica';
-import ConfigProcedimentos from './config/ConfigProcedimentos';
-import ConfigHorarios from './config/ConfigHorarios';
-import ConfigEquipe from './config/ConfigEquipe';
-import ConfigFaq from './config/ConfigFaq';
-import ConfigPoliticas from './config/ConfigPoliticas';
-import ConfigWhatsApp from './config/ConfigWhatsApp';
-import ConfigIntegracoes from './config/ConfigIntegracoes';
+import { useState, useRef, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth';
+import Login from '@/components/Login';
+import Sidebar from '@/components/Sidebar';
+import Dashboard from '@/components/Dashboard';
+import Conversas from '@/components/Conversas';
+import Pipeline from '@/components/Pipeline';
+import Clientes from '@/components/Clientes';
+import Retornos from '@/components/Retornos';
+import Configuracoes from '@/components/Configuracoes';
+import { Loader2 } from 'lucide-react';
 
-interface ConfiguracoesProps {
-  subPage: string | null;
-  setSubPage: (sub: string | null) => void;
-}
+const VALID_PAGES = ['dashboard', 'conversas', 'pipeline', 'clientes', 'retornos', 'configuracoes'];
 
-const menuConfig = [
-  { id: 'clinica', label: 'Minha Clínica', icon: Building2, desc: 'Informações básicas da clínica' },
-  { id: 'procedimentos', label: 'Procedimentos', icon: Scissors, desc: 'Catálogo de serviços e preços' },
-  { id: 'horarios', label: 'Horários', icon: Clock, desc: 'Horários de atendimento' },
-  { id: 'equipe', label: 'Equipe', icon: Users, desc: 'Profissionais da clínica' },
-  { id: 'faq', label: 'FAQ', icon: HelpCircle, desc: 'Perguntas frequentes' },
-  { id: 'politicas', label: 'Políticas', icon: FileText, desc: 'Regras e termos' },
-  { id: 'whatsapp', label: 'WhatsApp', icon: Smartphone, desc: 'Conexão WhatsApp Business' },
-  { id: 'integracoes', label: 'Integrações', icon: Link, desc: 'Google Agenda e Drive' },
-];
-
-export default function Configuracoes({ subPage, setSubPage }: ConfiguracoesProps) {
+export default function Home() {
+  const { usuario, clinica, loading } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   
-  const renderSubPage = () => {
-    switch (subPage) {
-      case 'clinica':
-        return <ConfigClinica onBack={() => setSubPage(null)} />;
-      case 'procedimentos':
-        return <ConfigProcedimentos onBack={() => setSubPage(null)} />;
-      case 'horarios':
-        return <ConfigHorarios onBack={() => setSubPage(null)} />;
-      case 'equipe':
-        return <ConfigEquipe onBack={() => setSubPage(null)} />;
-      case 'faq':
-        return <ConfigFaq onBack={() => setSubPage(null)} />;
-      case 'politicas':
-        return <ConfigPoliticas onBack={() => setSubPage(null)} />;
-      case 'whatsapp':
-        return <ConfigWhatsApp onBack={() => setSubPage(null)} />;
-      case 'integracoes':
-        return <ConfigIntegracoes onBack={() => setSubPage(null)} />;
+  // Pegar página da URL ou usar dashboard como padrão
+  const pageFromUrl = searchParams.get('page') || 'dashboard';
+  const subPageFromUrl = searchParams.get('sub') || null;
+  
+  const [currentPage, setCurrentPage] = useState(
+    VALID_PAGES.includes(pageFromUrl) ? pageFromUrl : 'dashboard'
+  );
+  
+  // Dados para iniciar conversa a partir de outras telas
+  const conversaInicialRef = useRef<{ telefone: string; nome: string } | null>(null);
+
+  // Atualizar página quando URL mudar
+  useEffect(() => {
+    const pageFromUrl = searchParams.get('page') || 'dashboard';
+    if (VALID_PAGES.includes(pageFromUrl) && pageFromUrl !== currentPage) {
+      setCurrentPage(pageFromUrl);
+    }
+  }, [searchParams]);
+
+  // Função para mudar de página (atualiza URL também)
+  const handleSetCurrentPage = (page: string) => {
+    setCurrentPage(page);
+    const params = new URLSearchParams();
+    params.set('page', page);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  // Função para mudar subpágina (usado pelas Configurações)
+  const handleSetSubPage = (sub: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (sub) {
+      params.set('sub', sub);
+    } else {
+      params.delete('sub');
+    }
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--theme-bg)]">
+        <Loader2 size={40} className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!usuario || !clinica) {
+    return <Login onSuccess={() => window.location.reload()} />;
+  }
+
+  // Função para navegar para Conversas e iniciar conversa
+  const handleAbrirConversa = (telefone: string, nome: string) => {
+    conversaInicialRef.current = { telefone, nome };
+    handleSetCurrentPage('conversas');
+  };
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'dashboard':
+        return <Dashboard />;
+      case 'conversas':
+        return <Conversas conversaInicial={conversaInicialRef.current} onConversaIniciada={() => { conversaInicialRef.current = null; }} />;
+      case 'pipeline':
+        return <Pipeline onAbrirConversa={handleAbrirConversa} />;
+      case 'clientes':
+        return <Clientes onAbrirConversa={handleAbrirConversa} />;
+      case 'retornos':
+        return <Retornos onAbrirConversa={handleAbrirConversa} />;
+      case 'configuracoes':
+        return <Configuracoes subPage={subPageFromUrl} setSubPage={handleSetSubPage} />;
       default:
-        return null;
+        return <Dashboard />;
     }
   };
 
-  if (subPage) {
-    return renderSubPage();
-  }
-
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Configurações</h1>
-        <p className="text-[#64748b] text-sm mt-1">Gerencie as informações da sua clínica</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {menuConfig.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setSubPage(item.id)}
-              className="bg-[#1e293b] rounded-xl border border-[#334155] p-5 hover:border-[#10b981] transition-colors text-left group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-[#10b981]/20 flex items-center justify-center">
-                  <Icon size={24} className="text-[#10b981]" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold group-hover:text-[#10b981] transition-colors">{item.label}</h3>
-                  <p className="text-sm text-[#64748b]">{item.desc}</p>
-                </div>
-                <ChevronRight size={20} className="text-[#64748b] group-hover:text-[#10b981] transition-colors" />
-              </div>
-            </button>
-          );
-        })}
-      </div>
+    <div className="flex h-screen bg-[var(--theme-bg)]">
+      <Sidebar currentPage={currentPage} setCurrentPage={handleSetCurrentPage} />
+      <main className="flex-1 overflow-auto p-4 lg:p-6 pt-16 lg:pt-6">
+        {renderPage()}
+      </main>
     </div>
   );
 }

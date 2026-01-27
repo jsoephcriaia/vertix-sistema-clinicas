@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { 
-  Building2, 
-  Scissors, 
-  Clock, 
-  Users, 
-  HelpCircle, 
+  Building2,
+  Scissors,
+  Clock,
+  Users,
+  HelpCircle,
   FileText,
   Smartphone,
   Link,
@@ -21,6 +20,11 @@ import ConfigPoliticas from './config/ConfigPoliticas';
 import ConfigWhatsApp from './config/ConfigWhatsApp';
 import ConfigIntegracoes from './config/ConfigIntegracoes';
 
+interface ConfiguracoesProps {
+  subPage: string | null;
+  setSubPage: (sub: string | null) => void;
+}
+
 const menuConfig = [
   { id: 'clinica', label: 'Minha Clínica', icon: Building2, desc: 'Informações básicas da clínica' },
   { id: 'procedimentos', label: 'Procedimentos', icon: Scissors, desc: 'Catálogo de serviços e preços' },
@@ -32,9 +36,8 @@ const menuConfig = [
   { id: 'integracoes', label: 'Integrações', icon: Link, desc: 'Google Agenda e Drive' },
 ];
 
-export default function Configuracoes() {
-  const [subPage, setSubPage] = useState<string | null>(null);
-
+export default function Configuracoes({ subPage, setSubPage }: ConfiguracoesProps) {
+  
   const renderSubPage = () => {
     switch (subPage) {
       case 'clinica':
