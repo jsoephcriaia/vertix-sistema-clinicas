@@ -140,10 +140,17 @@ export default function PainelAgendamentos({
       return;
     }
 
+    if (!leadId && !clienteId) {
+      showError('Erro: Lead não vinculado. Recarregue a página e tente novamente.');
+      return;
+    }
+
     setSalvandoAgendamento(true);
     try {
       const dataHora = new Date(`${dataAgendamento}T${horaAgendamento}`);
 
+      console.log('Criando agendamento com leadId:', leadId, 'clienteId:', clienteId);
+      
       const { data, error } = await supabase
         .from('agendamentos')
         .insert({
@@ -160,6 +167,8 @@ export default function PainelAgendamentos({
         })
         .select()
         .single();
+
+      console.log('Agendamento criado:', data);
 
       if (error) throw error;
 
