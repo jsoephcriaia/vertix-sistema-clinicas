@@ -214,7 +214,7 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
   const fetchLeads = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from('pipeline')
+      .from('leads_ia')
       .select('*')
       .eq('clinica_id', CLINICA_ID)
       .order('created_at', { ascending: false });
@@ -222,7 +222,17 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
     if (error) {
       console.error('Erro ao buscar leads:', error);
     } else {
-      setLeads(data || []);
+      // Mapear campos da leads_ia para o formato esperado
+      const leadsFormatados = (data || []).map(lead => ({
+        id: lead.id,
+        nome: lead.nome || 'Sem nome',
+        telefone: lead.telefone || '',
+        interesse: lead.procedimento_interesse || '',
+        valor_estimado: 0, // leads_ia não tem esse campo
+        etapa: lead.etapa || 'novo',
+        created_at: lead.created_at,
+      }));
+      setLeads(leadsFormatados);
     }
     setLoading(false);
   };
@@ -239,12 +249,11 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
 
     if (editando.id) {
       const { error } = await supabase
-        .from('pipeline')
+        .from('leads_ia')
         .update({
           nome: editando.nome,
           telefone: editando.telefone,
-          interesse: editando.interesse,
-          valor_estimado: editando.valor_estimado,
+          procedimento_interesse: editando.interesse,
           etapa: editando.etapa,
           updated_at: new Date().toISOString(),
         })
@@ -258,13 +267,12 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
       }
     } else {
       const { error } = await supabase
-        .from('pipeline')
+        .from('leads_ia')
         .insert({
           clinica_id: CLINICA_ID,
           nome: editando.nome,
           telefone: editando.telefone,
-          interesse: editando.interesse,
-          valor_estimado: editando.valor_estimado,
+          procedimento_interesse: editando.interesse,
           etapa: editando.etapa,
         });
 
@@ -287,7 +295,7 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
     showConfirm(
       `Excluir o lead "${lead?.nome}"?`,
       async () => {
-        const { error } = await supabase.from('pipeline').delete().eq('id', id);
+        const { error } = await supabase.from('leads_ia').delete().eq('id', id);
 
         if (error) {
           console.error('Erro ao excluir:', error);
@@ -333,7 +341,7 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
     setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, etapa: novaEtapa } : l)));
 
     const { error } = await supabase
-      .from('pipeline')
+      .from('leads_ia')
       .update({ etapa: novaEtapa, updated_at: new Date().toISOString() })
       .eq('id', leadId);
 

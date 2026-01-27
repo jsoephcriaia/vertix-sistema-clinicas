@@ -271,6 +271,14 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
       
       if (data && !error) {
         setLeadIA(data);
+        
+        // Se o lead tem nome, atualiza o nome da conversa selecionada
+        if (data.nome && conversaSelecionada) {
+          setConversaSelecionada(prev => prev ? { ...prev, nome: data.nome } : null);
+          setConversas(prev => prev.map(c => 
+            c.id === conversationId ? { ...c, nome: data.nome } : c
+          ));
+        }
       } else {
         setLeadIA(null);
       }
