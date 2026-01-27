@@ -272,6 +272,16 @@ export default function PainelAgendamentos({
 
       if (error) throw error;
 
+      // Buscar dados completos do agendamento para pegar lead_id e cliente_id
+      const { data: agendamentoCompleto } = await supabase
+        .from('agendamentos')
+        .select('lead_id, cliente_id')
+        .eq('id', agendamento.id)
+        .single();
+
+      const leadIdParaRetorno = agendamentoCompleto?.lead_id || leadId;
+      const clienteIdParaRetorno = agendamentoCompleto?.cliente_id || clienteId;
+
       // Se tem procedimento com retorno_dias, criar agendamento de retorno
       if (agendamento.procedimento?.retorno_dias) {
         const dataRetorno = new Date();
@@ -282,8 +292,8 @@ export default function PainelAgendamentos({
           .from('agendamentos')
           .insert({
             clinica_id: clinicaId,
-            lead_id: leadId,
-            cliente_id: clienteId,
+            lead_id: leadIdParaRetorno,
+            cliente_id: clienteIdParaRetorno,
             procedimento_id: agendamento.procedimento.id,
             data_hora: dataRetorno.toISOString(),
             valor: agendamento.valor,
@@ -299,11 +309,11 @@ export default function PainelAgendamentos({
       }
 
       // Atualizar lead para convertido
-      if (leadId) {
+      if (leadIdParaRetorno) {
         await supabase
           .from('leads_ia')
           .update({ etapa: 'convertido' })
-          .eq('id', leadId);
+          .eq('id', leadIdParaRetorno);
 
         if (onStatusAlterado) onStatusAlterado('convertido');
       }
