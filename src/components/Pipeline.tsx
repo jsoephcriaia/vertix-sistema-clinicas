@@ -37,6 +37,7 @@ const etapas = [
   { id: 'atendimento', label: 'Em Atendimento', cor: 'bg-yellow-500' },
   { id: 'agendado', label: 'Agendado', cor: 'bg-purple-500' },
   { id: 'convertido', label: 'Convertido', cor: 'bg-green-500' },
+  { id: 'perdido', label: 'Perdido', cor: 'bg-red-500' },
 ];
 
 function LeadCard({ 
@@ -148,7 +149,9 @@ function Coluna({
             <span className="text-xs bg-[#334155] px-2 py-0.5 rounded-full">{leads.length}</span>
           </div>
         </div>
-        <p className="text-xs text-[#10b981] mt-1">R$ {total.toLocaleString('pt-BR')}</p>
+        <p className={`text-xs mt-1 ${etapa.id === 'perdido' ? 'text-red-400' : 'text-[#10b981]'}`}>
+          R$ {total.toLocaleString('pt-BR')}
+        </p>
       </div>
 
       <div
@@ -380,7 +383,7 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {etapas.map((etapa) => (
             <Coluna
               key={etapa.id}
