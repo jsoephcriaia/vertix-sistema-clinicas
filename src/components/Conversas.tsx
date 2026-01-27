@@ -74,12 +74,13 @@ interface ConversasProps {
   onConversaIniciada?: () => void;
 }
 
-// Etapas do pipeline
-const ETAPAS_PIPELINE = [
+// Etapas do lead (correspondem ao constraint leads_ia_etapa_check)
+const ETAPAS_LEAD = [
   { id: 'novo', label: 'Novo', cor: 'bg-blue-500', textCor: 'text-blue-400', bgCor: 'bg-blue-500/20' },
   { id: 'atendimento', label: 'Em Atendimento', cor: 'bg-yellow-500', textCor: 'text-yellow-400', bgCor: 'bg-yellow-500/20' },
   { id: 'agendado', label: 'Agendado', cor: 'bg-purple-500', textCor: 'text-purple-400', bgCor: 'bg-purple-500/20' },
   { id: 'convertido', label: 'Convertido', cor: 'bg-green-500', textCor: 'text-green-400', bgCor: 'bg-green-500/20' },
+  { id: 'perdido', label: 'Perdido', cor: 'bg-red-500', textCor: 'text-red-400', bgCor: 'bg-red-500/20' },
 ];
 
 export default function Conversas({ conversaInicial, onConversaIniciada }: ConversasProps) {
@@ -302,7 +303,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         await converterParaCliente();
       }
       
-      showSuccess(`Etapa atualizada para "${ETAPAS_PIPELINE.find(e => e.id === novaEtapa)?.label}"`);
+      showSuccess(`Etapa atualizada para "${ETAPAS_LEAD.find(e => e.id === novaEtapa)?.label}"`);
     } catch (error) {
       console.error('Erro ao atualizar etapa:', error);
       showError('Erro ao atualizar etapa');
@@ -1084,7 +1085,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   };
 
   const getEtapaInfo = (etapaId: string) => {
-    return ETAPAS_PIPELINE.find(e => e.id === etapaId) || ETAPAS_PIPELINE[0];
+    return ETAPAS_LEAD.find(e => e.id === etapaId) || ETAPAS_LEAD[0];
   };
 
   // Se não tem Chatwoot configurado
@@ -1305,7 +1306,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                   {/* Dropdown de etapas */}
                   {showEtapaDropdown && leadIA && (
                     <div className="absolute top-full right-0 mt-1 bg-[#1e293b] border border-[#334155] rounded-lg shadow-lg z-50 min-w-[160px]">
-                      {ETAPAS_PIPELINE.map((etapa) => (
+                      {ETAPAS_LEAD.map((etapa) => (
                         <button
                           key={etapa.id}
                           onClick={() => atualizarEtapaLead(etapa.id)}
