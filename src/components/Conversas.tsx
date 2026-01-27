@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply, Plus, Phone, MessageSquare, Play, Pause, Trash2, CheckCircle, Clock } from 'lucide-react';
+import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply, Plus, Phone, MessageSquare, Play, Pause, Trash2, CheckCircle, Clock, Edit3, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
+import { supabase } from '@/lib/supabase';
 import EmojiPicker from './EmojiPicker';
 
 interface Attachment {
@@ -55,12 +56,31 @@ interface Lead {
   etapa: string;
 }
 
+interface PipelineLead {
+  id: string;
+  nome: string;
+  telefone: string;
+  interesse: string;
+  valor_estimado: number;
+  etapa: string;
+  created_at: string;
+  clinica_id: string;
+}
+
 type AbaConversa = 'abertas' | 'resolvidas';
 
 interface ConversasProps {
   conversaInicial?: { telefone: string; nome: string } | null;
   onConversaIniciada?: () => void;
 }
+
+// Etapas do pipeline
+const ETAPAS_PIPELINE = [
+  { id: 'novo', label: 'Novo', cor: 'bg-blue-500', textCor: 'text-blue-400', bgCor: 'bg-blue-500/20' },
+  { id: 'atendimento', label: 'Em Atendimento', cor: 'bg-yellow-500', textCor: 'text-yellow-400', bgCor: 'bg-yellow-500/20' },
+  { id: 'agendado', label: 'Agendado', cor: 'bg-purple-500', textCor: 'text-purple-400', bgCor: 'bg-purple-500/20' },
+  { id: 'convertido', label: 'Convertido', cor: 'bg-green-500', textCor: 'text-green-400', bgCor: 'bg-green-500/20' },
+];
 
 export default function Conversas({ conversaInicial, onConversaIniciada }: ConversasProps) {
   const { clinica } = useAuth();
@@ -88,6 +108,17 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   
   // Reply
   const [replyingTo, setReplyingTo] = useState<Mensagem | null>(null);
+  
+  // Pipeline do contato
+  const [pipelineLead, setPipelineLead] = useState<PipelineLead | null>(null);
+  const [loadingPipeline, setLoadingPipeline] = useState(false);
+  const [showEtapaDropdown, setShowEtapaDropdown] = useState(false);
+  const [atualizandoEtapa, setAtualizandoEtapa] = useState(false);
+  
+  // Editar nome
+  const [editandoNome, setEditandoNome] = useState(false);
+  const [nomeTemp, setNomeTemp] = useState('');
+  const [salvandoNome, setSalvandoNome] = useState(false);
   
   // Gravação de áudio
   const [isRecording, setIsRecording] = useState(false);
@@ -125,6 +156,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<number>(0);
   const isFirstLoadRef = useRef(true);
+  const etapaDropdownRef = useRef<HTMLDivElement>(null);
 
   // Carrega conversas
   useEffect(() => {
@@ -163,6 +195,26 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     }
   }, [conversaSelecionada, CLINICA_ID]);
 
+  // Buscar lead do pipeline quando selecionar conversa
+  useEffect(() => {
+    if (conversaSelecionada && CLINICA_ID) {
+      fetchPipelineLead(conversaSelecionada.telefone);
+    } else {
+      setPipelineLead(null);
+    }
+  }, [conversaSelecionada, CLINICA_ID]);
+
+  // Fechar dropdown de etapa ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (etapaDropdownRef.current && !etapaDropdownRef.current.contains(event.target as Node)) {
+        setShowEtapaDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Scroll para última mensagem apenas quando houver nova mensagem
   useEffect(() => {
     if (mensagens.length > 0) {
@@ -187,6 +239,132 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
       }
     };
   }, [audioUrl]);
+
+  // Buscar lead do pipeline pelo telefone
+  const fetchPipelineLead = async (telefone: string) => {
+    if (!CLINICA_ID || !telefone) return;
+    
+    setLoadingPipeline(true);
+    try {
+      // Normalizar telefone para busca
+      const telefoneNormalizado = telefone.replace(/\D/g, '');
+      
+      const { data, error } = await supabase
+        .from('pipeline')
+        .select('*')
+        .eq('clinica_id', CLINICA_ID)
+        .or(`telefone.eq.${telefoneNormalizado},telefone.eq.+${telefoneNormalizado},telefone.ilike.%${telefoneNormalizado.slice(-9)}%`)
+        .single();
+      
+      if (data && !error) {
+        setPipelineLead(data);
+      } else {
+        setPipelineLead(null);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar lead do pipeline:', error);
+      setPipelineLead(null);
+    } finally {
+      setLoadingPipeline(false);
+    }
+  };
+
+  // Atualizar etapa do pipeline
+  const atualizarEtapaPipeline = async (novaEtapa: string) => {
+    if (!pipelineLead || !CLINICA_ID) return;
+    
+    setAtualizandoEtapa(true);
+    try {
+      const { error } = await supabase
+        .from('pipeline')
+        .update({ etapa: novaEtapa })
+        .eq('id', pipelineLead.id);
+      
+      if (error) throw error;
+      
+      setPipelineLead(prev => prev ? { ...prev, etapa: novaEtapa } : null);
+      setShowEtapaDropdown(false);
+      
+      // Se convertido, converter para cliente
+      if (novaEtapa === 'convertido') {
+        await converterParaCliente();
+      }
+      
+      showSuccess(`Etapa atualizada para "${ETAPAS_PIPELINE.find(e => e.id === novaEtapa)?.label}"`);
+    } catch (error) {
+      console.error('Erro ao atualizar etapa:', error);
+      showError('Erro ao atualizar etapa');
+    } finally {
+      setAtualizandoEtapa(false);
+    }
+  };
+
+  // Converter lead para cliente
+  const converterParaCliente = async () => {
+    if (!pipelineLead || !CLINICA_ID) return;
+    
+    try {
+      // Verificar se já existe cliente com esse telefone
+      const { data: clienteExistente } = await supabase
+        .from('clientes')
+        .select('id')
+        .eq('clinica_id', CLINICA_ID)
+        .eq('telefone', pipelineLead.telefone)
+        .single();
+      
+      if (!clienteExistente) {
+        // Criar novo cliente
+        await supabase
+          .from('clientes')
+          .insert({
+            clinica_id: CLINICA_ID,
+            nome: pipelineLead.nome,
+            telefone: pipelineLead.telefone,
+          });
+        
+        showSuccess('Lead convertido para cliente!');
+      }
+    } catch (error) {
+      console.error('Erro ao converter para cliente:', error);
+    }
+  };
+
+  // Salvar nome editado
+  const salvarNome = async () => {
+    if (!conversaSelecionada || !nomeTemp.trim() || !CLINICA_ID) return;
+    
+    setSalvandoNome(true);
+    try {
+      // Atualizar no Chatwoot (contact)
+      // Por enquanto, vamos atualizar apenas localmente e no pipeline se existir
+      
+      // Atualizar no pipeline se existir
+      if (pipelineLead) {
+        const { error } = await supabase
+          .from('pipeline')
+          .update({ nome: nomeTemp.trim() })
+          .eq('id', pipelineLead.id);
+        
+        if (!error) {
+          setPipelineLead(prev => prev ? { ...prev, nome: nomeTemp.trim() } : null);
+        }
+      }
+      
+      // Atualizar localmente
+      setConversaSelecionada(prev => prev ? { ...prev, nome: nomeTemp.trim() } : null);
+      setConversas(prev => prev.map(c => 
+        c.id === conversaSelecionada.id ? { ...c, nome: nomeTemp.trim() } : c
+      ));
+      
+      setEditandoNome(false);
+      showSuccess('Nome atualizado!');
+    } catch (error) {
+      console.error('Erro ao salvar nome:', error);
+      showError('Erro ao salvar nome');
+    } finally {
+      setSalvandoNome(false);
+    }
+  };
 
   const fetchConversas = async () => {
     if (!CLINICA_ID) return;
@@ -592,8 +770,6 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     
     setLoadingClientes(true);
     try {
-      const { supabase } = await import('@/lib/supabase');
-      
       // Buscar clientes
       const { data: clientesData } = await supabase
         .from('clientes')
@@ -789,6 +965,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     setShowAnotacao(false);
     setReplyingTo(null);
     setSelectedFiles([]);
+    setEditandoNome(false);
     limparAudio();
     lastMessageIdRef.current = 0;
     fetchMensagens(conv.id);
@@ -897,22 +1074,8 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     );
   };
 
-  const getEtapaLabel = (etapa: string) => {
-    const etapas: Record<string, string> = {
-      novo: 'Novo',
-      atendimento: 'Em Atendimento',
-      agendado: 'Agendado',
-    };
-    return etapas[etapa] || etapa;
-  };
-
-  const getEtapaCor = (etapa: string) => {
-    const cores: Record<string, string> = {
-      novo: 'bg-blue-500/20 text-blue-400',
-      atendimento: 'bg-yellow-500/20 text-yellow-400',
-      agendado: 'bg-purple-500/20 text-purple-400',
-    };
-    return cores[etapa] || 'bg-gray-500/20 text-gray-400';
+  const getEtapaInfo = (etapaId: string) => {
+    return ETAPAS_PIPELINE.find(e => e.id === etapaId) || ETAPAS_PIPELINE[0];
   };
 
   // Se não tem Chatwoot configurado
@@ -1054,11 +1217,102 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           {/* Header do chat */}
           <div className="bg-[#1e293b] border-b border-[#334155] p-4 flex-shrink-0">
             <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 {renderAvatar(conversaSelecionada, 'md')}
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{conversaSelecionada.nome}</p>
+                <div className="min-w-0 flex-1">
+                  {/* Nome editável */}
+                  {editandoNome ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={nomeTemp}
+                        onChange={(e) => setNomeTemp(e.target.value)}
+                        className="bg-[#0f172a] border border-[#334155] rounded px-2 py-1 text-sm focus:outline-none focus:border-[#10b981] w-40"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') salvarNome();
+                          if (e.key === 'Escape') setEditandoNome(false);
+                        }}
+                      />
+                      <button
+                        onClick={salvarNome}
+                        disabled={salvandoNome}
+                        className="p-1 hover:bg-[#334155] rounded text-[#10b981]"
+                      >
+                        {salvandoNome ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                      </button>
+                      <button
+                        onClick={() => setEditandoNome(false)}
+                        className="p-1 hover:bg-[#334155] rounded text-[#64748b]"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium truncate">{conversaSelecionada.nome}</p>
+                      <button
+                        onClick={() => {
+                          setNomeTemp(conversaSelecionada.nome);
+                          setEditandoNome(true);
+                        }}
+                        className="p-1 hover:bg-[#334155] rounded text-[#64748b] hover:text-white"
+                        title="Editar nome"
+                      >
+                        <Edit3 size={12} />
+                      </button>
+                    </div>
+                  )}
                   <p className="text-xs text-[#64748b]">{conversaSelecionada.telefone}</p>
+                </div>
+                
+                {/* Etapa do Pipeline */}
+                <div className="relative" ref={etapaDropdownRef}>
+                  {loadingPipeline ? (
+                    <div className="px-3 py-1.5 rounded-lg bg-[#334155]">
+                      <Loader2 size={14} className="animate-spin text-[#64748b]" />
+                    </div>
+                  ) : pipelineLead ? (
+                    <button
+                      onClick={() => setShowEtapaDropdown(!showEtapaDropdown)}
+                      disabled={atualizandoEtapa}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${getEtapaInfo(pipelineLead.etapa).bgCor} ${getEtapaInfo(pipelineLead.etapa).textCor}`}
+                    >
+                      {atualizandoEtapa ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <>
+                          <span>{getEtapaInfo(pipelineLead.etapa).label}</span>
+                          <ChevronDown size={14} />
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-[#64748b] px-3 py-1.5 bg-[#334155] rounded-lg">
+                      Sem pipeline
+                    </span>
+                  )}
+                  
+                  {/* Dropdown de etapas */}
+                  {showEtapaDropdown && pipelineLead && (
+                    <div className="absolute top-full right-0 mt-1 bg-[#1e293b] border border-[#334155] rounded-lg shadow-lg z-50 min-w-[160px]">
+                      {ETAPAS_PIPELINE.map((etapa) => (
+                        <button
+                          key={etapa.id}
+                          onClick={() => atualizarEtapaPipeline(etapa.id)}
+                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[#334155] transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                            pipelineLead.etapa === etapa.id ? 'bg-[#334155]' : ''
+                          }`}
+                        >
+                          <div className={`w-2 h-2 rounded-full ${etapa.cor}`}></div>
+                          <span className={pipelineLead.etapa === etapa.id ? etapa.textCor : ''}>{etapa.label}</span>
+                          {pipelineLead.etapa === etapa.id && (
+                            <Check size={14} className={`ml-auto ${etapa.textCor}`} />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -1560,8 +1814,8 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                           <p className="font-medium truncate">{lead.nome}</p>
                           <div className="flex items-center gap-2">
                             <p className="text-sm text-[#64748b]">{lead.telefone || 'Sem telefone'}</p>
-                            <span className={`text-xs px-2 py-0.5 rounded ${getEtapaCor(lead.etapa)}`}>
-                              {getEtapaLabel(lead.etapa)}
+                            <span className={`text-xs px-2 py-0.5 rounded ${getEtapaInfo(lead.etapa).bgCor} ${getEtapaInfo(lead.etapa).textCor}`}>
+                              {getEtapaInfo(lead.etapa).label}
                             </span>
                           </div>
                           {lead.interesse && (
