@@ -13,6 +13,9 @@ interface Retorno {
   status: string;
   tipo: string;
   observacoes: string | null;
+  lead_id: string | null;
+  cliente_id: string | null;
+  procedimento_id: string | null;
   lead: {
     id: string;
     nome: string;
@@ -53,8 +56,8 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
   const fetchRetornos = async () => {
     setLoading(true);
     
-    // Buscar agendamentos do tipo retorno OU agendamentos normais pendentes
-    const { data, error } = await supabase
+    // Buscar agendamentos pendentes
+    const { data: agendamentosData, error } = await supabase
       .from('agendamentos')
       .select(`
         id,
@@ -63,9 +66,9 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
         status,
         tipo,
         observacoes,
-        lead:leads_ia(id, nome, telefone),
-        cliente:clientes(id, nome, telefone),
-        procedimento:procedimentos(id, nome)
+        lead_id,
+        cliente_id,
+        procedimento_id
       `)
       .eq('clinica_id', CLINICA_ID)
       .in('status', ['agendado', 'confirmado'])
@@ -73,9 +76,63 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
 
     if (error) {
       console.error('Erro ao buscar retornos:', error);
-    } else {
-      setRetornos(data || []);
+      setLoading(false);
+      return;
     }
+
+    // Buscar dados dos leads, clientes e procedimentos separadamente
+    const leadIds = [...new Set(agendamentosData?.filter(a => a.lead_id).map(a => a.lead_id) || [])];
+    const clienteIds = [...new Set(agendamentosData?.filter(a => a.cliente_id).map(a => a.cliente_id) || [])];
+    const procedimentoIds = [...new Set(agendamentosData?.filter(a => a.procedimento_id).map(a => a.procedimento_id) || [])];
+
+    // Buscar leads
+    let leadsMap: Record<string, { id: string; nome: string; telefone: string }> = {};
+    if (leadIds.length > 0) {
+      const { data: leadsData } = await supabase
+        .from('leads_ia')
+        .select('id, nome, telefone')
+        .in('id', leadIds);
+      
+      if (leadsData) {
+        leadsData.forEach(l => { leadsMap[l.id] = l; });
+      }
+    }
+
+    // Buscar clientes
+    let clientesMap: Record<string, { id: string; nome: string; telefone: string }> = {};
+    if (clienteIds.length > 0) {
+      const { data: clientesData } = await supabase
+        .from('clientes')
+        .select('id, nome, telefone')
+        .in('id', clienteIds);
+      
+      if (clientesData) {
+        clientesData.forEach(c => { clientesMap[c.id] = c; });
+      }
+    }
+
+    // Buscar procedimentos
+    let procedimentosMap: Record<string, { id: string; nome: string }> = {};
+    if (procedimentoIds.length > 0) {
+      const { data: procedimentosData } = await supabase
+        .from('procedimentos')
+        .select('id, nome')
+        .in('id', procedimentoIds);
+      
+      if (procedimentosData) {
+        procedimentosData.forEach(p => { procedimentosMap[p.id] = p; });
+      }
+    }
+
+    // Montar dados completos
+    const retornosCompletos = agendamentosData?.map(a => ({
+      ...a,
+      lead: a.lead_id ? [leadsMap[a.lead_id]] : null,
+      cliente: a.cliente_id ? [clientesMap[a.cliente_id]] : null,
+      procedimento: a.procedimento_id ? [procedimentosMap[a.procedimento_id]] : null,
+    })) || [];
+
+    setRetornos(retornosCompletos);
     setLoading(false);
   };
 
