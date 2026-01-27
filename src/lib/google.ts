@@ -25,12 +25,3 @@ export const googleConfig = {
   
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
-  ```
-  
-  ---
-  
-  ## Passo 3: Verificar que `.env.local` está no `.gitignore`
-  
-  Abra o arquivo `.gitignore` e confirme que tem essa linha:
-  ```
-  .env.local
