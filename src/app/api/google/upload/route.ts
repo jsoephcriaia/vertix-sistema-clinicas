@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    const imageUrl = `https://drive.google.com/uc?id=${uploadData.id}`;
+    const imageUrl = `https://drive.google.com/thumbnail?id=${uploadData.id}&sz=w1000`;
 
     // Atualizar procedimento
     if (procedimentoId) {
