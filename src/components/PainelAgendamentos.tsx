@@ -326,22 +326,37 @@ export default function PainelAgendamentos({
         dataRetorno.setDate(dataRetorno.getDate() + agendamento.procedimento.retorno_dias);
         dataRetorno.setHours(10, 0, 0, 0); // Horário padrão 10h
 
-        await supabase
-          .from('agendamentos')
-          .insert({
-            clinica_id: clinicaId,
-            lead_id: leadIdParaRetorno,
-            cliente_id: clienteIdParaRetorno,
-            procedimento_id: agendamento.procedimento.id,
-            data_hora: dataRetorno.toISOString(),
-            valor: agendamento.valor,
-            status: 'agendado',
-            tipo: 'retorno',
-            criado_por: 'sistema',
-            observacoes: `Retorno automático - ${agendamento.procedimento.retorno_dias} dias após procedimento`,
-          });
+        const dadosRetorno: any = {
+          clinica_id: clinicaId,
+          procedimento_id: agendamento.procedimento.id,
+          data_hora: dataRetorno.toISOString(),
+          valor: agendamento.valor,
+          status: 'agendado',
+          tipo: 'retorno',
+          criado_por: 'sistema',
+          observacoes: `Retorno automático - ${agendamento.procedimento.retorno_dias} dias após procedimento`,
+        };
 
-        showSuccess(`Realizado! Retorno agendado para ${dataRetorno.toLocaleDateString('pt-BR')}`);
+        // Só adiciona lead_id se existir
+        if (leadIdParaRetorno) {
+          dadosRetorno.lead_id = leadIdParaRetorno;
+        }
+
+        // Só adiciona cliente_id se existir
+        if (clienteIdParaRetorno) {
+          dadosRetorno.cliente_id = clienteIdParaRetorno;
+        }
+
+        const { error: erroRetorno } = await supabase
+          .from('agendamentos')
+          .insert(dadosRetorno);
+
+        if (erroRetorno) {
+          console.error('Erro ao criar retorno:', erroRetorno);
+          showError('Erro ao criar retorno automático');
+        } else {
+          showSuccess(`Realizado! Retorno agendado para ${dataRetorno.toLocaleDateString('pt-BR')}`);
+        }
       } else {
         showSuccess('Marcado como realizado!');
       }
