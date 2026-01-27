@@ -56,15 +56,15 @@ interface Lead {
   etapa: string;
 }
 
-interface PipelineLead {
+interface LeadIA {
   id: string;
   nome: string;
   telefone: string;
-  interesse: string;
-  valor_estimado: number;
+  procedimento_interesse: string | null;
   etapa: string;
   created_at: string;
   clinica_id: string;
+  conversation_id: number | null;
 }
 
 type AbaConversa = 'abertas' | 'resolvidas';
@@ -109,9 +109,9 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   // Reply
   const [replyingTo, setReplyingTo] = useState<Mensagem | null>(null);
   
-  // Pipeline do contato
-  const [pipelineLead, setPipelineLead] = useState<PipelineLead | null>(null);
-  const [loadingPipeline, setLoadingPipeline] = useState(false);
+  // Lead da conversa (tabela leads_ia)
+  const [leadIA, setLeadIA] = useState<LeadIA | null>(null);
+  const [loadingLead, setLoadingLead] = useState(false);
   const [showEtapaDropdown, setShowEtapaDropdown] = useState(false);
   const [atualizandoEtapa, setAtualizandoEtapa] = useState(false);
   
@@ -195,12 +195,12 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     }
   }, [conversaSelecionada, CLINICA_ID]);
 
-  // Buscar lead do pipeline quando selecionar conversa
+  // Buscar lead quando selecionar conversa
   useEffect(() => {
     if (conversaSelecionada && CLINICA_ID) {
-      fetchPipelineLead(conversaSelecionada.telefone);
+      fetchLeadIA(conversaSelecionada.id, conversaSelecionada.telefone);
     } else {
-      setPipelineLead(null);
+      setLeadIA(null);
     }
   }, [conversaSelecionada, CLINICA_ID]);
 
@@ -240,49 +240,61 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     };
   }, [audioUrl]);
 
-  // Buscar lead do pipeline pelo telefone
-  const fetchPipelineLead = async (telefone: string) => {
-    if (!CLINICA_ID || !telefone) return;
+  // Buscar lead pelo conversation_id ou telefone
+  const fetchLeadIA = async (conversationId: number, telefone: string) => {
+    if (!CLINICA_ID) return;
     
-    setLoadingPipeline(true);
+    setLoadingLead(true);
     try {
-      // Normalizar telefone para busca
-      const telefoneNormalizado = telefone.replace(/\D/g, '');
-      
-      const { data, error } = await supabase
-        .from('pipeline')
+      // Primeiro tenta buscar pelo conversation_id (mais preciso)
+      let { data, error } = await supabase
+        .from('leads_ia')
         .select('*')
         .eq('clinica_id', CLINICA_ID)
-        .or(`telefone.eq.${telefoneNormalizado},telefone.eq.+${telefoneNormalizado},telefone.ilike.%${telefoneNormalizado.slice(-9)}%`)
+        .eq('conversation_id', conversationId)
         .single();
       
+      // Se não encontrou, tenta pelo telefone
+      if (!data && telefone) {
+        const telefoneNormalizado = telefone.replace(/\D/g, '');
+        const resultado = await supabase
+          .from('leads_ia')
+          .select('*')
+          .eq('clinica_id', CLINICA_ID)
+          .or(`telefone.eq.${telefoneNormalizado},telefone.eq.+${telefoneNormalizado},telefone.ilike.%${telefoneNormalizado.slice(-9)}%`)
+          .single();
+        
+        data = resultado.data;
+        error = resultado.error;
+      }
+      
       if (data && !error) {
-        setPipelineLead(data);
+        setLeadIA(data);
       } else {
-        setPipelineLead(null);
+        setLeadIA(null);
       }
     } catch (error) {
-      console.error('Erro ao buscar lead do pipeline:', error);
-      setPipelineLead(null);
+      console.error('Erro ao buscar lead:', error);
+      setLeadIA(null);
     } finally {
-      setLoadingPipeline(false);
+      setLoadingLead(false);
     }
   };
 
-  // Atualizar etapa do pipeline
-  const atualizarEtapaPipeline = async (novaEtapa: string) => {
-    if (!pipelineLead || !CLINICA_ID) return;
+  // Atualizar etapa do lead
+  const atualizarEtapaLead = async (novaEtapa: string) => {
+    if (!leadIA || !CLINICA_ID) return;
     
     setAtualizandoEtapa(true);
     try {
       const { error } = await supabase
-        .from('pipeline')
+        .from('leads_ia')
         .update({ etapa: novaEtapa })
-        .eq('id', pipelineLead.id);
+        .eq('id', leadIA.id);
       
       if (error) throw error;
       
-      setPipelineLead(prev => prev ? { ...prev, etapa: novaEtapa } : null);
+      setLeadIA(prev => prev ? { ...prev, etapa: novaEtapa } : null);
       setShowEtapaDropdown(false);
       
       // Se convertido, converter para cliente
@@ -301,7 +313,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
 
   // Converter lead para cliente
   const converterParaCliente = async () => {
-    if (!pipelineLead || !CLINICA_ID) return;
+    if (!leadIA || !CLINICA_ID) return;
     
     try {
       // Verificar se já existe cliente com esse telefone
@@ -309,7 +321,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         .from('clientes')
         .select('id')
         .eq('clinica_id', CLINICA_ID)
-        .eq('telefone', pipelineLead.telefone)
+        .eq('telefone', leadIA.telefone)
         .single();
       
       if (!clienteExistente) {
@@ -318,8 +330,8 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           .from('clientes')
           .insert({
             clinica_id: CLINICA_ID,
-            nome: pipelineLead.nome,
-            telefone: pipelineLead.telefone,
+            nome: leadIA.nome,
+            telefone: leadIA.telefone,
           });
         
         showSuccess('Lead convertido para cliente!');
@@ -335,18 +347,15 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     
     setSalvandoNome(true);
     try {
-      // Atualizar no Chatwoot (contact)
-      // Por enquanto, vamos atualizar apenas localmente e no pipeline se existir
-      
-      // Atualizar no pipeline se existir
-      if (pipelineLead) {
+      // Atualizar no leads_ia se existir
+      if (leadIA) {
         const { error } = await supabase
-          .from('pipeline')
+          .from('leads_ia')
           .update({ nome: nomeTemp.trim() })
-          .eq('id', pipelineLead.id);
+          .eq('id', leadIA.id);
         
         if (!error) {
-          setPipelineLead(prev => prev ? { ...prev, nome: nomeTemp.trim() } : null);
+          setLeadIA(prev => prev ? { ...prev, nome: nomeTemp.trim() } : null);
         }
       }
       
@@ -1268,45 +1277,45 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 
                 {/* Etapa do Pipeline */}
                 <div className="relative" ref={etapaDropdownRef}>
-                  {loadingPipeline ? (
+                  {loadingLead ? (
                     <div className="px-3 py-1.5 rounded-lg bg-[#334155]">
                       <Loader2 size={14} className="animate-spin text-[#64748b]" />
                     </div>
-                  ) : pipelineLead ? (
+                  ) : leadIA ? (
                     <button
                       onClick={() => setShowEtapaDropdown(!showEtapaDropdown)}
                       disabled={atualizandoEtapa}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${getEtapaInfo(pipelineLead.etapa).bgCor} ${getEtapaInfo(pipelineLead.etapa).textCor}`}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${getEtapaInfo(leadIA.etapa).bgCor} ${getEtapaInfo(leadIA.etapa).textCor}`}
                     >
                       {atualizandoEtapa ? (
                         <Loader2 size={14} className="animate-spin" />
                       ) : (
                         <>
-                          <span>{getEtapaInfo(pipelineLead.etapa).label}</span>
+                          <span>{getEtapaInfo(leadIA.etapa).label}</span>
                           <ChevronDown size={14} />
                         </>
                       )}
                     </button>
                   ) : (
                     <span className="text-xs text-[#64748b] px-3 py-1.5 bg-[#334155] rounded-lg">
-                      Sem pipeline
+                      Sem lead
                     </span>
                   )}
                   
                   {/* Dropdown de etapas */}
-                  {showEtapaDropdown && pipelineLead && (
+                  {showEtapaDropdown && leadIA && (
                     <div className="absolute top-full right-0 mt-1 bg-[#1e293b] border border-[#334155] rounded-lg shadow-lg z-50 min-w-[160px]">
                       {ETAPAS_PIPELINE.map((etapa) => (
                         <button
                           key={etapa.id}
-                          onClick={() => atualizarEtapaPipeline(etapa.id)}
+                          onClick={() => atualizarEtapaLead(etapa.id)}
                           className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[#334155] transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                            pipelineLead.etapa === etapa.id ? 'bg-[#334155]' : ''
+                            leadIA.etapa === etapa.id ? 'bg-[#334155]' : ''
                           }`}
                         >
                           <div className={`w-2 h-2 rounded-full ${etapa.cor}`}></div>
-                          <span className={pipelineLead.etapa === etapa.id ? etapa.textCor : ''}>{etapa.label}</span>
-                          {pipelineLead.etapa === etapa.id && (
+                          <span className={leadIA.etapa === etapa.id ? etapa.textCor : ''}>{etapa.label}</span>
+                          {leadIA.etapa === etapa.id && (
                             <Check size={14} className={`ml-auto ${etapa.textCor}`} />
                           )}
                         </button>
