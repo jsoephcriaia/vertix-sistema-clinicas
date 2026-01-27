@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import Login from '@/components/Login';
 import Sidebar from '@/components/Sidebar';
@@ -12,12 +13,37 @@ import Retornos from '@/components/Retornos';
 import Configuracoes from '@/components/Configuracoes';
 import { Loader2 } from 'lucide-react';
 
+const VALID_PAGES = ['dashboard', 'conversas', 'pipeline', 'clientes', 'retornos', 'configuracoes'];
+
 export default function Home() {
   const { usuario, clinica, loading } = useAuth();
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Pegar página da URL ou usar dashboard como padrão
+  const pageFromUrl = searchParams.get('page') || 'dashboard';
+  const [currentPage, setCurrentPage] = useState(
+    VALID_PAGES.includes(pageFromUrl) ? pageFromUrl : 'dashboard'
+  );
   
   // Dados para iniciar conversa a partir de outras telas
   const conversaInicialRef = useRef<{ telefone: string; nome: string } | null>(null);
+
+  // Atualizar página quando URL mudar
+  useEffect(() => {
+    const pageFromUrl = searchParams.get('page') || 'dashboard';
+    if (VALID_PAGES.includes(pageFromUrl) && pageFromUrl !== currentPage) {
+      setCurrentPage(pageFromUrl);
+    }
+  }, [searchParams]);
+
+  // Função para mudar de página (atualiza URL também)
+  const handleSetCurrentPage = (page: string) => {
+    setCurrentPage(page);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', page);
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
 
   if (loading) {
     return (
@@ -34,7 +60,7 @@ export default function Home() {
   // Função para navegar para Conversas e iniciar conversa
   const handleAbrirConversa = (telefone: string, nome: string) => {
     conversaInicialRef.current = { telefone, nome };
-    setCurrentPage('conversas');
+    handleSetCurrentPage('conversas');
   };
 
   const renderPage = () => {
@@ -58,7 +84,7 @@ export default function Home() {
 
   return (
     <div className="flex h-screen bg-[var(--theme-bg)]">
-      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      <Sidebar currentPage={currentPage} setCurrentPage={handleSetCurrentPage} />
       <main className="flex-1 overflow-auto p-4 lg:p-6 pt-16 lg:pt-6">
         {renderPage()}
       </main>
