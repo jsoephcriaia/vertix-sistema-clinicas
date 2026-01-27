@@ -13,20 +13,20 @@ interface Retorno {
   status: string;
   tipo: string;
   observacoes: string | null;
-  lead?: {
+  lead: {
     id: string;
     nome: string;
     telefone: string;
-  } | null;
-  cliente?: {
+  }[] | null;
+  cliente: {
     id: string;
     nome: string;
     telefone: string;
-  } | null;
-  procedimento?: {
+  }[] | null;
+  procedimento: {
     id: string;
     nome: string;
-  } | null;
+  }[] | null;
 }
 
 interface RetornosProps {
@@ -107,8 +107,10 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
   };
 
   const handleEnviarMensagem = (retorno: Retorno) => {
-    const nome = retorno.lead?.nome || retorno.cliente?.nome || 'Cliente';
-    const telefone = retorno.lead?.telefone || retorno.cliente?.telefone;
+    const lead = retorno.lead?.[0];
+    const cliente = retorno.cliente?.[0];
+    const nome = lead?.nome || cliente?.nome || 'Cliente';
+    const telefone = lead?.telefone || cliente?.telefone;
     
     if (!telefone) {
       showError('Este cliente não possui telefone cadastrado');
@@ -196,12 +198,15 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
     // Filtro por busca
     if (busca) {
       lista = lista.filter(r => {
-        const nome = r.lead?.nome || r.cliente?.nome || '';
-        const telefone = r.lead?.telefone || r.cliente?.telefone || '';
-        const procedimento = r.procedimento?.nome || '';
+        const lead = r.lead?.[0];
+        const cliente = r.cliente?.[0];
+        const procedimento = r.procedimento?.[0];
+        const nome = lead?.nome || cliente?.nome || '';
+        const telefone = lead?.telefone || cliente?.telefone || '';
+        const procNome = procedimento?.nome || '';
         return nome.toLowerCase().includes(busca.toLowerCase()) ||
                telefone.includes(busca) ||
-               procedimento.toLowerCase().includes(busca.toLowerCase());
+               procNome.toLowerCase().includes(busca.toLowerCase());
       });
     }
 
@@ -316,8 +321,11 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
             const diasAtraso = getDiasAtraso(retorno.data_hora);
             const diasPara = getDiasParaRetorno(retorno.data_hora);
             const atrasado = diasAtraso > 0;
-            const nome = retorno.lead?.nome || retorno.cliente?.nome || 'Sem nome';
-            const telefone = retorno.lead?.telefone || retorno.cliente?.telefone || '';
+            const lead = retorno.lead?.[0];
+            const cliente = retorno.cliente?.[0];
+            const procedimento = retorno.procedimento?.[0];
+            const nome = lead?.nome || cliente?.nome || 'Sem nome';
+            const telefone = lead?.telefone || cliente?.telefone || '';
 
             return (
               <div key={retorno.id} className={`bg-[#1e293b] rounded-xl border p-5 ${atrasado ? 'border-red-500/50' : retorno.status === 'confirmado' ? 'border-green-500/30' : 'border-[#334155]'}`}>
@@ -350,10 +358,10 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
                           <Phone size={14} />
                           <span>{telefone || 'Sem telefone'}</span>
                         </div>
-                        {retorno.procedimento && (
+                        {procedimento && (
                           <div className="flex items-center gap-1">
                             <Package size={14} />
-                            <span>{retorno.procedimento.nome}</span>
+                            <span>{procedimento.nome}</span>
                           </div>
                         )}
                       </div>
