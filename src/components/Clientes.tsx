@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit, Trash2, Phone, Mail, DollarSign, Calendar, Star, X, Save, Loader2, User, MessageSquare } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Phone, Mail, DollarSign, Calendar, Star, X, Save, Loader2, User, MessageSquare, History } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
@@ -37,6 +37,10 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState<Cliente | null>(null);
+  const [showHistorico, setShowHistorico] = useState(false);
+  const [clienteHistorico, setClienteHistorico] = useState<Cliente | null>(null);
+  const [historicoProcedimentos, setHistoricoProcedimentos] = useState<any[]>([]);
+  const [loadingHistorico, setLoadingHistorico] = useState(false);
 
   const novoCliente: Cliente = {
     id: '',
@@ -257,6 +261,62 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
     }
   };
 
+  const handleVerHistorico = async (cliente: Cliente) => {
+    setClienteHistorico(cliente);
+    setShowHistorico(true);
+    setLoadingHistorico(true);
+
+    // Pegar lead_id do cliente pelo telefone
+    let leadId = null;
+    if (cliente.telefone) {
+      const { data: leadData } = await supabase
+        .from('leads_ia')
+        .select('id')
+        .eq('telefone', cliente.telefone)
+        .eq('clinica_id', CLINICA_ID)
+        .single();
+      
+      leadId = leadData?.id;
+    }
+
+    // Buscar todos os agendamentos do cliente
+    const { data: agendamentos } = await supabase
+      .from('agendamentos')
+      .select('id, data_hora, valor, status, tipo, procedimento_id')
+      .eq('clinica_id', CLINICA_ID)
+      .or(`cliente_id.eq.${cliente.id}${leadId ? `,lead_id.eq.${leadId}` : ''}`)
+      .order('data_hora', { ascending: false });
+
+    if (agendamentos && agendamentos.length > 0) {
+      // Buscar nomes dos procedimentos
+      const procedimentoIds = [...new Set(agendamentos.filter(a => a.procedimento_id).map(a => a.procedimento_id))];
+      
+      let procedimentosMap: Record<string, string> = {};
+      if (procedimentoIds.length > 0) {
+        const { data: procsData } = await supabase
+          .from('procedimentos')
+          .select('id, nome')
+          .in('id', procedimentoIds);
+        
+        if (procsData) {
+          procsData.forEach(p => { procedimentosMap[p.id] = p.nome; });
+        }
+      }
+
+      // Montar lista com nome do procedimento
+      const historicoCompleto = agendamentos.map(a => ({
+        ...a,
+        procedimento_nome: a.procedimento_id ? procedimentosMap[a.procedimento_id] : 'Consulta',
+      }));
+
+      setHistoricoProcedimentos(historicoCompleto);
+    } else {
+      setHistoricoProcedimentos([]);
+    }
+
+    setLoadingHistorico(false);
+  };
+
   const formatarData = (data: string | null) => {
     if (!data) return '-';
     return new Date(data).toLocaleDateString('pt-BR');
@@ -400,6 +460,13 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                 {/* Ações */}
                 <div className="flex gap-2">
                   <button
+                    onClick={() => handleVerHistorico(cliente)}
+                    className="p-2 hover:bg-purple-500/20 rounded-lg transition-colors"
+                    title="Ver histórico"
+                  >
+                    <History size={18} className="text-purple-400" />
+                  </button>
+                  <button
                     onClick={() => handleEnviarMensagem(cliente)}
                     disabled={!cliente.telefone}
                     className="p-2 hover:bg-[#10b981]/20 rounded-lg transition-colors disabled:opacity-50"
@@ -522,6 +589,117 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                 {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                 Salvar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Histórico */}
+      {showHistorico && clienteHistorico && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-[#334155] flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Histórico de Procedimentos</h2>
+                <p className="text-sm text-[#64748b]">{clienteHistorico.nome}</p>
+              </div>
+              <button 
+                onClick={() => { setShowHistorico(false); setClienteHistorico(null); }} 
+                className="p-2 hover:bg-[#334155] rounded-lg"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingHistorico ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 size={32} className="animate-spin text-purple-400" />
+                </div>
+              ) : historicoProcedimentos.length === 0 ? (
+                <div className="text-center py-12 text-[#64748b]">
+                  <History size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>Nenhum procedimento encontrado</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {historicoProcedimentos.map((item) => {
+                    const data = new Date(item.data_hora);
+                    const statusColors: Record<string, string> = {
+                      realizado: 'bg-green-500/20 text-green-400',
+                      confirmado: 'bg-blue-500/20 text-blue-400',
+                      agendado: 'bg-yellow-500/20 text-yellow-400',
+                      cancelado: 'bg-red-500/20 text-red-400',
+                      nao_compareceu: 'bg-orange-500/20 text-orange-400',
+                    };
+                    const statusLabels: Record<string, string> = {
+                      realizado: 'Realizado',
+                      confirmado: 'Confirmado',
+                      agendado: 'Agendado',
+                      cancelado: 'Cancelado',
+                      nao_compareceu: 'Não Compareceu',
+                    };
+
+                    return (
+                      <div 
+                        key={item.id} 
+                        className="flex items-center justify-between p-4 bg-[#0f172a] rounded-lg border border-[#334155]"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium">{item.procedimento_nome}</p>
+                            {item.tipo === 'retorno' && (
+                              <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">
+                                Retorno
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-[#64748b]">
+                            {data.toLocaleDateString('pt-BR')} às {data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-xs px-2 py-1 rounded ${statusColors[item.status] || 'bg-gray-500/20 text-gray-400'}`}>
+                            {statusLabels[item.status] || item.status}
+                          </span>
+                          {item.valor && (
+                            <p className="text-sm text-[#10b981] mt-1">
+                              R$ {item.valor.toLocaleString('pt-BR')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Resumo */}
+                  <div className="mt-6 pt-4 border-t border-[#334155]">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-2xl font-bold text-[#10b981]">
+                          {historicoProcedimentos.filter(h => h.status === 'realizado').length}
+                        </p>
+                        <p className="text-xs text-[#64748b]">Realizados</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-yellow-400">
+                          {historicoProcedimentos.filter(h => ['agendado', 'confirmado'].includes(h.status)).length}
+                        </p>
+                        <p className="text-xs text-[#64748b]">Pendentes</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-[#10b981]">
+                          R$ {historicoProcedimentos
+                            .filter(h => h.status === 'realizado')
+                            .reduce((sum, h) => sum + (h.valor || 0), 0)
+                            .toLocaleString('pt-BR')}
+                        </p>
+                        <p className="text-xs text-[#64748b]">Total Gasto</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
