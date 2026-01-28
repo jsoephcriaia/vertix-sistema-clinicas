@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, HardDrive, CheckCircle, Link2, ExternalLink, AlertCircle, MessageSquare, Save, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar, HardDrive, CheckCircle, Link2, MessageSquare, Save, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface ConfigIntegracoesProps {

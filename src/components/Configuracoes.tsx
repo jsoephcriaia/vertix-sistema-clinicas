@@ -3,10 +3,12 @@
 import {
   Smartphone,
   Link,
-  ChevronRight
+  ChevronRight,
+  Settings2
 } from 'lucide-react';
 import ConfigWhatsApp from './config/ConfigWhatsApp';
 import ConfigIntegracoes from './config/ConfigIntegracoes';
+import ConfigAvancado from './config/ConfigAvancado';
 
 interface ConfiguracoesProps {
   subPage: string | null;
@@ -16,6 +18,7 @@ interface ConfiguracoesProps {
 const menuConfig = [
   { id: 'whatsapp', label: 'WhatsApp', icon: Smartphone, desc: 'Conexão WhatsApp Business' },
   { id: 'integracoes', label: 'Integrações', icon: Link, desc: 'Google Agenda e Drive' },
+  { id: 'avancado', label: 'Avançado', icon: Settings2, desc: 'Agente de IA e configurações avançadas' },
 ];
 
 export default function Configuracoes({ subPage, setSubPage }: ConfiguracoesProps) {
@@ -26,6 +29,8 @@ export default function Configuracoes({ subPage, setSubPage }: ConfiguracoesProp
         return <ConfigWhatsApp onBack={() => setSubPage(null)} />;
       case 'integracoes':
         return <ConfigIntegracoes onBack={() => setSubPage(null)} />;
+      case 'avancado':
+        return <ConfigAvancado onBack={() => setSubPage(null)} />;
       default:
         return null;
     }
