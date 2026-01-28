@@ -518,6 +518,100 @@ export default function PainelAgendamentos({
             </button>
           </div>
 
+          {/* Formulário novo agendamento - aparece no topo */}
+          {showNovoAgendamento && (
+            <div className="mb-4 p-4 bg-[#0f172a] rounded-lg border border-purple-500/50">
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Calendar size={16} className="text-purple-400" />
+                Novo Agendamento
+              </h4>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs text-[#64748b] mb-1">Data *</label>
+                    <input
+                      type="date"
+                      value={dataAgendamento}
+                      onChange={(e) => setDataAgendamento(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[#64748b] mb-1">Hora *</label>
+                    <input
+                      type="time"
+                      value={horaAgendamento}
+                      onChange={(e) => setHoraAgendamento(e.target.value)}
+                      className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-[#64748b] mb-1">Procedimento</label>
+                  <select
+                    value={procedimentoAgendamento}
+                    onChange={(e) => setProcedimentoAgendamento(e.target.value)}
+                    className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="">Selecione (opcional)</option>
+                    {procedimentos.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nome} - R$ {p.preco.toLocaleString('pt-BR')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-[#64748b] mb-1">Valor</label>
+                  <input
+                    type="number"
+                    value={valorAgendamento}
+                    onChange={(e) => setValorAgendamento(e.target.value)}
+                    className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
+                    placeholder="R$ 0,00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-[#64748b] mb-1">Observações</label>
+                  <textarea
+                    value={observacoesAgendamento}
+                    onChange={(e) => setObservacoesAgendamento(e.target.value)}
+                    className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500 resize-none"
+                    rows={2}
+                    placeholder="Observações opcionais..."
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={limparFormulario}
+                    className="flex-1 px-4 py-2.5 bg-[#334155] hover:bg-[#475569] rounded-lg text-sm transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={criarAgendamento}
+                    disabled={!dataAgendamento || !horaAgendamento || salvandoAgendamento}
+                    className="flex-1 px-4 py-2.5 bg-purple-500 hover:bg-purple-600 disabled:bg-[#334155] disabled:text-[#64748b] rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                  >
+                    {salvandoAgendamento ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <>
+                        <Calendar size={16} />
+                        Agendar
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {loadingAgendamentos ? (
             <div className="flex justify-center py-12">
               <Loader2 size={28} className="animate-spin text-purple-400" />
@@ -661,96 +755,6 @@ export default function PainelAgendamentos({
             </div>
           )}
 
-          {/* Formulário novo agendamento */}
-          {showNovoAgendamento && (
-            <div className="mt-4 p-4 bg-[#0f172a] rounded-lg border border-[#334155]">
-              <h4 className="font-medium mb-3">Novo Agendamento</h4>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-xs text-[#64748b] mb-1">Data *</label>
-                    <input
-                      type="date"
-                      value={dataAgendamento}
-                      onChange={(e) => setDataAgendamento(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-[#64748b] mb-1">Hora *</label>
-                    <input
-                      type="time"
-                      value={horaAgendamento}
-                      onChange={(e) => setHoraAgendamento(e.target.value)}
-                      className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-[#64748b] mb-1">Procedimento</label>
-                  <select
-                    value={procedimentoAgendamento}
-                    onChange={(e) => setProcedimentoAgendamento(e.target.value)}
-                    className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="">Selecione (opcional)</option>
-                    {procedimentos.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nome} - R$ {p.preco.toLocaleString('pt-BR')}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-[#64748b] mb-1">Valor</label>
-                  <input
-                    type="number"
-                    value={valorAgendamento}
-                    onChange={(e) => setValorAgendamento(e.target.value)}
-                    className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
-                    placeholder="R$ 0,00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-[#64748b] mb-1">Observações</label>
-                  <textarea
-                    value={observacoesAgendamento}
-                    onChange={(e) => setObservacoesAgendamento(e.target.value)}
-                    className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500 resize-none"
-                    rows={2}
-                    placeholder="Observações opcionais..."
-                  />
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={limparFormulario}
-                    className="flex-1 px-4 py-2.5 bg-[#334155] hover:bg-[#475569] rounded-lg text-sm transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={criarAgendamento}
-                    disabled={!dataAgendamento || !horaAgendamento || salvandoAgendamento}
-                    className="flex-1 px-4 py-2.5 bg-purple-500 hover:bg-purple-600 disabled:bg-[#334155] disabled:text-[#64748b] rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
-                  >
-                    {salvandoAgendamento ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <>
-                        <Calendar size={16} />
-                        Agendar
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </>
