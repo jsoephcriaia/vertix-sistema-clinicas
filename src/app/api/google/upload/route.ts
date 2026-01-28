@@ -78,16 +78,17 @@ async function getValidAccessToken(clinica: any, clinicaId: string): Promise<str
 
 export async function POST(request: NextRequest) {
   console.log('=== UPLOAD API INICIADO ===');
-  
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const clinicaId = formData.get('clinicaId') as string;
     const procedimentoId = formData.get('procedimentoId') as string;
     const usuarioId = formData.get('usuarioId') as string;
+    const profissionalId = formData.get('profissionalId') as string;
     const tipo = formData.get('tipo') as string;
 
-    console.log('Dados recebidos:', { clinicaId, procedimentoId, usuarioId, tipo, fileName: file?.name });
+    console.log('Dados recebidos:', { clinicaId, procedimentoId, usuarioId, profissionalId, tipo, fileName: file?.name });
 
     if (!file || !clinicaId) {
       return NextResponse.json({ error: 'Arquivo e clinicaId são obrigatórios' }, { status: 400 });
@@ -162,6 +163,8 @@ export async function POST(request: NextRequest) {
       fileName = `logo_${clinicaId}_${Date.now()}.${file.name.split('.').pop()}`;
     } else if (tipo === 'avatar') {
       fileName = `avatar_${usuarioId}_${Date.now()}.${file.name.split('.').pop()}`;
+    } else if (tipo === 'profissional_avatar') {
+      fileName = `profissional_${profissionalId}_${Date.now()}.${file.name.split('.').pop()}`;
     } else {
       fileName = `${procedimentoId || 'img'}_${tipo}_${Date.now()}.${file.name.split('.').pop()}`;
     }
@@ -227,6 +230,11 @@ export async function POST(request: NextRequest) {
         .from('usuarios')
         .update({ avatar: imageUrl })
         .eq('id', usuarioId);
+    } else if (tipo === 'profissional_avatar' && profissionalId) {
+      await supabase
+        .from('equipe')
+        .update({ avatar: imageUrl })
+        .eq('id', profissionalId);
     } else if (procedimentoId) {
       const updateField = tipo === 'antes_depois' ? 'imagem_antes_depois_url' : 'imagem_url';
       await supabase

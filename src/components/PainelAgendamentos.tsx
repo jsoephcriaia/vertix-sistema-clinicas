@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Plus, Calendar, Loader2, Check, Clock, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Plus, Calendar, Loader2, Check, Clock, AlertCircle, RefreshCw, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAlert } from '@/components/Alert';
 
@@ -11,6 +11,17 @@ interface Procedimento {
   preco: number;
   duracao_minutos: number;
   retorno_dias: number | null;
+}
+
+interface Profissional {
+  id: string;
+  nome: string;
+  avatar?: string | null;
+}
+
+interface Slot {
+  inicio: string;
+  fim: string;
 }
 
 interface Agendamento {
@@ -23,7 +34,9 @@ interface Agendamento {
   observacoes: string | null;
   google_calendar_event_id: string | null;
   procedimento_id: string | null;
+  profissional_id: string | null;
   procedimento?: Procedimento;
+  profissional?: Profissional;
 }
 
 interface PainelAgendamentosProps {
@@ -54,6 +67,10 @@ export default function PainelAgendamentos({
   // Procedimentos disponíveis
   const [procedimentos, setProcedimentos] = useState<Procedimento[]>([]);
 
+  // Profissionais disponíveis
+  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
+  const [profissionaisDisponiveis, setProfissionaisDisponiveis] = useState<Profissional[]>([]);
+
   // Agendamentos
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loadingAgendamentos, setLoadingAgendamentos] = useState(false);
@@ -63,25 +80,45 @@ export default function PainelAgendamentos({
   const [dataAgendamento, setDataAgendamento] = useState('');
   const [horaAgendamento, setHoraAgendamento] = useState('');
   const [procedimentoAgendamento, setProcedimentoAgendamento] = useState('');
+  const [profissionalAgendamento, setProfissionalAgendamento] = useState('');
   const [valorAgendamento, setValorAgendamento] = useState('');
   const [observacoesAgendamento, setObservacoesAgendamento] = useState('');
   const [salvandoAgendamento, setSalvandoAgendamento] = useState(false);
+
+  // Slots disponíveis
+  const [slotsDisponiveis, setSlotsDisponiveis] = useState<Slot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [usarSlots, setUsarSlots] = useState(true);
 
   // Carregar dados quando abrir
   useEffect(() => {
     if (isOpen && clinicaId && (leadId || clienteId)) {
       fetchProcedimentos();
+      fetchProfissionais();
       fetchAgendamentos();
     }
   }, [isOpen, leadId, clienteId, clinicaId]);
 
-  // Atualizar valor quando selecionar procedimento
+  // Atualizar valor e profissionais quando selecionar procedimento
   useEffect(() => {
     if (procedimentoAgendamento) {
       const proc = procedimentos.find(p => p.id === procedimentoAgendamento);
       if (proc) setValorAgendamento(proc.preco.toString());
+      fetchProfissionaisPorProcedimento(procedimentoAgendamento);
+    } else {
+      setProfissionaisDisponiveis(profissionais);
+      setProfissionalAgendamento('');
     }
-  }, [procedimentoAgendamento, procedimentos]);
+  }, [procedimentoAgendamento, procedimentos, profissionais]);
+
+  // Buscar slots quando mudar data ou profissional
+  useEffect(() => {
+    if (dataAgendamento && profissionalAgendamento && usarSlots) {
+      fetchSlotsDisponiveis();
+    } else {
+      setSlotsDisponiveis([]);
+    }
+  }, [dataAgendamento, profissionalAgendamento, procedimentoAgendamento, usarSlots]);
 
   const fetchProcedimentos = async () => {
     try {
@@ -95,6 +132,77 @@ export default function PainelAgendamentos({
       if (data) setProcedimentos(data);
     } catch (error) {
       console.error('Erro ao buscar procedimentos:', error);
+    }
+  };
+
+  const fetchProfissionais = async () => {
+    try {
+      const { data } = await supabase
+        .from('equipe')
+        .select('id, nome, avatar')
+        .eq('clinica_id', clinicaId)
+        .eq('ativo', true)
+        .order('nome');
+
+      if (data) {
+        setProfissionais(data);
+        setProfissionaisDisponiveis(data);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar profissionais:', error);
+    }
+  };
+
+  const fetchProfissionaisPorProcedimento = async (procedimentoId: string) => {
+    try {
+      // Buscar profissionais que fazem este procedimento
+      const { data: relacoes } = await supabase
+        .from('profissional_procedimentos')
+        .select('profissional_id')
+        .eq('procedimento_id', procedimentoId);
+
+      if (relacoes && relacoes.length > 0) {
+        const profIds = relacoes.map(r => r.profissional_id);
+        const filtrados = profissionais.filter(p => profIds.includes(p.id));
+        setProfissionaisDisponiveis(filtrados);
+
+        // Se o profissional atual não faz este procedimento, limpar seleção
+        if (!profIds.includes(profissionalAgendamento)) {
+          setProfissionalAgendamento('');
+        }
+      } else {
+        // Se não há relações, mostrar todos os profissionais
+        setProfissionaisDisponiveis(profissionais);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar profissionais do procedimento:', error);
+      setProfissionaisDisponiveis(profissionais);
+    }
+  };
+
+  const fetchSlotsDisponiveis = async () => {
+    if (!dataAgendamento || !profissionalAgendamento) return;
+
+    setLoadingSlots(true);
+    try {
+      const proc = procedimentos.find(p => p.id === procedimentoAgendamento);
+      const duracao = proc?.duracao_minutos || 60;
+
+      const response = await fetch(
+        `/api/disponibilidade?profissionalId=${profissionalAgendamento}&clinicaId=${clinicaId}&data=${dataAgendamento}&duracaoMinutos=${duracao}`
+      );
+      const result = await response.json();
+
+      if (result.slots) {
+        setSlotsDisponiveis(result.slots);
+      } else {
+        setSlotsDisponiveis([]);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar slots:', error);
+      setSlotsDisponiveis([]);
+    } finally {
+      setLoadingSlots(false);
     }
   };
 
@@ -112,7 +220,8 @@ export default function PainelAgendamentos({
           criado_por,
           observacoes,
           google_calendar_event_id,
-          procedimento_id
+          procedimento_id,
+          profissional_id
         `)
         .eq('clinica_id', clinicaId)
         .order('data_hora', { ascending: false });
@@ -128,23 +237,38 @@ export default function PainelAgendamentos({
       if (data && !error) {
         // Buscar procedimentos para mapear
         const procedimentoIds = [...new Set(data.filter(a => a.procedimento_id).map(a => a.procedimento_id))];
-        
+        const profissionalIds = [...new Set(data.filter(a => a.profissional_id).map(a => a.profissional_id))];
+
         let procedimentosMap: Record<string, Procedimento> = {};
+        let profissionaisMap: Record<string, Profissional> = {};
+
         if (procedimentoIds.length > 0) {
           const { data: procsData } = await supabase
             .from('procedimentos')
             .select('id, nome, preco, duracao_minutos, retorno_dias')
             .in('id', procedimentoIds);
-          
+
           if (procsData) {
             procsData.forEach(p => { procedimentosMap[p.id] = p; });
           }
         }
 
-        // Montar agendamentos com procedimento
+        if (profissionalIds.length > 0) {
+          const { data: profsData } = await supabase
+            .from('equipe')
+            .select('id, nome, avatar')
+            .in('id', profissionalIds as string[]);
+
+          if (profsData) {
+            profsData.forEach(p => { profissionaisMap[p.id] = p; });
+          }
+        }
+
+        // Montar agendamentos completos
         const agendamentosCompletos = data.map(a => ({
           ...a,
           procedimento: a.procedimento_id ? procedimentosMap[a.procedimento_id] : undefined,
+          profissional: a.profissional_id ? profissionaisMap[a.profissional_id] : undefined,
         }));
 
         setAgendamentos(agendamentosCompletos as any);
@@ -171,8 +295,6 @@ export default function PainelAgendamentos({
     try {
       const dataHora = new Date(`${dataAgendamento}T${horaAgendamento}`);
 
-      console.log('Criando agendamento com leadId:', leadId, 'clienteId:', clienteId);
-      
       const { data, error } = await supabase
         .from('agendamentos')
         .insert({
@@ -180,6 +302,7 @@ export default function PainelAgendamentos({
           lead_id: leadId || null,
           cliente_id: clienteId || null,
           procedimento_id: procedimentoAgendamento || null,
+          profissional_id: profissionalAgendamento || null,
           data_hora: dataHora.toISOString(),
           valor: valorAgendamento ? parseFloat(valorAgendamento) : null,
           status: 'agendado',
@@ -189,8 +312,6 @@ export default function PainelAgendamentos({
         })
         .select()
         .single();
-
-      console.log('Agendamento criado:', data);
 
       if (error) throw error;
 
@@ -234,8 +355,10 @@ export default function PainelAgendamentos({
     setDataAgendamento('');
     setHoraAgendamento('');
     setProcedimentoAgendamento('');
+    setProfissionalAgendamento('');
     setValorAgendamento('');
     setObservacoesAgendamento('');
+    setSlotsDisponiveis([]);
   };
 
   const confirmarAgendamento = async (agendamento: Agendamento) => {
@@ -245,16 +368,16 @@ export default function PainelAgendamentos({
       const endDate = new Date(startDate);
       endDate.setMinutes(endDate.getMinutes() + (agendamento.procedimento?.duracao_minutos || 60));
 
+      const profNome = agendamento.profissional?.nome || '';
       const eventData = {
-        summary: `${agendamento.procedimento?.nome || 'Consulta'} - ${leadNome}`,
-        description: `Cliente: ${leadNome}\nTelefone: ${leadTelefone || 'Não informado'}\nValor: R$ ${agendamento.valor?.toLocaleString('pt-BR') || '0'}${agendamento.observacoes ? '\nObs: ' + agendamento.observacoes : ''}`,
+        summary: `${agendamento.procedimento?.nome || 'Consulta'} - ${leadNome}${profNome ? ` (${profNome})` : ''}`,
+        description: `Cliente: ${leadNome}\nTelefone: ${leadTelefone || 'Não informado'}${profNome ? `\nProfissional: ${profNome}` : ''}\nValor: R$ ${agendamento.valor?.toLocaleString('pt-BR') || '0'}${agendamento.observacoes ? '\nObs: ' + agendamento.observacoes : ''}`,
         startDateTime: startDate.toISOString(),
         endDateTime: endDate.toISOString(),
       };
 
       let googleEventId = null;
 
-      // Chamar API para criar evento
       const calendarResponse = await fetch('/api/google/calendar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -266,20 +389,17 @@ export default function PainelAgendamentos({
       });
 
       const calendarResult = await calendarResponse.json();
-      
+
       if (calendarResult.success) {
         googleEventId = calendarResult.eventId;
-      } else {
-        console.warn('Não foi possível criar evento no Calendar:', calendarResult.error);
       }
 
-      // Atualizar status para confirmado e salvar eventId
       const { error } = await supabase
         .from('agendamentos')
-        .update({ 
-          status: 'confirmado', 
+        .update({
+          status: 'confirmado',
           google_calendar_event_id: googleEventId,
-          updated_at: new Date().toISOString() 
+          updated_at: new Date().toISOString()
         })
         .eq('id', agendamento.id);
 
@@ -290,7 +410,7 @@ export default function PainelAgendamentos({
       } else {
         showToast('Agendamento confirmado!', 'success');
       }
-      
+
       fetchAgendamentos();
     } catch (error) {
       console.error('Erro ao confirmar agendamento:', error);
@@ -303,7 +423,6 @@ export default function PainelAgendamentos({
       'Cancelar este agendamento?',
       async () => {
         try {
-          // Se tem evento no Calendar, deletar
           if (agendamento.google_calendar_event_id) {
             await fetch('/api/google/calendar', {
               method: 'POST',
@@ -318,10 +437,10 @@ export default function PainelAgendamentos({
 
           const { error } = await supabase
             .from('agendamentos')
-            .update({ 
+            .update({
               status: 'cancelado',
               google_calendar_event_id: null,
-              updated_at: new Date().toISOString() 
+              updated_at: new Date().toISOString()
             })
             .eq('id', agendamento.id);
 
@@ -340,18 +459,16 @@ export default function PainelAgendamentos({
 
   const marcarRealizado = async (agendamento: Agendamento) => {
     try {
-      // Atualizar status para realizado
       const { error } = await supabase
         .from('agendamentos')
-        .update({ 
-          status: 'realizado', 
-          updated_at: new Date().toISOString() 
+        .update({
+          status: 'realizado',
+          updated_at: new Date().toISOString()
         })
         .eq('id', agendamento.id);
 
       if (error) throw error;
 
-      // Buscar dados completos do agendamento para pegar lead_id e cliente_id
       const { data: agendamentoCompleto } = await supabase
         .from('agendamentos')
         .select('lead_id, cliente_id')
@@ -361,22 +478,15 @@ export default function PainelAgendamentos({
       const leadIdParaRetorno = agendamentoCompleto?.lead_id || leadId;
       const clienteIdParaRetorno = agendamentoCompleto?.cliente_id || clienteId;
 
-      console.log('Marcando como realizado:', {
-        procedimento: agendamento.procedimento,
-        retorno_dias: agendamento.procedimento?.retorno_dias,
-        leadIdParaRetorno,
-        clienteIdParaRetorno
-      });
-
-      // Se tem procedimento com retorno_dias, criar agendamento de retorno
       if (agendamento.procedimento?.retorno_dias) {
         const dataRetorno = new Date();
         dataRetorno.setDate(dataRetorno.getDate() + agendamento.procedimento.retorno_dias);
-        dataRetorno.setHours(10, 0, 0, 0); // Horário padrão 10h
+        dataRetorno.setHours(10, 0, 0, 0);
 
         const dadosRetorno: any = {
           clinica_id: clinicaId,
           procedimento_id: agendamento.procedimento.id,
+          profissional_id: agendamento.profissional_id,
           data_hora: dataRetorno.toISOString(),
           valor: agendamento.valor,
           status: 'agendado',
@@ -385,15 +495,8 @@ export default function PainelAgendamentos({
           observacoes: `Retorno automático - ${agendamento.procedimento.retorno_dias} dias após procedimento`,
         };
 
-        // Só adiciona lead_id se existir
-        if (leadIdParaRetorno) {
-          dadosRetorno.lead_id = leadIdParaRetorno;
-        }
-
-        // Só adiciona cliente_id se existir
-        if (clienteIdParaRetorno) {
-          dadosRetorno.cliente_id = clienteIdParaRetorno;
-        }
+        if (leadIdParaRetorno) dadosRetorno.lead_id = leadIdParaRetorno;
+        if (clienteIdParaRetorno) dadosRetorno.cliente_id = clienteIdParaRetorno;
 
         const { error: erroRetorno } = await supabase
           .from('agendamentos')
@@ -409,7 +512,6 @@ export default function PainelAgendamentos({
         showToast('Marcado como realizado!', 'success');
       }
 
-      // Atualizar lead para convertido
       if (leadIdParaRetorno) {
         await supabase
           .from('leads_ia')
@@ -430,9 +532,9 @@ export default function PainelAgendamentos({
     try {
       const { error } = await supabase
         .from('agendamentos')
-        .update({ 
-          status: 'nao_compareceu', 
-          updated_at: new Date().toISOString() 
+        .update({
+          status: 'nao_compareceu',
+          updated_at: new Date().toISOString()
         })
         .eq('id', agendamentoId);
 
@@ -457,7 +559,7 @@ export default function PainelAgendamentos({
 
   const getStatusInfo = (status: string) => {
     const statusMap: Record<string, { label: string; cor: string; bg: string }> = {
-      agendado: { label: 'Aguardando Confirmação', cor: 'text-blue-400', bg: 'bg-blue-500/20' },
+      agendado: { label: 'Aguardando', cor: 'text-blue-400', bg: 'bg-blue-500/20' },
       confirmado: { label: 'Confirmado', cor: 'text-green-400', bg: 'bg-green-500/20' },
       realizado: { label: 'Realizado', cor: 'text-emerald-400', bg: 'bg-emerald-500/20' },
       cancelado: { label: 'Cancelado', cor: 'text-red-400', bg: 'bg-red-500/20' },
@@ -466,7 +568,6 @@ export default function PainelAgendamentos({
     return statusMap[status] || { label: status, cor: 'text-gray-400', bg: 'bg-gray-500/20' };
   };
 
-  // Separar agendamentos por status
   const agendamentosPendentes = agendamentos.filter(a => ['agendado', 'confirmado'].includes(a.status));
   const agendamentosPassados = agendamentos.filter(a => ['realizado', 'cancelado', 'nao_compareceu'].includes(a.status));
 
@@ -474,13 +575,11 @@ export default function PainelAgendamentos({
 
   return (
     <>
-      {/* Overlay */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/50 z-40"
         onClick={onClose}
       />
 
-      {/* Painel */}
       <div className="fixed right-0 top-0 h-full w-[420px] max-w-full bg-[var(--theme-card)] border-l border-[var(--theme-card-border)] z-50 flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-[var(--theme-card-border)]">
@@ -518,7 +617,7 @@ export default function PainelAgendamentos({
             </button>
           </div>
 
-          {/* Formulário novo agendamento - aparece no topo */}
+          {/* Formulário novo agendamento */}
           {showNovoAgendamento && (
             <div className="mb-4 p-4 bg-[var(--theme-input)] rounded-lg border border-purple-500/50">
               <h4 className="font-medium mb-3 flex items-center gap-2">
@@ -526,28 +625,7 @@ export default function PainelAgendamentos({
                 Novo Agendamento
               </h4>
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-xs text-[var(--theme-text-muted)] mb-1">Data *</label>
-                    <input
-                      type="date"
-                      value={dataAgendamento}
-                      onChange={(e) => setDataAgendamento(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-[var(--theme-text-muted)] mb-1">Hora *</label>
-                    <input
-                      type="time"
-                      value={horaAgendamento}
-                      onChange={(e) => setHoraAgendamento(e.target.value)}
-                      className="w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
-                    />
-                  </div>
-                </div>
-
+                {/* Procedimento */}
                 <div>
                   <label className="block text-xs text-[var(--theme-text-muted)] mb-1">Procedimento</label>
                   <select
@@ -558,12 +636,103 @@ export default function PainelAgendamentos({
                     <option value="">Selecione (opcional)</option>
                     {procedimentos.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.nome} - R$ {p.preco.toLocaleString('pt-BR')}
+                        {p.nome} ({p.duracao_minutos}min) - R$ {p.preco.toLocaleString('pt-BR')}
                       </option>
                     ))}
                   </select>
                 </div>
 
+                {/* Profissional */}
+                {profissionaisDisponiveis.length > 0 && (
+                  <div>
+                    <label className="block text-xs text-[var(--theme-text-muted)] mb-1">Profissional</label>
+                    <select
+                      value={profissionalAgendamento}
+                      onChange={(e) => setProfissionalAgendamento(e.target.value)}
+                      className="w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="">Selecione (opcional)</option>
+                      {profissionaisDisponiveis.map((p) => (
+                        <option key={p.id} value={p.id}>{p.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Data */}
+                <div>
+                  <label className="block text-xs text-[var(--theme-text-muted)] mb-1">Data *</label>
+                  <input
+                    type="date"
+                    value={dataAgendamento}
+                    onChange={(e) => setDataAgendamento(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                {/* Slots ou Hora */}
+                {profissionalAgendamento && dataAgendamento && usarSlots ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs text-[var(--theme-text-muted)]">Horário Disponível *</label>
+                      <button
+                        onClick={() => setUsarSlots(false)}
+                        className="text-xs text-purple-400 hover:underline"
+                      >
+                        Digitar hora manualmente
+                      </button>
+                    </div>
+                    {loadingSlots ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 size={20} className="animate-spin text-purple-400" />
+                      </div>
+                    ) : slotsDisponiveis.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto">
+                        {slotsDisponiveis.map((slot) => (
+                          <button
+                            key={slot.inicio}
+                            onClick={() => setHoraAgendamento(slot.inicio)}
+                            className={`px-2 py-2 rounded-lg text-sm transition-colors ${
+                              horaAgendamento === slot.inicio
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-[var(--theme-card)] border border-[var(--theme-card-border)] hover:border-purple-500'
+                            }`}
+                          >
+                            {slot.inicio}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-sm text-[var(--theme-text-muted)]">
+                        <AlertCircle size={20} className="mx-auto mb-1 text-orange-400" />
+                        Nenhum horário disponível neste dia
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs text-[var(--theme-text-muted)]">Hora *</label>
+                      {profissionalAgendamento && dataAgendamento && (
+                        <button
+                          onClick={() => { setUsarSlots(true); setHoraAgendamento(''); }}
+                          className="text-xs text-purple-400 hover:underline"
+                        >
+                          Ver horários disponíveis
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="time"
+                      value={horaAgendamento}
+                      onChange={(e) => setHoraAgendamento(e.target.value)}
+                      className="w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                )}
+
+                {/* Valor */}
                 <div>
                   <label className="block text-xs text-[var(--theme-text-muted)] mb-1">Valor</label>
                   <input
@@ -575,6 +744,7 @@ export default function PainelAgendamentos({
                   />
                 </div>
 
+                {/* Observações */}
                 <div>
                   <label className="block text-xs text-[var(--theme-text-muted)] mb-1">Observações</label>
                   <textarea
@@ -618,9 +788,9 @@ export default function PainelAgendamentos({
             </div>
           ) : agendamentos.length === 0 ? (
             <div className="text-center py-12">
-              <Calendar size={48} className="mx-auto text-[#334155] mb-3" />
+              <Calendar size={48} className="mx-auto text-[var(--theme-text-muted)] mb-3" />
               <p className="text-[var(--theme-text-muted)]">Nenhum agendamento</p>
-              <p className="text-xs text-[#475569] mt-1">Clique em "Agendar" para criar</p>
+              <p className="text-xs text-[var(--theme-text-muted)] mt-1">Clique em "Agendar" para criar</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -637,8 +807,8 @@ export default function PainelAgendamentos({
                         <div
                           key={ag.id}
                           className={`p-3 bg-[var(--theme-input)] rounded-lg border ${
-                            isPast && ag.status === 'agendado' 
-                              ? 'border-orange-500/50' 
+                            isPast && ag.status === 'agendado'
+                              ? 'border-orange-500/50'
                               : 'border-[var(--theme-card-border)]'
                           }`}
                         >
@@ -658,6 +828,12 @@ export default function PainelAgendamentos({
                               <p className="text-sm text-[var(--theme-text-muted)]">
                                 {data} às {hora}
                               </p>
+                              {ag.profissional && (
+                                <p className="text-xs text-purple-400 flex items-center gap-1 mt-1">
+                                  <User size={12} />
+                                  {ag.profissional.nome}
+                                </p>
+                              )}
                             </div>
                             <span className={`text-xs px-2 py-1 rounded ${statusInfo.bg} ${statusInfo.cor}`}>
                               {statusInfo.label}
@@ -676,11 +852,10 @@ export default function PainelAgendamentos({
                             </p>
                           )}
 
-                          <div className="text-xs text-[#475569] mb-2">
-                            Criado por: {ag.criado_por === 'ia' ? '🤖 IA' : ag.criado_por === 'sistema' ? '⚙️ Sistema' : '👤 Humano'}
+                          <div className="text-xs text-[var(--theme-text-muted)] mb-2">
+                            Criado por: {ag.criado_por === 'ia' ? 'IA' : ag.criado_por === 'sistema' ? 'Sistema' : 'Humano'}
                           </div>
 
-                          {/* Ações baseadas no status */}
                           {ag.status === 'agendado' && (
                             <div className="flex gap-2 mt-3">
                               <button
@@ -740,7 +915,10 @@ export default function PainelAgendamentos({
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-sm">{ag.procedimento?.nome || 'Consulta'}</p>
-                              <p className="text-xs text-[var(--theme-text-muted)]">{data}</p>
+                              <p className="text-xs text-[var(--theme-text-muted)]">
+                                {data}
+                                {ag.profissional && ` - ${ag.profissional.nome}`}
+                              </p>
                             </div>
                             <span className={`text-xs px-2 py-0.5 rounded ${statusInfo.bg} ${statusInfo.cor}`}>
                               {statusInfo.label}
