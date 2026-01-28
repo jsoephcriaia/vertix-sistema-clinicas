@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, Upload, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { useAlert } from '@/components/Alert';
 
 interface ConfigEquipeProps {
   onBack: () => void;
@@ -21,6 +22,7 @@ interface Profissional {
 
 export default function ConfigEquipe({ onBack }: ConfigEquipeProps) {
   const { clinica } = useAuth();
+  const { showToast } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [equipe, setEquipe] = useState<Profissional[]>([]);
@@ -93,7 +95,7 @@ export default function ConfigEquipe({ onBack }: ConfigEquipeProps) {
 
       if (error) {
         console.error('Erro ao atualizar:', error);
-        alert('Erro ao salvar profissional');
+        showToast('Erro ao salvar profissional', 'error');
       }
     } else {
       const { error } = await supabase
@@ -110,7 +112,7 @@ export default function ConfigEquipe({ onBack }: ConfigEquipeProps) {
 
       if (error) {
         console.error('Erro ao criar:', error);
-        alert('Erro ao criar profissional');
+        showToast('Erro ao criar profissional', 'error');
       }
     }
 
@@ -130,7 +132,7 @@ export default function ConfigEquipe({ onBack }: ConfigEquipeProps) {
 
     if (error) {
       console.error('Erro ao excluir:', error);
-      alert('Erro ao excluir profissional');
+      showToast('Erro ao excluir profissional', 'error');
     } else {
       fetchEquipe();
     }

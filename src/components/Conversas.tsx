@@ -87,7 +87,7 @@ const ETAPAS_LEAD = [
 
 export default function Conversas({ conversaInicial, onConversaIniciada }: ConversasProps) {
   const { clinica } = useAuth();
-  const { showConfirm, showSuccess, showError } = useAlert();
+  const { showConfirm, showToast } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [conversas, setConversas] = useState<Conversa[]>([]);
@@ -326,10 +326,10 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         await converterParaCliente();
       }
       
-      showSuccess(`Etapa atualizada para "${ETAPAS_LEAD.find(e => e.id === novaEtapa)?.label}"`);
+      showToast(`Etapa atualizada para "${ETAPAS_LEAD.find(e => e.id === novaEtapa)?.label}"`, 'success');
     } catch (error) {
       console.error('Erro ao atualizar etapa:', error);
-      showError('Erro ao atualizar etapa');
+      showToast('Erro ao atualizar etapa', 'error');
     } finally {
       setAtualizandoEtapa(false);
     }
@@ -358,7 +358,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
             telefone: leadIA.telefone,
           });
         
-        showSuccess('Lead convertido para cliente!');
+        showToast('Lead convertido para cliente!', 'success');
       }
     } catch (error) {
       console.error('Erro ao converter para cliente:', error);
@@ -390,10 +390,10 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
       ));
       
       setEditandoNome(false);
-      showSuccess('Nome atualizado!');
+      showToast('Nome atualizado!', 'success');
     } catch (error) {
       console.error('Erro ao salvar nome:', error);
-      showError('Erro ao salvar nome');
+      showToast('Erro ao salvar nome', 'error');
     } finally {
       setSalvandoNome(false);
     }
@@ -608,11 +608,11 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         setConversas(prev => prev.map(c => 
           c.id === conversaSelecionada.id ? { ...c, status: novoStatus } : c
         ));
-        showSuccess(novoStatus === 'resolved' ? 'Conversa resolvida!' : 'Conversa reaberta!');
+        showToast(novoStatus === 'resolved' ? 'Conversa resolvida!' : 'Conversa reaberta!', 'success');
       }
     } catch (error) {
       console.error('Erro ao alterar status:', error);
-      showError('Erro ao alterar status da conversa');
+      showToast('Erro ao alterar status da conversa', 'error');
     }
   };
 
@@ -638,13 +638,13 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
             setConversas(novasConversas);
             setConversaSelecionada(null);
             setMensagens([]);
-            showSuccess('Conversa deletada com sucesso!');
+            showToast('Conversa deletada com sucesso!', 'success');
           } else {
-            showError('Erro ao deletar conversa');
+            showToast('Erro ao deletar conversa', 'error');
           }
         } catch (error) {
           console.error('Erro ao deletar conversa:', error);
-          showError('Erro ao deletar conversa');
+          showToast('Erro ao deletar conversa', 'error');
         }
       },
       'Deletar conversa'
@@ -715,7 +715,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
       
     } catch (error) {
       console.error('Erro ao iniciar gravação:', error);
-      showError('Não foi possível acessar o microfone');
+      showToast('Não foi possível acessar o microfone', 'error');
     }
   };
 
@@ -904,11 +904,11 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           }
         }
       } else {
-        showError('Erro ao criar conversa');
+        showToast('Erro ao criar conversa', 'error');
       }
     } catch (error) {
       console.error('Erro ao iniciar conversa:', error);
-      showError('Erro ao iniciar conversa');
+      showToast('Erro ao iniciar conversa', 'error');
     } finally {
       setIniciandoConversa(false);
     }

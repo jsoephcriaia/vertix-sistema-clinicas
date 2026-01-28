@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Plus, Trash2, Clock, Ban, Loader2, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { useAlert } from '@/components/Alert';
 
 interface ConfigHorariosProps {
   onBack: () => void;
@@ -35,6 +36,7 @@ const diasSemana = [
 
 export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
   const { clinica } = useAuth();
+  const { showToast } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [loading, setLoading] = useState(true);
@@ -139,7 +141,7 @@ export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
       }
     }
 
-    alert('Horários salvos com sucesso!');
+    showToast('Horários salvos com sucesso!', 'success');
     setSaving(false);
     fetchData();
   };
@@ -160,7 +162,7 @@ export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
 
     if (error) {
       console.error('Erro ao criar bloqueio:', error);
-      alert('Erro ao criar bloqueio');
+      showToast('Erro ao criar bloqueio', 'error');
     } else {
       setShowBloqueioModal(false);
       setNovoBloqueio({

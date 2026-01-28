@@ -35,7 +35,7 @@ export default function PainelInteresse({
   leadNome,
   clinicaId,
 }: PainelInteresseProps) {
-  const { showSuccess, showError, showConfirm } = useAlert();
+  const { showToast, showConfirm } = useAlert();
 
   // Procedimentos disponíveis
   const [procedimentos, setProcedimentos] = useState<Procedimento[]>([]);
@@ -121,12 +121,12 @@ export default function PainelInteresse({
 
       if (error) {
         if (error.code === '23505') {
-          showError('Este procedimento já está vinculado ao lead');
+          showToast('Este procedimento já está vinculado ao lead', 'warning');
         } else {
           throw error;
         }
       } else {
-        showSuccess('Procedimento vinculado!');
+        showToast('Procedimento vinculado!', 'success');
         setShowAddProcedimento(false);
         setProcedimentoSelecionado('');
         setValorPersonalizado('');
@@ -134,7 +134,7 @@ export default function PainelInteresse({
       }
     } catch (error) {
       console.error('Erro ao adicionar procedimento:', error);
-      showError('Erro ao vincular procedimento');
+      showToast('Erro ao vincular procedimento', 'error');
     } finally {
       setSalvandoProcedimento(false);
     }
@@ -152,11 +152,11 @@ export default function PainelInteresse({
 
           if (error) throw error;
 
-          showSuccess('Procedimento removido!');
+          showToast('Procedimento removido!', 'success');
           fetchLeadProcedimentos();
         } catch (error) {
           console.error('Erro ao remover procedimento:', error);
-          showError('Erro ao remover procedimento');
+          showToast('Erro ao remover procedimento', 'error');
         }
       },
       'Remover'

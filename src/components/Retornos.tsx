@@ -28,7 +28,7 @@ interface RetornosProps {
 
 export default function Retornos({ onAbrirConversa }: RetornosProps) {
   const { clinica } = useAuth();
-  const { showSuccess, showError } = useAlert();
+  const { showToast } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [retornos, setRetornos] = useState<Retorno[]>([]);
@@ -144,16 +144,16 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
 
     if (error) {
       console.error('Erro ao confirmar:', error);
-      showError('Erro ao confirmar agendamento');
+      showToast('Erro ao confirmar agendamento', 'error');
     } else {
-      showSuccess('Agendamento confirmado!');
+      showToast('Agendamento confirmado!', 'success');
       fetchRetornos();
     }
   };
 
   const handleEnviarMensagem = (retorno: Retorno) => {
     if (!retorno.lead_telefone) {
-      showError('Este cliente não possui telefone cadastrado');
+      showToast('Este cliente não possui telefone cadastrado', 'warning');
       return;
     }
 

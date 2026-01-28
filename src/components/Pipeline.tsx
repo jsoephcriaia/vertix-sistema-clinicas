@@ -176,7 +176,7 @@ function Coluna({
 
 export default function Pipeline({ onAbrirConversa }: PipelineProps) {
   const { clinica } = useAuth();
-  const { showConfirm, showSuccess, showError } = useAlert();
+  const { showConfirm, showToast } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -261,9 +261,9 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
 
       if (error) {
         console.error('Erro ao atualizar:', error);
-        showError('Erro ao salvar lead');
+        showToast('Erro ao salvar lead', 'error');
       } else {
-        showSuccess('Lead atualizado com sucesso!');
+        showToast('Lead atualizado com sucesso!', 'success');
       }
     } else {
       const { error } = await supabase
@@ -278,9 +278,9 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
 
       if (error) {
         console.error('Erro ao criar:', error);
-        showError('Erro ao criar lead');
+        showToast('Erro ao criar lead', 'error');
       } else {
-        showSuccess('Lead criado com sucesso!');
+        showToast('Lead criado com sucesso!', 'success');
       }
     }
 
@@ -299,9 +299,9 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
 
         if (error) {
           console.error('Erro ao excluir:', error);
-          showError('Erro ao excluir lead');
+          showToast('Erro ao excluir lead', 'error');
         } else {
-          showSuccess('Lead excluído!');
+          showToast('Lead excluído!', 'success');
           fetchLeads();
         }
       },
@@ -311,7 +311,7 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
 
   const handleMensagem = (lead: Lead) => {
     if (!lead.telefone) {
-      showError('Este lead não possui telefone cadastrado');
+      showToast('Este lead não possui telefone cadastrado', 'warning');
       return;
     }
 
@@ -379,7 +379,7 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
             telefone: lead.telefone,
           });
         
-        showSuccess('Lead convertido para cliente!');
+        showToast('Lead convertido para cliente!', 'success');
       }
     } catch (error) {
       console.error('Erro ao converter para cliente:', error);

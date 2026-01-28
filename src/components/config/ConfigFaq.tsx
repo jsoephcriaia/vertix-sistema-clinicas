@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, HelpCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { useAlert } from '@/components/Alert';
 
 interface ConfigFaqProps {
   onBack: () => void;
@@ -18,6 +19,7 @@ interface FaqItem {
 
 export default function ConfigFaq({ onBack }: ConfigFaqProps) {
   const { clinica } = useAuth();
+  const { showToast } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
@@ -82,7 +84,7 @@ export default function ConfigFaq({ onBack }: ConfigFaqProps) {
 
       if (error) {
         console.error('Erro ao atualizar:', error);
-        alert('Erro ao salvar FAQ');
+        showToast('Erro ao salvar FAQ', 'error');
       }
     } else {
       const { error } = await supabase
@@ -96,7 +98,7 @@ export default function ConfigFaq({ onBack }: ConfigFaqProps) {
 
       if (error) {
         console.error('Erro ao criar:', error);
-        alert('Erro ao criar FAQ');
+        showToast('Erro ao criar FAQ', 'error');
       }
     }
 
@@ -116,7 +118,7 @@ export default function ConfigFaq({ onBack }: ConfigFaqProps) {
 
     if (error) {
       console.error('Erro ao excluir:', error);
-      alert('Erro ao excluir FAQ');
+      showToast('Erro ao excluir FAQ', 'error');
     } else {
       fetchFaqs();
     }

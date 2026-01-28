@@ -49,7 +49,7 @@ export default function PainelAgendamentos({
   onAgendamentoCriado,
   onStatusAlterado,
 }: PainelAgendamentosProps) {
-  const { showSuccess, showError, showConfirm } = useAlert();
+  const { showToast, showConfirm } = useAlert();
 
   // Procedimentos disponíveis
   const [procedimentos, setProcedimentos] = useState<Procedimento[]>([]);
@@ -158,12 +158,12 @@ export default function PainelAgendamentos({
 
   const criarAgendamento = async () => {
     if (!dataAgendamento || !horaAgendamento) {
-      showError('Preencha data e hora do agendamento');
+      showToast('Preencha data e hora do agendamento', 'warning');
       return;
     }
 
     if (!leadId && !clienteId) {
-      showError('Erro: Lead não vinculado. Recarregue a página e tente novamente.');
+      showToast('Erro: Lead não vinculado. Recarregue a página e tente novamente.', 'error');
       return;
     }
 
@@ -216,14 +216,14 @@ export default function PainelAgendamentos({
           agendamento_id: data.id,
         });
 
-      showSuccess('Agendamento criado!');
+      showToast('Agendamento criado!', 'success');
       limparFormulario();
       fetchAgendamentos();
 
       if (onAgendamentoCriado) onAgendamentoCriado();
     } catch (error) {
       console.error('Erro ao criar agendamento:', error);
-      showError('Erro ao criar agendamento');
+      showToast('Erro ao criar agendamento', 'error');
     } finally {
       setSalvandoAgendamento(false);
     }
@@ -286,15 +286,15 @@ export default function PainelAgendamentos({
       if (error) throw error;
 
       if (googleEventId) {
-        showSuccess('Agendamento confirmado e adicionado ao Google Calendar!');
+        showToast('Agendamento confirmado e adicionado ao Google Calendar!', 'success');
       } else {
-        showSuccess('Agendamento confirmado!');
+        showToast('Agendamento confirmado!', 'success');
       }
       
       fetchAgendamentos();
     } catch (error) {
       console.error('Erro ao confirmar agendamento:', error);
-      showError('Erro ao confirmar agendamento');
+      showToast('Erro ao confirmar agendamento', 'error');
     }
   };
 
@@ -327,11 +327,11 @@ export default function PainelAgendamentos({
 
           if (error) throw error;
 
-          showSuccess('Agendamento cancelado!');
+          showToast('Agendamento cancelado!', 'success');
           fetchAgendamentos();
         } catch (error) {
           console.error('Erro ao cancelar agendamento:', error);
-          showError('Erro ao cancelar agendamento');
+          showToast('Erro ao cancelar agendamento', 'error');
         }
       },
       'Cancelar Agendamento'
@@ -401,12 +401,12 @@ export default function PainelAgendamentos({
 
         if (erroRetorno) {
           console.error('Erro ao criar retorno:', erroRetorno);
-          showError('Erro ao criar retorno automático');
+          showToast('Erro ao criar retorno automático', 'error');
         } else {
-          showSuccess(`Realizado! Retorno agendado para ${dataRetorno.toLocaleDateString('pt-BR')}`);
+          showToast(`Realizado! Retorno agendado para ${dataRetorno.toLocaleDateString('pt-BR')}`, 'success');
         }
       } else {
-        showSuccess('Marcado como realizado!');
+        showToast('Marcado como realizado!', 'success');
       }
 
       // Atualizar lead para convertido
@@ -422,7 +422,7 @@ export default function PainelAgendamentos({
       fetchAgendamentos();
     } catch (error) {
       console.error('Erro ao marcar como realizado:', error);
-      showError('Erro ao atualizar agendamento');
+      showToast('Erro ao atualizar agendamento', 'error');
     }
   };
 
@@ -438,11 +438,11 @@ export default function PainelAgendamentos({
 
       if (error) throw error;
 
-      showSuccess('Marcado como não compareceu');
+      showToast('Marcado como não compareceu', 'success');
       fetchAgendamentos();
     } catch (error) {
       console.error('Erro ao atualizar:', error);
-      showError('Erro ao atualizar agendamento');
+      showToast('Erro ao atualizar agendamento', 'error');
     }
   };
 

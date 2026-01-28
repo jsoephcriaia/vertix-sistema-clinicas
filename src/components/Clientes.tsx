@@ -28,7 +28,7 @@ interface ClientesProps {
 
 export default function Clientes({ onAbrirConversa }: ClientesProps) {
   const { clinica } = useAuth();
-  const { showConfirm, showSuccess, showError } = useAlert();
+  const { showConfirm, showToast } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -204,9 +204,9 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
 
       if (error) {
         console.error('Erro ao atualizar:', error);
-        showError('Erro ao salvar cliente');
+        showToast('Erro ao salvar cliente', 'error');
       } else {
-        showSuccess('Cliente atualizado com sucesso!');
+        showToast('Cliente atualizado com sucesso!', 'success');
       }
     } else {
       const { error } = await supabase
@@ -222,9 +222,9 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
 
       if (error) {
         console.error('Erro ao criar:', error);
-        showError('Erro ao criar cliente');
+        showToast('Erro ao criar cliente', 'error');
       } else {
-        showSuccess('Cliente criado com sucesso!');
+        showToast('Cliente criado com sucesso!', 'success');
       }
     }
 
@@ -245,9 +245,9 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
 
         if (error) {
           console.error('Erro ao excluir:', error);
-          showError('Erro ao excluir cliente');
+          showToast('Erro ao excluir cliente', 'error');
         } else {
-          showSuccess('Cliente excluído com sucesso!');
+          showToast('Cliente excluído com sucesso!', 'success');
           fetchClientes();
         }
       },
@@ -257,7 +257,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
 
   const handleEnviarMensagem = (cliente: Cliente) => {
     if (!cliente.telefone) {
-      showError('Este cliente não possui telefone cadastrado');
+      showToast('Este cliente não possui telefone cadastrado', 'warning');
       return;
     }
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, FileText, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { useAlert } from '@/components/Alert';
 
 interface ConfigPoliticasProps {
   onBack: () => void;
@@ -17,6 +18,7 @@ interface Politica {
 
 export default function ConfigPoliticas({ onBack }: ConfigPoliticasProps) {
   const { clinica } = useAuth();
+  const { showToast } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [politicas, setPoliticas] = useState<Politica[]>([]);
@@ -78,7 +80,7 @@ export default function ConfigPoliticas({ onBack }: ConfigPoliticasProps) {
 
       if (error) {
         console.error('Erro ao atualizar:', error);
-        alert('Erro ao salvar política');
+        showToast('Erro ao salvar política', 'error');
       }
     } else {
       const { error } = await supabase
@@ -91,7 +93,7 @@ export default function ConfigPoliticas({ onBack }: ConfigPoliticasProps) {
 
       if (error) {
         console.error('Erro ao criar:', error);
-        alert('Erro ao criar política');
+        showToast('Erro ao criar política', 'error');
       }
     }
 
@@ -111,7 +113,7 @@ export default function ConfigPoliticas({ onBack }: ConfigPoliticasProps) {
 
     if (error) {
       console.error('Erro ao excluir:', error);
-      alert('Erro ao excluir política');
+      showToast('Erro ao excluir política', 'error');
     } else {
       fetchPoliticas();
     }

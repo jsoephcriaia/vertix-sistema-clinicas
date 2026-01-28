@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X, Upload, Clock, DollarSign, Calendar, AlertTriangle, Tag, Loader2, Image, ImagePlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { useAlert } from '@/components/Alert';
 
 interface ConfigProcedimentosProps {
   onBack: () => void;
@@ -25,6 +26,7 @@ interface Procedimento {
 
 export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps) {
   const { clinica } = useAuth();
+  const { showToast } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [procedimentos, setProcedimentos] = useState<Procedimento[]>([]);
@@ -80,7 +82,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
     
     if (error) {
       console.error('Erro ao buscar procedimentos:', error);
-      alert('Erro ao carregar procedimentos');
+      showToast('Erro ao carregar procedimentos', 'error');
     } else {
       setProcedimentos(data || []);
     }
@@ -122,7 +124,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
 
       if (error) {
         console.error('Erro ao atualizar:', error);
-        alert('Erro ao salvar procedimento');
+        showToast('Erro ao salvar procedimento', 'error');
       }
     } else {
       const { data, error } = await supabase
@@ -145,7 +147,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
 
       if (error) {
         console.error('Erro ao criar:', error);
-        alert('Erro ao criar procedimento');
+        showToast('Erro ao criar procedimento', 'error');
       } else if (data) {
         setEditando({ ...editando, id: data.id });
       }
@@ -167,7 +169,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
 
     if (error) {
       console.error('Erro ao excluir:', error);
-      alert('Erro ao excluir procedimento');
+      showToast('Erro ao excluir procedimento', 'error');
     } else {
       fetchProcedimentos();
     }
@@ -190,7 +192,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
     if (!editando) return;
 
     if (!driveConectado) {
-      alert('Conecte o Google Drive nas Integrações antes de fazer upload de imagens.');
+      showToast('Conecte o Google Drive nas Integrações antes de fazer upload de imagens.', 'warning');
       return;
     }
 
@@ -247,11 +249,11 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
         setEditando({ ...editando, id: procedimentoId, imagem_antes_depois_url: result.imageUrl });
       }
 
-      alert('Imagem enviada com sucesso!');
+      showToast('Imagem enviada com sucesso!', 'success');
 
     } catch (error) {
       console.error('Erro no upload:', error);
-      alert('Erro ao enviar imagem: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      showToast('Erro ao enviar imagem: ' + (error instanceof Error ? error.message : 'Erro desconhecido'), 'error');
     } finally {
       setUploading(false);
     }
@@ -261,11 +263,11 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        alert('Por favor, selecione apenas arquivos de imagem.');
+        showToast('Por favor, selecione apenas arquivos de imagem.', 'error');
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        alert('A imagem deve ter no máximo 10MB.');
+        showToast('A imagem deve ter no máximo 10MB.', 'error');
         return;
       }
       handleUploadImagem(file, tipo);
