@@ -851,8 +851,8 @@ export default function Profissionais() {
             </div>
           </div>
 
-          {/* Linha 2: Horários e Bloqueios (full width) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Linha 2: Horários e Bloqueios (full width, empilhados) */}
+          <div className="space-y-6">
             {/* Horários Semanais */}
             <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] p-6">
               <div className="flex items-center justify-between mb-4">
