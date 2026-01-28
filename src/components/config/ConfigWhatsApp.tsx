@@ -9,8 +9,8 @@ interface ConfigWhatsAppProps {
 }
 
 // Configurações UAZAPI
-const UAZAPI_URL = 'https://iaparanegocios.uazapi.com';
-const UAZAPI_ADMIN_TOKEN = 'OH50xrHALaPO3SG69UjJD0npdG5aw7NhmVeky4l4pKa2Qn32F6';
+const UAZAPI_URL = process.env.NEXT_PUBLIC_UAZAPI_URL || 'https://iaparanegocios.uazapi.com';
+const UAZAPI_ADMIN_TOKEN = process.env.NEXT_PUBLIC_UAZAPI_ADMIN_TOKEN || '';
 
 type Status = 'loading' | 'disconnected' | 'generating' | 'qrcode' | 'connected' | 'error';
 
@@ -130,15 +130,14 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
         .single();
 
       if (error) {
-        console.error('Erro ao buscar dados Chatwoot da clínica:', error);
         return;
       }
 
-      if (!clinicaData?.chatwoot_url || !clinicaData?.chatwoot_api_token) {
+      if (!clinicaData?.chatwoot_url || !clinicaData?.chatwoot_api_token || !clinicaData?.chatwoot_account_id) {
         return;
       }
 
-      // Verificar configuração atual
+      // Verificar configuração atual - checa se credenciais estão realmente configuradas
       const checkResponse = await fetch(`${UAZAPI_URL}/chatwoot/config`, {
         method: 'GET',
         headers: { 'token': token },
@@ -146,8 +145,10 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
 
       if (checkResponse.ok) {
         const currentConfig = await checkResponse.json();
-        if (currentConfig.chatwootEnabled === true || currentConfig.enabled === true) {
-          return;
+        // Verifica se o account_id está configurado (não apenas se está "enabled")
+        const accountId = currentConfig.chatwoot_account_id || currentConfig.accountId || 0;
+        if (accountId > 0) {
+          return; // Já está configurado corretamente
         }
       }
 
@@ -155,20 +156,20 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       // Remove trailing slash da URL do Chatwoot
       const chatwootUrl = clinicaData.chatwoot_url.replace(/\/$/, '');
 
+      // Formato compatível com UAZAPI (campos com prefixo chatwoot_)
       const chatwootConfig = {
-        enabled: true,
-        url: chatwootUrl,
-        token: clinicaData.chatwoot_api_token,
-        accountId: clinicaData.chatwoot_account_id,
-        inboxId: clinicaData.chatwoot_inbox_id || '1',
-        ignoreGroups: true,
-        messageSignature: false,
-        createNewConversion: false,
+        chatwoot_url: chatwootUrl,
+        chatwoot_access_token: clinicaData.chatwoot_api_token,
+        chatwoot_account_id: parseInt(clinicaData.chatwoot_account_id) || 0,
+        chatwoot_inbox_id: parseInt(clinicaData.chatwoot_inbox_id) || 1,
+        chatwoot_enabled: true,
+        chatwoot_sign_messages: false,
+        chatwoot_ignore_groups: true,
+        chatwoot_create_new_conversation: true,
       };
 
-      // Tentar diferentes métodos HTTP (POST, PUT, PATCH)
-      const methods = ['POST', 'PUT', 'PATCH'];
-      let success = false;
+      // Tentar diferentes métodos HTTP (PUT, POST, PATCH)
+      const methods = ['PUT', 'POST', 'PATCH'];
 
       for (const method of methods) {
         try {
@@ -182,15 +183,14 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
           });
 
           if (configResponse.ok) {
-            success = true;
             break;
           }
         } catch {
           // Tenta próximo método
         }
       }
-    } catch (error) {
-      console.error('Erro ao configurar integração Chatwoot:', error);
+    } catch {
+      // Erro silencioso
     }
   };
 
@@ -253,7 +253,6 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       }
 
       // Configurar integração Chatwoot no UAZAPI
-      console.log('Configurando integração Chatwoot...');
       await ensureChatwootConfigured(token);
 
       // Gerar QR Code (conectar)
