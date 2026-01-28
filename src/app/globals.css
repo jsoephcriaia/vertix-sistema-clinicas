@@ -59,6 +59,12 @@
   --theme-text-muted: var(--color-text-light-muted);
   --theme-input: var(--color-input);
   --theme-input-border: var(--color-input-border);
+  /* Sidebar modo claro */
+  --theme-sidebar: #FFFFFF;
+  --theme-sidebar-hover: #F1F5F9;
+  --theme-sidebar-border: #E4E9F0;
+  --theme-sidebar-text: #0F172A;
+  --theme-sidebar-text-muted: #64748B;
 }
 
 [data-theme="dark"] {
@@ -72,6 +78,12 @@
   --theme-text-muted: var(--color-text-dark-muted);
   --theme-input: var(--color-input-dark);
   --theme-input-border: var(--color-input-border-dark);
+  /* Sidebar modo escuro */
+  --theme-sidebar: #0E1A28;
+  --theme-sidebar-hover: #1E2C3F;
+  --theme-sidebar-border: #1E2C3F;
+  --theme-sidebar-text: #E6EDF5;
+  --theme-sidebar-text-muted: #9FB0C3;
 }
 
 /* Aplicar tema ao body */
