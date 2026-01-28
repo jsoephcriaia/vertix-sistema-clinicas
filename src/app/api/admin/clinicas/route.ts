@@ -58,18 +58,30 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Criar clínica no Supabase
+    const clinicaInsert: Record<string, unknown> = {
+      nome: clinicaNome,
+      chatwoot_setup_status: 'in_progress',
+      status: 'ativo',
+    };
+
+    // Só adiciona admin_id se for válido
+    if (adminId && adminId !== 'undefined') {
+      clinicaInsert.created_by_admin_id = adminId;
+    }
+
     const { data: clinica, error: clinicaError } = await supabase
       .from('clinicas')
-      .insert({
-        nome: clinicaNome,
-        chatwoot_setup_status: 'in_progress',
-        created_by_admin_id: adminId,
-        status: 'ativo',
-      })
+      .insert(clinicaInsert)
       .select()
       .single();
 
-    if (clinicaError) throw clinicaError;
+    if (clinicaError) {
+      console.error('Erro ao criar clínica:', clinicaError);
+      return NextResponse.json(
+        { error: `Erro ao criar clínica: ${clinicaError.message}` },
+        { status: 500 }
+      );
+    }
 
     // 2. Criar usuário no Supabase
     const { data: usuario, error: usuarioError } = await supabase
@@ -85,9 +97,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (usuarioError) {
+      console.error('Erro ao criar usuário:', usuarioError);
       // Rollback: deletar clínica
       await supabase.from('clinicas').delete().eq('id', clinica.id);
-      throw usuarioError;
+      return NextResponse.json(
+        { error: `Erro ao criar usuário: ${usuarioError.message}` },
+        { status: 500 }
+      );
     }
 
     // 3. Tentar criar no Chatwoot (se configurado)
@@ -115,18 +131,20 @@ export async function POST(request: NextRequest) {
           })
           .eq('id', clinica.id);
 
-        // Registrar no audit log
-        await supabase.from('admin_audit_log').insert({
-          admin_id: adminId,
-          action: 'clinic_created',
-          clinica_id: clinica.id,
-          details: {
-            clinicaNome,
-            usuarioEmail,
-            chatwoot_account_id: chatwootResult.accountId,
-            chatwoot_inbox_id: chatwootResult.inboxId,
-          },
-        });
+        // Registrar no audit log (não falha se der erro)
+        if (adminId && adminId !== 'undefined') {
+          await supabase.from('admin_audit_log').insert({
+            admin_id: adminId,
+            action: 'clinic_created',
+            clinica_id: clinica.id,
+            details: {
+              clinicaNome,
+              usuarioEmail,
+              chatwoot_account_id: chatwootResult.accountId,
+              chatwoot_inbox_id: chatwootResult.inboxId,
+            },
+          }).catch(e => console.error('Erro ao registrar audit log:', e));
+        }
 
         return NextResponse.json({
           success: true,
@@ -178,17 +196,19 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', clinica.id);
 
-      // Registrar no audit log
-      await supabase.from('admin_audit_log').insert({
-        admin_id: adminId,
-        action: 'clinic_created',
-        clinica_id: clinica.id,
-        details: {
-          clinicaNome,
-          usuarioEmail,
-          chatwoot_configured: false,
-        },
-      });
+      // Registrar no audit log (não falha se der erro)
+      if (adminId && adminId !== 'undefined') {
+        await supabase.from('admin_audit_log').insert({
+          admin_id: adminId,
+          action: 'clinic_created',
+          clinica_id: clinica.id,
+          details: {
+            clinicaNome,
+            usuarioEmail,
+            chatwoot_configured: false,
+          },
+        }).catch(e => console.error('Erro ao registrar audit log:', e));
+      }
 
       return NextResponse.json({
         success: true,
