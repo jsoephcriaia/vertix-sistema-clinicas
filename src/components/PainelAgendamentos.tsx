@@ -240,21 +240,57 @@ export default function PainelAgendamentos({
 
   const confirmarAgendamento = async (agendamento: Agendamento) => {
     try {
-      // Atualizar status para confirmado
+      // Criar evento no Google Calendar
+      const startDate = new Date(agendamento.data_hora);
+      const endDate = new Date(startDate);
+      endDate.setMinutes(endDate.getMinutes() + (agendamento.procedimento?.duracao_minutos || 60));
+
+      const eventData = {
+        summary: `${agendamento.procedimento?.nome || 'Consulta'} - ${leadNome}`,
+        description: `Cliente: ${leadNome}\nTelefone: ${leadTelefone || 'Não informado'}\nValor: R$ ${agendamento.valor?.toLocaleString('pt-BR') || '0'}${agendamento.observacoes ? '\nObs: ' + agendamento.observacoes : ''}`,
+        startDateTime: startDate.toISOString(),
+        endDateTime: endDate.toISOString(),
+      };
+
+      let googleEventId = null;
+
+      // Chamar API para criar evento
+      const calendarResponse = await fetch('/api/google/calendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          clinicaId,
+          eventData,
+        }),
+      });
+
+      const calendarResult = await calendarResponse.json();
+      
+      if (calendarResult.success) {
+        googleEventId = calendarResult.eventId;
+      } else {
+        console.warn('Não foi possível criar evento no Calendar:', calendarResult.error);
+      }
+
+      // Atualizar status para confirmado e salvar eventId
       const { error } = await supabase
         .from('agendamentos')
         .update({ 
           status: 'confirmado', 
+          google_calendar_event_id: googleEventId,
           updated_at: new Date().toISOString() 
         })
         .eq('id', agendamento.id);
 
       if (error) throw error;
 
-      // TODO: Criar evento no Google Calendar
-      // await criarEventoGoogleCalendar(agendamento);
-
-      showSuccess('Agendamento confirmado!');
+      if (googleEventId) {
+        showSuccess('Agendamento confirmado e adicionado ao Google Calendar!');
+      } else {
+        showSuccess('Agendamento confirmado!');
+      }
+      
       fetchAgendamentos();
     } catch (error) {
       console.error('Erro ao confirmar agendamento:', error);
@@ -262,22 +298,34 @@ export default function PainelAgendamentos({
     }
   };
 
-  const cancelarAgendamento = async (agendamentoId: string) => {
+  const cancelarAgendamento = async (agendamento: Agendamento) => {
     showConfirm(
       'Cancelar este agendamento?',
       async () => {
         try {
+          // Se tem evento no Calendar, deletar
+          if (agendamento.google_calendar_event_id) {
+            await fetch('/api/google/calendar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'delete',
+                clinicaId,
+                eventId: agendamento.google_calendar_event_id,
+              }),
+            });
+          }
+
           const { error } = await supabase
             .from('agendamentos')
             .update({ 
-              status: 'cancelado', 
+              status: 'cancelado',
+              google_calendar_event_id: null,
               updated_at: new Date().toISOString() 
             })
-            .eq('id', agendamentoId);
+            .eq('id', agendamento.id);
 
           if (error) throw error;
-
-          // TODO: Remover evento do Google Calendar se existir
 
           showSuccess('Agendamento cancelado!');
           fetchAgendamentos();
@@ -549,7 +597,7 @@ export default function PainelAgendamentos({
                                 Confirmar
                               </button>
                               <button
-                                onClick={() => cancelarAgendamento(ag.id)}
+                                onClick={() => cancelarAgendamento(ag)}
                                 className="flex-1 px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs transition-colors"
                               >
                                 Cancelar
