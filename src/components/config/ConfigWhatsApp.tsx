@@ -122,8 +122,19 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
         .eq('id', clinicaId)
         .single();
 
-      if (error || !clinicaData?.chatwoot_url || !clinicaData?.chatwoot_api_token) {
-        console.log('Chatwoot não configurado para esta clínica');
+      if (error) {
+        console.error('Erro ao buscar dados Chatwoot da clínica:', error);
+        return;
+      }
+
+      console.log('=== DADOS CHATWOOT DA CLÍNICA ===');
+      console.log('chatwoot_url:', clinicaData?.chatwoot_url);
+      console.log('chatwoot_account_id:', clinicaData?.chatwoot_account_id);
+      console.log('chatwoot_inbox_id:', clinicaData?.chatwoot_inbox_id);
+      console.log('chatwoot_api_token:', clinicaData?.chatwoot_api_token ? '***' + clinicaData.chatwoot_api_token.slice(-4) : 'NULL');
+
+      if (!clinicaData?.chatwoot_url || !clinicaData?.chatwoot_api_token) {
+        console.log('Chatwoot não configurado para esta clínica (faltam url ou token)');
         return;
       }
 
@@ -145,8 +156,6 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       // Remove trailing slash da URL do Chatwoot
       const chatwootUrl = clinicaData.chatwoot_url.replace(/\/$/, '');
 
-      console.log('Configurando integração Chatwoot no UAZAPI...');
-
       const chatwootConfig = {
         enabled: true,
         url: chatwootUrl,
@@ -157,6 +166,13 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
         messageSignature: false,
         createNewConversion: false,
       };
+
+      console.log('=== CONFIGURAÇÃO SENDO ENVIADA PARA UAZAPI ===');
+      console.log('URL Chatwoot:', chatwootConfig.url);
+      console.log('Account ID:', chatwootConfig.accountId);
+      console.log('Inbox ID:', chatwootConfig.inboxId);
+      console.log('Token:', '***' + chatwootConfig.token.slice(-4));
+      console.log('Configurando integração Chatwoot no UAZAPI...');
 
       // Tentar diferentes métodos HTTP (POST, PUT, PATCH)
       const methods = ['POST', 'PUT', 'PATCH'];
