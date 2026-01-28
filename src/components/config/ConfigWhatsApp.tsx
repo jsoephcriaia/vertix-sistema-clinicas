@@ -166,6 +166,28 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
           .eq('id', clinicaId);
       }
 
+      // Configurar webhook do UAZAPI para receber mensagens
+      const webhookUrl = `${window.location.origin}/api/webhook/uazapi`;
+      console.log('Configurando webhook UAZAPI:', webhookUrl);
+
+      try {
+        await fetch(`${UAZAPI_URL}/webhook/set`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'token': token,
+          },
+          body: JSON.stringify({
+            webhookUrl: webhookUrl,
+            webhookEnabled: true,
+          }),
+        });
+        console.log('Webhook configurado com sucesso');
+      } catch (webhookError) {
+        console.error('Erro ao configurar webhook:', webhookError);
+        // Continua mesmo se falhar - pode ser configurado manualmente
+      }
+
       // Gerar QR Code (conectar)
       const connectResponse = await fetch(`${UAZAPI_URL}/instance/connect`, {
         method: 'POST',

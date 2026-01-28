@@ -6,7 +6,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-const UAZAPI_URL = 'https://uazapi.com.br'
+const UAZAPI_URL = 'https://iaparanegocios.uazapi.com'
 
 export async function POST(request: NextRequest) {
   try {
