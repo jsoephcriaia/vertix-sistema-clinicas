@@ -15,27 +15,76 @@ export async function POST(request: NextRequest) {
     console.log('=== WEBHOOK CHATWOOT RECEBIDO ===')
     console.log(JSON.stringify(body, null, 2))
     
-    // Só processa mensagens de saída (outgoing) enviadas por agentes
+    // Só processa eventos de mensagem criada
     if (body.event !== 'message_created') {
       console.log('Evento ignorado:', body.event)
       return NextResponse.json({ success: true, ignored: true })
     }
-    
-    // Ignora mensagens incoming (do cliente) e privadas
-    if (body.message_type === 'incoming' || body.private === true) {
-      console.log('Mensagem incoming ou privada, ignorando...')
+
+    // Ignora mensagens privadas
+    if (body.private === true) {
+      console.log('Mensagem privada, ignorando...')
       return NextResponse.json({ success: true, ignored: true })
     }
-    
-    // Só processa mensagens outgoing (do atendente)
+
+    const accountId = body.account?.id?.toString()
+    const messageContent = body.content
+    const phoneNumber = body.conversation?.meta?.sender?.phone_number?.replace(/\D/g, '')
+    const conversationId = body.conversation?.id
+    const senderName = body.conversation?.meta?.sender?.name || body.sender?.name || 'Novo contato'
+    const isIncoming = body.message_type === 'incoming'
+
+    // Para mensagens incoming, criar lead se não existir
+    if (isIncoming) {
+      console.log('Mensagem incoming recebida, verificando lead...')
+
+      if (!accountId || !phoneNumber) {
+        console.log('Dados incompletos para criar lead')
+        return NextResponse.json({ success: true, ignored: true })
+      }
+
+      // Busca a clínica pelo account_id do Chatwoot
+      const { data: clinica } = await supabase
+        .from('clinicas')
+        .select('id')
+        .eq('chatwoot_account_id', accountId)
+        .single()
+
+      if (clinica) {
+        const telefoneFormatado = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`
+
+        // Verificar se já existe lead com esse telefone
+        const { data: leadExistente } = await supabase
+          .from('leads_ia')
+          .select('id')
+          .eq('clinica_id', clinica.id)
+          .or(`telefone.eq.${phoneNumber},telefone.eq.${telefoneFormatado}`)
+          .single()
+
+        if (!leadExistente) {
+          // Criar novo lead
+          await supabase
+            .from('leads_ia')
+            .insert({
+              clinica_id: clinica.id,
+              nome: senderName,
+              telefone: telefoneFormatado,
+              etapa: 'novo',
+              conversation_id: conversationId,
+            })
+
+          console.log('Lead criado automaticamente para mensagem incoming:', telefoneFormatado)
+        }
+      }
+
+      return NextResponse.json({ success: true, leadProcessed: true })
+    }
+
+    // Só processa mensagens outgoing (do atendente) para envio via UAZAPI
     if (body.message_type !== 'outgoing') {
       console.log('Não é mensagem outgoing, ignorando...')
       return NextResponse.json({ success: true, ignored: true })
     }
-    
-    const accountId = body.account?.id?.toString()
-    const messageContent = body.content
-    const phoneNumber = body.conversation?.meta?.sender?.phone_number?.replace(/\D/g, '')
     
     console.log('Dados:', { accountId, messageContent, phoneNumber })
     

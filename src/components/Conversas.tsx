@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, Send, User, StickyNote, X, Check, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply, Plus, Phone, MessageSquare, Play, Pause, Trash2, CheckCircle, Clock, Edit3, ChevronDown, CalendarPlus, Package } from 'lucide-react';
+import { Search, Send, User, StickyNote, X, Check, CheckCheck, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply, Plus, Phone, MessageSquare, Play, Pause, Trash2, CheckCircle, Clock, Edit3, ChevronDown, CalendarPlus, Package } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
 import { supabase } from '@/lib/supabase';
@@ -36,6 +36,7 @@ interface Mensagem {
   tipo: 'recebida' | 'enviada';
   texto: string;
   hora: string;
+  status?: 'sent' | 'delivered' | 'read' | 'failed';
   attachments?: Attachment[];
   replyTo?: {
     id: number;
@@ -171,7 +172,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   useEffect(() => {
     if (CLINICA_ID) {
       fetchConversas();
-      const interval = setInterval(fetchConversas, 30000);
+      const interval = setInterval(() => fetchConversas(true), 30000);
       return () => clearInterval(interval);
     }
   }, [CLINICA_ID]);
@@ -401,28 +402,28 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     }
   };
 
-  const fetchConversas = async () => {
+  const fetchConversas = async (isPolling = false) => {
     if (!CLINICA_ID) return;
-    
+
     try {
       const response = await fetch(`/api/chatwoot/conversations?clinica_id=${CLINICA_ID}`);
       const data = await response.json();
-      
+
       if (data.error === 'Chatwoot não configurado') {
         setChatwootConfigurado(false);
         setLoadingConversas(false);
         return;
       }
-      
+
       setChatwootConfigurado(true);
-      
+
       if (data.data?.payload) {
         const conversasFormatadas: Conversa[] = data.data.payload.map((conv: any) => {
           const sender = conv.meta?.sender || {};
           const lastMessage = conv.last_non_activity_message;
           const tempoPassado = formatarTempo(conv.timestamp || conv.last_activity_at);
           const labels = conv.labels || [];
-          
+
           let ultimaMsg = lastMessage?.content || 'Nova conversa';
           if (!ultimaMsg && lastMessage?.attachments?.length > 0) {
             const tipo = lastMessage.attachments[0].file_type;
@@ -432,7 +433,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
             else if (tipo === 'file') ultimaMsg = '📄 Arquivo';
             else ultimaMsg = '📎 Anexo';
           }
-          
+
           return {
             id: conv.id,
             nome: sender.name || 'Cliente',
@@ -448,11 +449,26 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           };
         });
 
+        // Se é polling, só atualiza se houver diferença real
+        if (isPolling) {
+          const hasChanges = conversasFormatadas.length !== conversas.length ||
+            conversasFormatadas.some((conv, i) => {
+              const old = conversas.find(c => c.id === conv.id);
+              if (!old) return true;
+              return old.ultima !== conv.ultima ||
+                     old.naoLida !== conv.naoLida ||
+                     old.status !== conv.status ||
+                     old.humano !== conv.humano;
+            });
+
+          if (!hasChanges) return;
+        }
+
         setConversas(conversasFormatadas);
-        
+
         // Seleciona primeira conversa da aba ativa se nenhuma selecionada
         if (!conversaSelecionada) {
-          const conversasAba = conversasFormatadas.filter(c => 
+          const conversasAba = conversasFormatadas.filter(c =>
             abaAtiva === 'abertas' ? c.status !== 'resolved' : c.status === 'resolved'
           );
           if (conversasAba.length > 0) {
@@ -520,6 +536,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         tipo: msg.message_type === 0 ? 'recebida' : 'enviada',
         texto: msg.content || '',
         hora: formatarHora(msg.created_at),
+        status: msg.status as 'sent' | 'delivered' | 'read' | 'failed' | undefined,
         attachments: msg.attachments || [],
         replyTo: msg.content_attributes?.in_reply_to ? {
           id: msg.content_attributes.in_reply_to,
@@ -1156,7 +1173,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 <Plus size={18} />
               </button>
               <button 
-                onClick={fetchConversas}
+                onClick={() => fetchConversas()}
                 className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors"
                 title="Atualizar"
               >
@@ -1496,10 +1513,21 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                         )}
                         
                         {msg.texto && <p className="break-words">{msg.texto}</p>}
-                        
-                        <p className={`text-xs mt-1 ${msg.tipo === 'enviada' ? 'text-green-200' : 'text-[var(--theme-text-muted)]'}`}>
-                          {msg.hora}
-                        </p>
+
+                        <div className={`flex items-center justify-end gap-1 mt-1 ${msg.tipo === 'enviada' ? 'text-green-200' : 'text-[var(--theme-text-muted)]'}`}>
+                          <span className="text-xs">{msg.hora}</span>
+                          {msg.tipo === 'enviada' && (
+                            msg.status === 'read' ? (
+                              <CheckCheck size={14} className="text-blue-400" />
+                            ) : msg.status === 'delivered' ? (
+                              <CheckCheck size={14} />
+                            ) : msg.status === 'failed' ? (
+                              <span className="text-red-400 text-xs">!</span>
+                            ) : (
+                              <Check size={14} />
+                            )
+                          )}
+                        </div>
                       </div>
                       
                       {msg.tipo === 'enviada' && (

@@ -230,8 +230,9 @@ export default function Dashboard() {
       });
       setFaturamentoMensal(faturamentoMensalData);
 
-      // Leads recentes
+      // Leads recentes (apenas leads, não clientes convertidos)
       const leadsRecentesData = leadsData
+        .filter(l => l.etapa !== 'convertido')
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, 6)
         .map(lead => {

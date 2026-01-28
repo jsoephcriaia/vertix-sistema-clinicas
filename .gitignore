@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# n8n workflows (contém dados sensíveis)
+n8n-workflows/
+.env.local

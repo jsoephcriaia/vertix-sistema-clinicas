@@ -88,7 +88,32 @@ export async function POST(request: NextRequest) {
     )
     
     if (existingConversation) {
-      return NextResponse.json({ 
+      // Verificar se já existe lead com esse telefone
+      const telefoneFormatado = phone_number.startsWith('+') ? phone_number : `+${phone_number}`
+
+      const { data: leadExistente } = await supabase
+        .from('leads_ia')
+        .select('id')
+        .eq('clinica_id', clinica_id)
+        .or(`telefone.eq.${phone_number},telefone.eq.${telefoneFormatado}`)
+        .single()
+
+      if (!leadExistente) {
+        // Criar lead mesmo para conversa existente
+        await supabase
+          .from('leads_ia')
+          .insert({
+            clinica_id: clinica_id,
+            nome: name || 'Novo contato',
+            telefone: telefoneFormatado,
+            etapa: 'novo',
+            conversation_id: existingConversation.id,
+          })
+
+        console.log('Lead criado para conversa existente:', telefoneFormatado)
+      }
+
+      return NextResponse.json({
         conversation_id: existingConversation.id,
         contact_id: contactId,
         existing: true
@@ -111,11 +136,44 @@ export async function POST(request: NextRequest) {
         })
       }
     )
-    
-    const createConvResult = await createConvResponse.json()
 
-    return NextResponse.json({ 
-      conversation_id: createConvResult.id,
+    const createConvResult = await createConvResponse.json()
+    const conversationId = createConvResult.id
+
+    // 4. Criar lead automaticamente se não existir
+    const telefoneFormatado = phone_number.startsWith('+') ? phone_number : `+${phone_number}`
+
+    // Verificar se já existe lead com esse telefone
+    const { data: leadExistente } = await supabase
+      .from('leads_ia')
+      .select('id')
+      .eq('clinica_id', clinica_id)
+      .or(`telefone.eq.${phone_number},telefone.eq.${telefoneFormatado}`)
+      .single()
+
+    if (!leadExistente) {
+      // Criar novo lead
+      await supabase
+        .from('leads_ia')
+        .insert({
+          clinica_id: clinica_id,
+          nome: name || 'Novo contato',
+          telefone: telefoneFormatado,
+          etapa: 'novo',
+          conversation_id: conversationId,
+        })
+
+      console.log('Lead criado automaticamente:', telefoneFormatado)
+    } else {
+      // Atualizar conversation_id se o lead já existe
+      await supabase
+        .from('leads_ia')
+        .update({ conversation_id: conversationId })
+        .eq('id', leadExistente.id)
+    }
+
+    return NextResponse.json({
+      conversation_id: conversationId,
       contact_id: contactId,
       existing: false
     })
