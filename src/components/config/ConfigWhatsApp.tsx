@@ -146,30 +146,51 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       const chatwootUrl = clinicaData.chatwoot_url.replace(/\/$/, '');
 
       console.log('Configurando integração Chatwoot no UAZAPI...');
-      const configResponse = await fetch(`${UAZAPI_URL}/chatwoot/config`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'token': token,
-        },
-        body: JSON.stringify({
-          enabled: true,
-          url: chatwootUrl,
-          token: clinicaData.chatwoot_api_token,
-          accountId: clinicaData.chatwoot_account_id,
-          inboxId: clinicaData.chatwoot_inbox_id || '1',
-          ignoreGroups: true,
-          messageSignature: false,
-          createNewConversion: false,
-        }),
-      });
 
-      if (configResponse.ok) {
-        const result = await configResponse.json();
-        console.log('Integração Chatwoot configurada com sucesso:', result);
-      } else {
-        const errorText = await configResponse.text();
-        console.error('Erro ao configurar Chatwoot:', configResponse.status, errorText);
+      const chatwootConfig = {
+        enabled: true,
+        url: chatwootUrl,
+        token: clinicaData.chatwoot_api_token,
+        accountId: clinicaData.chatwoot_account_id,
+        inboxId: clinicaData.chatwoot_inbox_id || '1',
+        ignoreGroups: true,
+        messageSignature: false,
+        createNewConversion: false,
+      };
+
+      // Tentar diferentes métodos HTTP (POST, PUT, PATCH)
+      const methods = ['POST', 'PUT', 'PATCH'];
+      let success = false;
+
+      for (const method of methods) {
+        try {
+          console.log(`Tentando configurar Chatwoot via ${method}...`);
+          const configResponse = await fetch(`${UAZAPI_URL}/chatwoot/config`, {
+            method,
+            headers: {
+              'Content-Type': 'application/json',
+              'token': token,
+            },
+            body: JSON.stringify(chatwootConfig),
+          });
+
+          if (configResponse.ok) {
+            const result = await configResponse.json();
+            console.log(`Integração Chatwoot configurada com sucesso via ${method}:`, result);
+            success = true;
+            break;
+          } else if (configResponse.status !== 405) {
+            // Se não for 405 (Method Not Allowed), logar o erro
+            const errorText = await configResponse.text();
+            console.error(`Erro ao configurar Chatwoot via ${method}:`, configResponse.status, errorText);
+          }
+        } catch (e) {
+          console.log(`Erro no método ${method}:`, e);
+        }
+      }
+
+      if (!success) {
+        console.warn('Não foi possível configurar Chatwoot automaticamente. Configure manualmente no painel UAZAPI.');
       }
     } catch (error) {
       console.error('Erro ao configurar integração Chatwoot:', error);
@@ -335,15 +356,66 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
 
   const disconnect = async () => {
     if (!confirm('Tem certeza que deseja desconectar o WhatsApp?')) return;
-    
+
+    setStatus('loading');
+
     try {
       if (instanceToken) {
-        await fetch(`${UAZAPI_URL}/instance/logout`, {
-          method: 'POST',
-          headers: {
-            'token': instanceToken,
-          },
+        // Tentar diferentes endpoints de logout
+        const logoutEndpoints = [
+          { url: `${UAZAPI_URL}/instance/logout`, method: 'POST' },
+          { url: `${UAZAPI_URL}/instance/disconnect`, method: 'POST' },
+          { url: `${UAZAPI_URL}/instance/logout`, method: 'DELETE' },
+        ];
+
+        let logoutSuccess = false;
+
+        for (const endpoint of logoutEndpoints) {
+          try {
+            console.log(`Tentando logout via ${endpoint.method} ${endpoint.url}...`);
+            const response = await fetch(endpoint.url, {
+              method: endpoint.method,
+              headers: {
+                'Content-Type': 'application/json',
+                'token': instanceToken,
+              },
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              console.log('Logout bem sucedido:', result);
+              logoutSuccess = true;
+              break;
+            } else {
+              console.log(`Endpoint ${endpoint.url} retornou:`, response.status);
+            }
+          } catch (e) {
+            console.log(`Erro no endpoint ${endpoint.url}:`, e);
+          }
+        }
+
+        // Aguardar um pouco para o logout processar
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Verificar se realmente desconectou
+        const statusResponse = await fetch(`${UAZAPI_URL}/instance/status`, {
+          method: 'GET',
+          headers: { 'token': instanceToken },
         });
+
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          if (statusData.instance?.status === 'connected') {
+            console.warn('Ainda conectado após logout. Tente desconectar pelo painel UAZAPI.');
+            alert('Não foi possível desconectar automaticamente. Tente desconectar diretamente no painel UAZAPI ou pelo WhatsApp do celular (Dispositivos Conectados).');
+            setStatus('connected');
+            return;
+          }
+        }
+
+        if (!logoutSuccess) {
+          console.warn('Nenhum endpoint de logout funcionou, mas o status indica desconectado.');
+        }
       }
     } catch (error) {
       console.error('Erro ao desconectar:', error);
