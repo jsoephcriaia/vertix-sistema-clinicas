@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
     // 1. Criar clínica no Supabase
     const clinicaInsert: Record<string, unknown> = {
       nome: clinicaNome,
+      email: usuarioEmail.toLowerCase(), // Usa o email do usuário como email da clínica
       chatwoot_setup_status: 'in_progress',
       status: 'ativo',
     };
