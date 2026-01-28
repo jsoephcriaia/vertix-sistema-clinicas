@@ -8,13 +8,13 @@ import Sidebar from '@/components/Sidebar';
 import Dashboard from '@/components/Dashboard';
 import Conversas from '@/components/Conversas';
 import Pipeline from '@/components/Pipeline';
-import Clientes from '@/components/Clientes';
+import Contatos from '@/components/Contatos';
 import Profissionais from '@/components/Profissionais';
 import Retornos from '@/components/Retornos';
 import Configuracoes from '@/components/Configuracoes';
 import { Loader2 } from 'lucide-react';
 
-const VALID_PAGES = ['dashboard', 'conversas', 'pipeline', 'clientes', 'profissionais', 'retornos', 'configuracoes'];
+const VALID_PAGES = ['dashboard', 'conversas', 'pipeline', 'contatos', 'profissionais', 'retornos', 'configuracoes'];
 
 export default function Home() {
   const { usuario, clinica, loading } = useAuth();
@@ -85,8 +85,8 @@ export default function Home() {
         return <Conversas conversaInicial={conversaInicialRef.current} onConversaIniciada={() => { conversaInicialRef.current = null; }} />;
       case 'pipeline':
         return <Pipeline onAbrirConversa={handleAbrirConversa} />;
-      case 'clientes':
-        return <Clientes onAbrirConversa={handleAbrirConversa} />;
+      case 'contatos':
+        return <Contatos onAbrirConversa={handleAbrirConversa} />;
       case 'profissionais':
         return <Profissionais />;
       case 'retornos':
