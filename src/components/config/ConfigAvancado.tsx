@@ -58,7 +58,7 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
       setAgenteIaPausado(novoStatus);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Erro desconhecido';
-      setErro(`Erro ao alterar: ${msg}. Verifique se a coluna agente_ia_pausado existe no banco.`);
+      setErro(`Erro ao alterar: ${msg}`);
       console.error('Erro ao alterar status do agente:', error);
     } finally {
       setAgenteSaving(false);
@@ -94,21 +94,21 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
 
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold">Agente de IA (n8n)</h3>
+              <h3 className="font-semibold">Secretária de IA</h3>
               {iaAtiva ? (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-primary/20 text-primary flex items-center gap-1">
-                  <CheckCircle size={12} /> Ativo
+                  <CheckCircle size={12} /> Ativa
                 </span>
               ) : (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-500/20 text-yellow-400 flex items-center gap-1">
-                  <PauseCircle size={12} /> Pausado
+                  <PauseCircle size={12} /> Pausada
                 </span>
               )}
             </div>
             <p className="text-sm text-[var(--theme-text-muted)]">
               {iaAtiva
-                ? 'A IA está respondendo automaticamente às mensagens do WhatsApp'
-                : 'A IA está pausada. Todas as conversas serão atendidas manualmente'}
+                ? 'A Secretária de IA está respondendo automaticamente às mensagens do WhatsApp'
+                : 'A Secretária de IA está pausada. Todas as conversas serão atendidas manualmente'}
             </p>
           </div>
 
@@ -140,13 +140,13 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
         }`}>
           {iaAtiva ? (
             <p>
-              <strong>IA Ativa:</strong> O agente n8n processará automaticamente as mensagens recebidas.
-              Para pausar temporariamente em uma conversa específica, adicione a etiqueta &quot;humano&quot; no Chatwoot.
+              <strong>Secretária Ativa:</strong> As mensagens recebidas serão processadas automaticamente.
+              Para pausar em uma conversa específica, adicione a etiqueta &quot;humano&quot; no Chatwoot.
             </p>
           ) : (
             <p>
-              <strong>IA Pausada:</strong> Nenhuma mensagem será enviada ao agente n8n.
-              Você pode atender todas as conversas manualmente sem precisar usar etiquetas.
+              <strong>Secretária Pausada:</strong> Todas as conversas serão atendidas manualmente,
+              sem precisar usar etiquetas.
             </p>
           )}
         </div>

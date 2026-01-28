@@ -18,7 +18,7 @@ interface ConfiguracoesProps {
 const menuConfig = [
   { id: 'whatsapp', label: 'WhatsApp', icon: Smartphone, desc: 'Conexão WhatsApp Business' },
   { id: 'integracoes', label: 'Integrações', icon: Link, desc: 'Google Agenda e Drive' },
-  { id: 'avancado', label: 'Avançado', icon: Settings2, desc: 'Agente de IA e configurações avançadas' },
+  { id: 'avancado', label: 'Avançado', icon: Settings2, desc: 'Secretária de IA e configurações avançadas' },
 ];
 
 export default function Configuracoes({ subPage, setSubPage }: ConfiguracoesProps) {
