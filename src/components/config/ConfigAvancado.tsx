@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Bot, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Bot, CheckCircle, PauseCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface ConfigAvancadoProps {
@@ -9,9 +9,12 @@ interface ConfigAvancadoProps {
 }
 
 export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
-  const [agenteIaAtivo, setAgenteIaAtivo] = useState(false);
+  // agente_ia_pausado: false = IA ativa (padrão), true = IA pausada
+  const [agenteIaPausado, setAgenteIaPausado] = useState(false);
   const [agenteSaving, setAgenteSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const iaAtiva = !agenteIaPausado;
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -21,12 +24,12 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
 
       const { data } = await supabase
         .from('clinicas')
-        .select('agente_ia_ativo')
+        .select('agente_ia_pausado')
         .eq('id', clinicaId)
         .single();
 
       if (data) {
-        setAgenteIaAtivo(data.agente_ia_ativo || false);
+        setAgenteIaPausado(data.agente_ia_pausado || false);
       }
       setLoading(false);
     };
@@ -36,7 +39,7 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
 
   const handleToggleAgente = async () => {
     setAgenteSaving(true);
-    const novoStatus = !agenteIaAtivo;
+    const novoStatus = !agenteIaPausado;
 
     try {
       const sessao = localStorage.getItem('vertix_sessao');
@@ -45,12 +48,12 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
 
       const { error } = await supabase
         .from('clinicas')
-        .update({ agente_ia_ativo: novoStatus })
+        .update({ agente_ia_pausado: novoStatus })
         .eq('id', clinicaId);
 
       if (error) throw error;
 
-      setAgenteIaAtivo(novoStatus);
+      setAgenteIaPausado(novoStatus);
     } catch (error) {
       console.error('Erro ao alterar status do agente:', error);
     } finally {
@@ -79,25 +82,29 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
       </div>
 
       {/* Agente de IA Toggle */}
-      <div className={`bg-[var(--theme-card)] rounded-xl border ${agenteIaAtivo ? 'border-[#10b981]' : 'border-[var(--theme-card-border)]'} p-6`}>
+      <div className={`bg-[var(--theme-card)] rounded-xl border ${iaAtiva ? 'border-[#10b981]' : 'border-yellow-500/50'} p-6`}>
         <div className="flex items-center gap-4">
-          <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${agenteIaAtivo ? 'bg-primary/20' : 'bg-[var(--theme-input)]'}`}>
-            <Bot size={24} className={agenteIaAtivo ? 'text-primary' : 'text-[var(--theme-text-muted)]'} />
+          <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${iaAtiva ? 'bg-primary/20' : 'bg-yellow-500/20'}`}>
+            <Bot size={24} className={iaAtiva ? 'text-primary' : 'text-yellow-400'} />
           </div>
 
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-semibold">Agente de IA (n8n)</h3>
-              {agenteIaAtivo && (
+              {iaAtiva ? (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-primary/20 text-primary flex items-center gap-1">
                   <CheckCircle size={12} /> Ativo
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-500/20 text-yellow-400 flex items-center gap-1">
+                  <PauseCircle size={12} /> Pausado
                 </span>
               )}
             </div>
             <p className="text-sm text-[var(--theme-text-muted)]">
-              {agenteIaAtivo
+              {iaAtiva
                 ? 'A IA está respondendo automaticamente às mensagens do WhatsApp'
-                : 'A IA está desativada. Todas as conversas serão atendidas manualmente'}
+                : 'A IA está pausada. Todas as conversas serão atendidas manualmente'}
             </p>
           </div>
 
@@ -105,30 +112,30 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
             onClick={handleToggleAgente}
             disabled={agenteSaving}
             className={`relative w-16 h-8 rounded-full transition-colors ${
-              agenteIaAtivo
+              iaAtiva
                 ? 'bg-primary'
-                : 'bg-[var(--theme-card-border)]'
+                : 'bg-yellow-500'
             } ${agenteSaving ? 'opacity-50' : ''}`}
           >
             <div className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${
-              agenteIaAtivo ? 'left-9' : 'left-1'
+              iaAtiva ? 'left-9' : 'left-1'
             }`} />
           </button>
         </div>
 
         <div className={`mt-4 p-3 rounded-lg text-sm ${
-          agenteIaAtivo
+          iaAtiva
             ? 'bg-green-500/10 text-green-400 border border-green-500/30'
             : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
         }`}>
-          {agenteIaAtivo ? (
+          {iaAtiva ? (
             <p>
               <strong>IA Ativa:</strong> O agente n8n processará automaticamente as mensagens recebidas.
               Para pausar temporariamente em uma conversa específica, adicione a etiqueta &quot;humano&quot; no Chatwoot.
             </p>
           ) : (
             <p>
-              <strong>IA Desativada:</strong> Nenhuma mensagem será enviada ao agente n8n.
+              <strong>IA Pausada:</strong> Nenhuma mensagem será enviada ao agente n8n.
               Você pode atender todas as conversas manualmente sem precisar usar etiquetas.
             </p>
           )}
