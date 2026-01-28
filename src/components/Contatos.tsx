@@ -100,6 +100,14 @@ export default function Contatos({ onAbrirConversa }: ContatosProps) {
       .select('lead_id, cliente_id, data_hora, status')
       .eq('clinica_id', CLINICA_ID);
 
+    // Criar mapa de telefone -> lead info (id + avatar)
+    const telefoneToLead: Record<string, { id: string; avatar: string | null }> = {};
+    leadsData?.forEach(lead => {
+      if (lead.telefone) {
+        telefoneToLead[lead.telefone] = { id: lead.id, avatar: lead.avatar };
+      }
+    });
+
     // Criar mapa de telefone de clientes para evitar duplicatas
     const telefonesClientes = new Set(clientesData?.map(c => c.telefone).filter(Boolean) || []);
 
@@ -129,7 +137,16 @@ export default function Contatos({ onAbrirConversa }: ContatosProps) {
 
     // Processar clientes
     const clientesProcessados: Contato[] = (clientesData || []).map(cliente => {
-      const agCliente = agendamentos?.filter(a => a.cliente_id === cliente.id) || [];
+      // Buscar lead info pelo telefone para pegar avatar e lead_id
+      const leadInfo = cliente.telefone ? telefoneToLead[cliente.telefone] : null;
+      const leadId = leadInfo?.id || null;
+      const avatar = leadInfo?.avatar || null;
+
+      // Buscar agendamentos por cliente_id OU lead_id (pelo telefone)
+      const agCliente = agendamentos?.filter(a =>
+        a.cliente_id === cliente.id || (leadId && a.lead_id === leadId)
+      ) || [];
+
       const ultimoAg = agCliente.sort((a, b) =>
         new Date(b.data_hora).getTime() - new Date(a.data_hora).getTime()
       )[0];
@@ -141,7 +158,7 @@ export default function Contatos({ onAbrirConversa }: ContatosProps) {
         email: cliente.email || '',
         observacoes: cliente.observacoes || '',
         como_conheceu: cliente.como_conheceu || '',
-        avatar: null,
+        avatar: avatar,
         tipo: 'cliente' as const,
         status: cliente.status,
         created_at: cliente.created_at,
@@ -320,18 +337,36 @@ export default function Contatos({ onAbrirConversa }: ContatosProps) {
     setShowHistorico(true);
     setLoadingHistorico(true);
 
-    let query = supabase
-      .from('agendamentos')
-      .select('id, data_hora, valor, status, tipo, procedimento_id')
-      .eq('clinica_id', CLINICA_ID);
+    // Para clientes, também buscar pelo lead_id (usando telefone)
+    let leadId: string | null = null;
+    if (contato.tipo === 'cliente' && contato.telefone) {
+      const { data: leadData } = await supabase
+        .from('leads_ia')
+        .select('id')
+        .eq('telefone', contato.telefone)
+        .eq('clinica_id', CLINICA_ID)
+        .single();
 
-    if (contato.tipo === 'cliente') {
-      query = query.eq('cliente_id', contato.id);
-    } else {
-      query = query.eq('lead_id', contato.id);
+      leadId = leadData?.id || null;
     }
 
-    const { data: agendamentos } = await query.order('data_hora', { ascending: false });
+    // Construir query com OR para cliente_id e lead_id
+    let orConditions: string[] = [];
+    if (contato.tipo === 'cliente') {
+      orConditions.push(`cliente_id.eq.${contato.id}`);
+      if (leadId) {
+        orConditions.push(`lead_id.eq.${leadId}`);
+      }
+    } else {
+      orConditions.push(`lead_id.eq.${contato.id}`);
+    }
+
+    const { data: agendamentos } = await supabase
+      .from('agendamentos')
+      .select('id, data_hora, valor, status, tipo, procedimento_id')
+      .eq('clinica_id', CLINICA_ID)
+      .or(orConditions.join(','))
+      .order('data_hora', { ascending: false });
 
     if (agendamentos && agendamentos.length > 0) {
       const procedimentoIds = [...new Set(agendamentos.filter(a => a.procedimento_id).map(a => a.procedimento_id))];
