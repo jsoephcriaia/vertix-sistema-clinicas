@@ -453,8 +453,8 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
       </DndContext>
 
       {showModal && editando && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
+          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-[#334155] flex items-center justify-between">
               <h2 className="text-xl font-semibold">Novo Lead</h2>
               <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[#334155] rounded-lg">

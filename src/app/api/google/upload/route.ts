@@ -156,7 +156,9 @@ export async function POST(request: NextRequest) {
     const base64Data = buffer.toString('base64');
 
     // Upload do arquivo
-    const fileName = `${procedimentoId || 'img'}_${tipo}_${Date.now()}.${file.name.split('.').pop()}`;
+    const fileName = tipo === 'logo'
+      ? `logo_${clinicaId}_${Date.now()}.${file.name.split('.').pop()}`
+      : `${procedimentoId || 'img'}_${tipo}_${Date.now()}.${file.name.split('.').pop()}`;
     const metadata = {
       name: fileName,
       parents: folderId ? [folderId] : [],
@@ -208,8 +210,13 @@ export async function POST(request: NextRequest) {
 
     const imageUrl = `https://drive.google.com/thumbnail?id=${uploadData.id}&sz=w1000`;
 
-    // Atualizar procedimento
-    if (procedimentoId) {
+    // Atualizar registro no banco
+    if (tipo === 'logo') {
+      await supabase
+        .from('clinicas')
+        .update({ logo_url: imageUrl })
+        .eq('id', clinicaId);
+    } else if (procedimentoId) {
       const updateField = tipo === 'antes_depois' ? 'imagem_antes_depois_url' : 'imagem_url';
       await supabase
         .from('procedimentos')

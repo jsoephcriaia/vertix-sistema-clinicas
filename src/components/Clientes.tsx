@@ -524,8 +524,8 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
 
       {/* Modal */}
       {showModal && editando && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
+          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-[#334155] flex items-center justify-between">
               <h2 className="text-xl font-semibold">
                 {editando.id ? 'Editar Cliente' : 'Novo Cliente'}
@@ -617,15 +617,15 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
 
       {/* Modal Histórico */}
       {showHistorico && clienteHistorico && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowHistorico(false); setClienteHistorico(null); }}>
+          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-[#334155] flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold">Histórico de Procedimentos</h2>
                 <p className="text-sm text-[#64748b]">{clienteHistorico.nome}</p>
               </div>
-              <button 
-                onClick={() => { setShowHistorico(false); setClienteHistorico(null); }} 
+              <button
+                onClick={() => { setShowHistorico(false); setClienteHistorico(null); }}
                 className="p-2 hover:bg-[#334155] rounded-lg"
               >
                 <X size={20} />

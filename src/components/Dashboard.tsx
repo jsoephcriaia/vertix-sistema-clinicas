@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, DollarSign, Calendar, TrendingUp, AlertTriangle, Loader2 } from 'lucide-react';
+import { Users, DollarSign, Calendar, TrendingUp, AlertTriangle, Loader2, Percent, UserX, Receipt } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface Metricas {
   totalClientes: number;
@@ -12,12 +13,18 @@ interface Metricas {
   totalLeads: number;
   leadsNovos: number;
   leadsConvertidos: number;
+  leadsPerdidos: number;
+  leadsAtendimento: number;
+  leadsAgendados: number;
   valorEmNegociacao: number;
   agendamentosEstaSemana: number;
   agendamentosHoje: number;
   agendamentosPendentes: number;
   totalProcedimentos: number;
   faturamentoRealizado: number;
+  taxaConversao: number;
+  taxaNoShow: number;
+  ticketMedio: number;
 }
 
 interface LeadRecente {
@@ -41,6 +48,16 @@ interface AgendamentoProximo {
   procedimento_nome: string;
 }
 
+interface FaturamentoMensal {
+  mes: string;
+  valor: number;
+}
+
+interface ProcedimentoRanking {
+  nome: string;
+  quantidade: number;
+}
+
 export default function Dashboard() {
   const { clinica } = useAuth();
   const CLINICA_ID = clinica?.id || '';
@@ -49,6 +66,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [leadsRecentes, setLeadsRecentes] = useState<LeadRecente[]>([]);
   const [agendamentosProximos, setAgendamentosProximos] = useState<AgendamentoProximo[]>([]);
+  const [faturamentoMensal, setFaturamentoMensal] = useState<FaturamentoMensal[]>([]);
+  const [procedimentosRanking, setProcedimentosRanking] = useState<ProcedimentoRanking[]>([]);
 
   useEffect(() => {
     if (CLINICA_ID) {
@@ -107,14 +126,14 @@ export default function Dashboard() {
 
       // Criar mapa de leads para avatar
       const leadsMap: Record<string, { nome: string; telefone: string; avatar: string | null }> = {};
-      leads?.forEach(l => { 
-        leadsMap[l.id] = { nome: l.nome, telefone: l.telefone, avatar: l.avatar }; 
+      leads?.forEach(l => {
+        leadsMap[l.id] = { nome: l.nome, telefone: l.telefone, avatar: l.avatar };
       });
 
       // Datas para cálculos
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
-      
+
       const fimDeHoje = new Date(hoje);
       fimDeHoje.setHours(23, 59, 59, 999);
 
@@ -136,6 +155,12 @@ export default function Dashboard() {
       const totalLeads = leadsData.length;
       const leadsNovos = leadsData.filter(l => l.etapa === 'novo').length;
       const leadsConvertidos = leadsData.filter(l => l.etapa === 'convertido').length;
+      const leadsPerdidos = leadsData.filter(l => l.etapa === 'perdido').length;
+      const leadsAtendimento = leadsData.filter(l => l.etapa === 'atendimento').length;
+      const leadsAgendados = leadsData.filter(l => l.etapa === 'agendado').length;
+
+      // Taxa de conversão
+      const taxaConversao = totalLeads > 0 ? (leadsConvertidos / totalLeads) * 100 : 0;
 
       // Valor em negociação (leads não convertidos/perdidos com procedimentos vinculados)
       const valorEmNegociacao = leadProcedimentosData
@@ -146,24 +171,38 @@ export default function Dashboard() {
         }, 0);
 
       // Métricas de agendamentos
-      const agendamentosEstaSemana = agendamentosData.filter(a => {
+      const agendamentosAtivos = agendamentosData.filter(a => a.status !== 'cancelado');
+
+      const agendamentosEstaSemana = agendamentosAtivos.filter(a => {
         const dataAgendamento = new Date(a.data_hora);
-        return dataAgendamento >= hoje && dataAgendamento <= proximaSemana && a.status !== 'cancelado';
+        return dataAgendamento >= hoje && dataAgendamento <= proximaSemana;
       }).length;
 
-      const agendamentosHoje = agendamentosData.filter(a => {
+      const agendamentosHoje = agendamentosAtivos.filter(a => {
         const dataAgendamento = new Date(a.data_hora);
-        return dataAgendamento >= hoje && dataAgendamento <= fimDeHoje && a.status !== 'cancelado';
+        return dataAgendamento >= hoje && dataAgendamento <= fimDeHoje;
       }).length;
 
-      const agendamentosPendentes = agendamentosData.filter(a => 
+      const agendamentosPendentes = agendamentosData.filter(a =>
         a.status === 'agendado'
       ).length;
 
+      // Taxa de no-show (não compareceu / total que deveria comparecer)
+      const agendamentosPassados = agendamentosData.filter(a => {
+        const dataAgendamento = new Date(a.data_hora);
+        return dataAgendamento < hoje && ['realizado', 'nao_compareceu'].includes(a.status);
+      });
+      const noShows = agendamentosPassados.filter(a => a.status === 'nao_compareceu').length;
+      const taxaNoShow = agendamentosPassados.length > 0 ? (noShows / agendamentosPassados.length) * 100 : 0;
+
       // Faturamento realizado (agendamentos com status 'realizado')
-      const faturamentoRealizado = agendamentosData
-        .filter(a => a.status === 'realizado')
-        .reduce((acc, a) => acc + Number(a.valor || 0), 0);
+      const agendamentosRealizados = agendamentosData.filter(a => a.status === 'realizado');
+      const faturamentoRealizado = agendamentosRealizados.reduce((acc, a) => acc + Number(a.valor || 0), 0);
+
+      // Ticket médio
+      const ticketMedio = agendamentosRealizados.length > 0
+        ? faturamentoRealizado / agendamentosRealizados.length
+        : 0;
 
       setMetricas({
         totalClientes,
@@ -172,13 +211,59 @@ export default function Dashboard() {
         totalLeads,
         leadsNovos,
         leadsConvertidos,
+        leadsPerdidos,
+        leadsAtendimento,
+        leadsAgendados,
         valorEmNegociacao,
         agendamentosEstaSemana,
         agendamentosHoje,
         agendamentosPendentes,
         totalProcedimentos: procedimentos?.length || 0,
         faturamentoRealizado,
+        taxaConversao,
+        taxaNoShow,
+        ticketMedio,
       });
+
+      // Faturamento mensal (últimos 6 meses)
+      const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      const faturamentoPorMes: Record<string, number> = {};
+
+      for (let i = 5; i >= 0; i--) {
+        const data = new Date();
+        data.setMonth(data.getMonth() - i);
+        const chave = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+        faturamentoPorMes[chave] = 0;
+      }
+
+      agendamentosRealizados.forEach(a => {
+        const data = new Date(a.data_hora);
+        const chave = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+        if (faturamentoPorMes[chave] !== undefined) {
+          faturamentoPorMes[chave] += Number(a.valor || 0);
+        }
+      });
+
+      const faturamentoMensalData = Object.entries(faturamentoPorMes).map(([chave, valor]) => {
+        const [ano, mes] = chave.split('-');
+        return { mes: mesesNomes[parseInt(mes) - 1], valor };
+      });
+      setFaturamentoMensal(faturamentoMensalData);
+
+      // Ranking de procedimentos
+      const procedimentoCount: Record<string, number> = {};
+      agendamentosData.forEach(a => {
+        if (a.procedimento_id && a.status !== 'cancelado') {
+          const nome = procedimentosMap[a.procedimento_id] || 'Outros';
+          procedimentoCount[nome] = (procedimentoCount[nome] || 0) + 1;
+        }
+      });
+
+      const rankingData = Object.entries(procedimentoCount)
+        .map(([nome, quantidade]) => ({ nome, quantidade }))
+        .sort((a, b) => b.quantidade - a.quantidade)
+        .slice(0, 5);
+      setProcedimentosRanking(rankingData);
 
       // Leads recentes com valor dos procedimentos vinculados
       const leadsComValor = await Promise.all(
@@ -186,7 +271,6 @@ export default function Dashboard() {
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 5)
           .map(async (lead) => {
-            // Buscar procedimentos vinculados a este lead
             const procedimentosLead = leadProcedimentosData.filter(lp => lp.lead_id === lead.id);
             const valorTotal = procedimentosLead.reduce((acc, lp) => {
               const valor = lp.valor_personalizado || lp.procedimento?.preco || 0;
@@ -207,11 +291,8 @@ export default function Dashboard() {
       setLeadsRecentes(leadsComValor);
 
       // Próximos agendamentos (futuros, não cancelados)
-      const proximosAgendamentos = agendamentosData
-        .filter(a => {
-          const dataAgendamento = new Date(a.data_hora);
-          return dataAgendamento >= hoje && a.status !== 'cancelado';
-        })
+      const proximosAgendamentos = agendamentosAtivos
+        .filter(a => new Date(a.data_hora) >= hoje)
         .slice(0, 5)
         .map(a => {
           const leadInfo = a.lead_id ? leadsMap[a.lead_id] : null;
@@ -265,16 +346,9 @@ export default function Dashboard() {
     return statusMap[status] || { label: status, cor: 'bg-gray-500/20 text-gray-500' };
   };
 
-  // Componente de Avatar
   const Avatar = ({ src, nome, corFundo = 'bg-primary' }: { src?: string | null; nome: string; corFundo?: string }) => {
     if (src) {
-      return (
-        <img 
-          src={src} 
-          alt={nome}
-          className="w-10 h-10 rounded-full object-cover"
-        />
-      );
+      return <img src={src} alt={nome} className="w-10 h-10 rounded-full object-cover" />;
     }
     return (
       <div className={`w-10 h-10 rounded-full ${corFundo} flex items-center justify-center text-white font-bold`}>
@@ -282,6 +356,18 @@ export default function Dashboard() {
       </div>
     );
   };
+
+  // Cores para gráfico de leads por etapa
+  const CORES_ETAPAS = ['#3b82f6', '#eab308', '#a855f7', '#22c55e', '#ef4444'];
+
+  // Dados para PieChart de leads
+  const dadosLeadsPorEtapa = metricas ? [
+    { name: 'Novos', value: metricas.leadsNovos, color: '#3b82f6' },
+    { name: 'Em Atendimento', value: metricas.leadsAtendimento, color: '#eab308' },
+    { name: 'Agendados', value: metricas.leadsAgendados, color: '#a855f7' },
+    { name: 'Convertidos', value: metricas.leadsConvertidos, color: '#22c55e' },
+    { name: 'Perdidos', value: metricas.leadsPerdidos, color: '#ef4444' },
+  ].filter(d => d.value > 0) : [];
 
   if (loading) {
     return (
@@ -300,8 +386,8 @@ export default function Dashboard() {
         <p className="text-sm text-[var(--theme-text-secondary)]">Visão geral da sua clínica</p>
       </div>
 
-      {/* Cards de métricas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Cards de métricas - Linha 1 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         {/* Clientes */}
         <div className="rounded-xl p-5 shadow-sm bg-[var(--theme-card)] border border-[var(--theme-card-border)]">
           <div className="flex items-center justify-between mb-3">
@@ -329,8 +415,7 @@ export default function Dashboard() {
           <p className="text-2xl font-bold text-[var(--theme-text)]">R$ {metricas.valorEmNegociacao.toLocaleString('pt-BR')}</p>
           <p className="text-sm text-[var(--theme-text-secondary)]">Em negociação</p>
           <div className="flex gap-2 mt-2">
-            <span className="text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded">{metricas.leadsNovos} novos</span>
-            <span className="text-xs bg-green-500/20 text-green-600 px-2 py-0.5 rounded">{metricas.leadsConvertidos} convertidos</span>
+            <span className="text-xs bg-blue-500/20 text-blue-600 px-2 py-0.5 rounded">{metricas.totalLeads} leads</span>
           </div>
         </div>
 
@@ -369,6 +454,137 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Cards de métricas - Linha 2 */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        {/* Taxa de Conversão */}
+        <div className="rounded-xl p-5 shadow-sm bg-[var(--theme-card)] border border-[var(--theme-card-border)]">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-emerald-500/20 rounded-lg">
+              <Percent size={24} className="text-emerald-500" />
+            </div>
+            <span className="text-xs text-[var(--theme-text-muted)]">Conversão</span>
+          </div>
+          <p className="text-2xl font-bold text-[var(--theme-text)]">{metricas.taxaConversao.toFixed(1)}%</p>
+          <p className="text-sm text-[var(--theme-text-secondary)]">Taxa de conversão</p>
+          <div className="flex gap-2 mt-2">
+            <span className="text-xs bg-green-500/20 text-green-600 px-2 py-0.5 rounded">{metricas.leadsConvertidos} convertidos</span>
+            <span className="text-xs bg-gray-500/20 text-gray-500 px-2 py-0.5 rounded">{metricas.totalLeads} total</span>
+          </div>
+        </div>
+
+        {/* Taxa de No-Show */}
+        <div className="rounded-xl p-5 shadow-sm bg-[var(--theme-card)] border border-[var(--theme-card-border)]">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-orange-500/20 rounded-lg">
+              <UserX size={24} className="text-orange-500" />
+            </div>
+            <span className="text-xs text-[var(--theme-text-muted)]">No-Show</span>
+          </div>
+          <p className="text-2xl font-bold text-[var(--theme-text)]">{metricas.taxaNoShow.toFixed(1)}%</p>
+          <p className="text-sm text-[var(--theme-text-secondary)]">Não compareceram</p>
+          <div className="flex gap-2 mt-2">
+            <span className={`text-xs px-2 py-0.5 rounded ${metricas.taxaNoShow <= 10 ? 'bg-green-500/20 text-green-600' : 'bg-orange-500/20 text-orange-600'}`}>
+              {metricas.taxaNoShow <= 10 ? 'Bom' : 'Atenção'}
+            </span>
+          </div>
+        </div>
+
+        {/* Ticket Médio */}
+        <div className="rounded-xl p-5 shadow-sm bg-[var(--theme-card)] border border-[var(--theme-card-border)]">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-pink-500/20 rounded-lg">
+              <Receipt size={24} className="text-pink-500" />
+            </div>
+            <span className="text-xs text-[var(--theme-text-muted)]">Ticket Médio</span>
+          </div>
+          <p className="text-2xl font-bold text-[var(--theme-text)]">R$ {metricas.ticketMedio.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</p>
+          <p className="text-sm text-[var(--theme-text-secondary)]">Por atendimento</p>
+        </div>
+      </div>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Faturamento Mensal */}
+        <div className="rounded-xl p-5 shadow-sm bg-[var(--theme-card)] border border-[var(--theme-card-border)]">
+          <h2 className="font-semibold mb-4 text-[var(--theme-text)]">Faturamento Mensal</h2>
+          {faturamentoMensal.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={faturamentoMensal}>
+                <XAxis dataKey="mes" tick={{ fill: 'var(--theme-text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: 'var(--theme-text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${(v/1000).toFixed(0)}k`} />
+                <Tooltip
+                  formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR')}`, 'Faturamento']}
+                  contentStyle={{ backgroundColor: 'var(--theme-card)', border: '1px solid var(--theme-card-border)', borderRadius: '8px' }}
+                  labelStyle={{ color: 'var(--theme-text)' }}
+                />
+                <Bar dataKey="valor" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-center py-8 text-[var(--theme-text-secondary)]">Sem dados de faturamento</p>
+          )}
+        </div>
+
+        {/* Leads por Etapa */}
+        <div className="rounded-xl p-5 shadow-sm bg-[var(--theme-card)] border border-[var(--theme-card-border)]">
+          <h2 className="font-semibold mb-4 text-[var(--theme-text)]">Leads por Etapa</h2>
+          {dadosLeadsPorEtapa.length > 0 ? (
+            <div className="flex items-center">
+              <ResponsiveContainer width="60%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={dadosLeadsPorEtapa}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {dadosLeadsPorEtapa.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number, name: string) => [value, name]}
+                    contentStyle={{ backgroundColor: 'var(--theme-card)', border: '1px solid var(--theme-card-border)', borderRadius: '8px' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="w-[40%] space-y-2">
+                {dadosLeadsPorEtapa.map((item, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-xs text-[var(--theme-text-secondary)]">{item.name}</span>
+                    <span className="text-xs font-medium text-[var(--theme-text)] ml-auto">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-center py-8 text-[var(--theme-text-secondary)]">Sem leads cadastrados</p>
+          )}
+        </div>
+      </div>
+
+      {/* Procedimentos mais agendados */}
+      {procedimentosRanking.length > 0 && (
+        <div className="rounded-xl p-5 shadow-sm bg-[var(--theme-card)] border border-[var(--theme-card-border)] mb-6">
+          <h2 className="font-semibold mb-4 text-[var(--theme-text)]">Procedimentos Mais Agendados</h2>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={procedimentosRanking} layout="vertical">
+              <XAxis type="number" tick={{ fill: 'var(--theme-text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="nome" tick={{ fill: 'var(--theme-text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} width={120} />
+              <Tooltip
+                formatter={(value: number) => [value, 'Agendamentos']}
+                contentStyle={{ backgroundColor: 'var(--theme-card)', border: '1px solid var(--theme-card-border)', borderRadius: '8px' }}
+              />
+              <Bar dataKey="quantidade" fill="#a855f7" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Listas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -425,7 +641,7 @@ export default function Dashboard() {
               {agendamentosProximos.map((agendamento) => {
                 const { data, hora } = formatarDataHora(agendamento.data_hora);
                 const statusInfo = getStatusAgendamento(agendamento.status);
-                
+
                 return (
                   <div key={agendamento.id} className="flex items-center justify-between p-3 rounded-lg bg-[var(--theme-bg-tertiary)]">
                     <div className="flex items-center gap-3">

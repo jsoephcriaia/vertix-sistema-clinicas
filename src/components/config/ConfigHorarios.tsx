@@ -325,8 +325,8 @@ export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
       </div>
 
       {showBloqueioModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-md p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowBloqueioModal(false)}>
+          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Novo Bloqueio</h2>
               <button onClick={() => setShowBloqueioModal(false)} className="p-2 hover:bg-[#334155] rounded-lg">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Save, Upload, MapPin, Phone, Mail, Instagram, Facebook, Globe, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
@@ -15,6 +15,11 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [driveConectado, setDriveConectado] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const inputLogoRef = useRef<HTMLInputElement>(null);
+
   const [dados, setDados] = useState({
     nome: '',
     descricao: '',
@@ -43,7 +48,7 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
       .select('*')
       .eq('id', CLINICA_ID)
       .single();
-    
+
     if (error) {
       console.error('Erro ao buscar clínica:', error);
     } else if (data) {
@@ -61,6 +66,8 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
         facebook: data.facebook || '',
         website: data.website || '',
       });
+      setLogoUrl(data.logo_url || null);
+      setDriveConectado(!!data.google_drive_connected);
     }
     setLoading(false);
   };
@@ -69,9 +76,63 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
     setDados(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleUploadLogo = async (file: File) => {
+    if (!driveConectado) {
+      alert('Conecte o Google Drive nas Integrações antes de fazer upload de imagens.');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione apenas arquivos de imagem.');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('A imagem deve ter no máximo 2MB.');
+      return;
+    }
+
+    setUploadingLogo(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('clinicaId', CLINICA_ID);
+      formData.append('tipo', 'logo');
+
+      const response = await fetch('/api/google/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      setLogoUrl(result.imageUrl);
+      alert('Logo enviada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao enviar logo:', error);
+      alert('Erro ao enviar logo: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleUploadLogo(file);
+    }
+    // Reset input para permitir selecionar o mesmo arquivo novamente
+    e.target.value = '';
+  };
+
   const handleSave = async () => {
     setSaving(true);
-    
+
     const { error } = await supabase
       .from('clinicas')
       .update({
@@ -97,7 +158,7 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
     } else {
       alert('Dados salvos com sucesso!');
     }
-    
+
     setSaving(false);
   };
 
@@ -128,14 +189,46 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
         <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
           <h2 className="font-semibold mb-4">Logo da Clínica</h2>
           <div className="flex items-center gap-4">
-            <div className="w-24 h-24 rounded-xl bg-[#334155] flex items-center justify-center">
-              <Upload size={32} className="text-[#64748b]" />
+            <div className="w-24 h-24 rounded-xl bg-[#334155] flex items-center justify-center overflow-hidden">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                <Upload size={32} className="text-[#64748b]" />
+              )}
             </div>
             <div>
-              <button className="bg-[#10b981] hover:bg-[#059669] text-white px-4 py-2 rounded-lg transition-colors">
-                Enviar Logo
+              <input
+                ref={inputLogoRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onFileSelect}
+              />
+              <button
+                onClick={() => inputLogoRef.current?.click()}
+                disabled={uploadingLogo}
+                className="bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+              >
+                {uploadingLogo ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={16} />
+                    Enviar Logo
+                  </>
+                )}
               </button>
-              <p className="text-xs text-[#64748b] mt-2">PNG ou JPG, máximo 2MB</p>
+              <p className="text-xs text-[#64748b] mt-2">
+                PNG ou JPG, máximo 2MB
+                {!driveConectado && (
+                  <span className="block text-yellow-500 mt-1">
+                    Conecte o Google Drive nas Integrações
+                  </span>
+                )}
+              </p>
             </div>
           </div>
         </div>
