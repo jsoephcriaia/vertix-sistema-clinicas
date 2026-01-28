@@ -48,6 +48,7 @@ interface Cliente {
   nome: string;
   telefone: string;
   email?: string;
+  avatar?: string | null;
 }
 
 interface Lead {
@@ -56,6 +57,7 @@ interface Lead {
   telefone: string;
   interesse?: string;
   etapa: string;
+  avatar?: string | null;
 }
 
 interface LeadIA {
@@ -806,24 +808,33 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
       // Buscar clientes
       const { data: clientesData } = await supabase
         .from('clientes')
-        .select('id, nome, telefone, email')
+        .select('id, nome, telefone, email, avatar')
         .eq('clinica_id', CLINICA_ID)
         .order('nome');
-      
+
       if (clientesData) {
         setClientes(clientesData);
       }
-      
-      // Buscar leads do pipeline
+
+      // Buscar leads do pipeline/leads_ia
       const { data: leadsData } = await supabase
-        .from('pipeline')
-        .select('id, nome, telefone, interesse, etapa')
+        .from('leads_ia')
+        .select('id, nome, telefone, procedimento_interesse, etapa, avatar')
         .eq('clinica_id', CLINICA_ID)
         .not('etapa', 'eq', 'convertido')
         .order('nome');
       
       if (leadsData) {
-        setLeads(leadsData);
+        // Map leads_ia fields to Lead interface
+        const leadsMapped = leadsData.map(l => ({
+          id: l.id,
+          nome: l.nome || 'Sem nome',
+          telefone: l.telefone || '',
+          interesse: l.procedimento_interesse || '',
+          etapa: l.etapa || 'novo',
+          avatar: l.avatar || null,
+        }));
+        setLeads(leadsMapped);
       }
     } catch (error) {
       console.error('Erro ao buscar clientes e leads:', error);
@@ -1841,9 +1852,13 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                         disabled={iniciandoConversa || !cliente.telefone}
                         className="w-full flex items-center gap-3 p-4 hover:bg-[var(--theme-bg-tertiary)] transition-colors text-left border-b border-[var(--theme-card-border)] disabled:opacity-50"
                       >
-                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-                          {cliente.nome.charAt(0).toUpperCase()}
-                        </div>
+                        {cliente.avatar ? (
+                          <img src={cliente.avatar} alt={cliente.nome} className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+                            {cliente.nome.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{cliente.nome}</p>
                           <p className="text-sm text-[var(--theme-text-muted)]">{cliente.telefone || 'Sem telefone'}</p>
@@ -1866,9 +1881,13 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                         disabled={iniciandoConversa || !lead.telefone}
                         className="w-full flex items-center gap-3 p-4 hover:bg-[var(--theme-bg-tertiary)] transition-colors text-left border-b border-[var(--theme-card-border)] disabled:opacity-50"
                       >
-                        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
-                          {lead.nome.charAt(0).toUpperCase()}
-                        </div>
+                        {lead.avatar ? (
+                          <img src={lead.avatar} alt={lead.nome} className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                            {lead.nome.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{lead.nome}</p>
                           <div className="flex items-center gap-2">

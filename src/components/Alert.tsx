@@ -188,10 +188,10 @@ export function AlertProvider({ children }: { children: ReactNode }) {
             className={`bg-[var(--theme-card)] border border-[var(--theme-card-border)] border-l-4 ${getToastBorder(toast.type)} rounded-lg shadow-lg p-4 flex items-center gap-3 min-w-[280px] max-w-[400px] animate-in slide-in-from-right duration-300`}
           >
             {getToastIcon(toast.type)}
-            <p className="text-white text-sm flex-1">{toast.message}</p>
+            <p className="text-[var(--theme-text)] text-sm flex-1">{toast.message}</p>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-[var(--theme-text-muted)] hover:text-white transition-colors"
+              className="text-[var(--theme-text-muted)] hover:text-[var(--theme-text)] transition-colors"
             >
               <X size={16} />
             </button>
@@ -221,7 +221,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
               {/* Conteúdo */}
               <div className="px-6 pb-6 text-center">
                 {options.title && (
-                  <h3 className="text-xl font-semibold text-white mb-2">
+                  <h3 className="text-xl font-semibold text-[var(--theme-text)] mb-2">
                     {options.title}
                   </h3>
                 )}
@@ -237,7 +237,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
                     <button
                       onClick={handleCancel}
                       disabled={isLoading}
-                      className="flex-1 px-4 py-3 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] text-white rounded-xl transition-colors font-medium disabled:opacity-50"
+                      className="flex-1 px-4 py-3 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] text-[var(--theme-text)] rounded-xl transition-colors font-medium disabled:opacity-50"
                     >
                       {options.cancelText || 'Cancelar'}
                     </button>

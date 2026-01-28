@@ -183,7 +183,9 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
 
     if (error) {
       console.error('Erro ao atualizar:', error);
+      showToast('Erro ao alterar status', 'error');
     } else {
+      showToast(ativo ? 'Procedimento desativado' : 'Procedimento ativado', 'success');
       fetchProcedimentos();
     }
   };

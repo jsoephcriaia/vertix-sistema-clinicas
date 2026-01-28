@@ -34,7 +34,7 @@ const menuItems = [
   { id: 'conversas', label: 'Conversas', icon: MessageSquare },
   { id: 'pipeline', label: 'Pipeline', icon: Kanban },
   { id: 'clientes', label: 'Clientes', icon: Users },
-  { id: 'retornos', label: 'Retornos', icon: Calendar },
+  { id: 'retornos', label: 'Agenda', icon: Calendar },
   { id: 'configuracoes', label: 'Configurações', icon: Settings },
 ];
 

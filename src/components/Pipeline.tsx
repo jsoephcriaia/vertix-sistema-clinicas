@@ -5,18 +5,6 @@ import { Phone, Plus, X, Save, Loader2, Trash2, MessageSquare } from 'lucide-rea
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
-import {
-  DndContext,
-  DragOverlay,
-  closestCorners,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragStartEvent,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import { useDraggable, useDroppable } from '@dnd-kit/core';
 
 interface Lead {
   id: string;
@@ -40,67 +28,43 @@ const etapas = [
   { id: 'perdido', label: 'Perdido', cor: 'bg-red-500' },
 ];
 
-function LeadCard({ 
-  lead, 
-  onDelete, 
-  onMensagem 
-}: { 
-  lead: Lead; 
+function LeadCard({
+  lead,
+  onDelete,
+  onMensagem
+}: {
+  lead: Lead;
   onDelete: (id: string) => void;
   onMensagem: (lead: Lead) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: lead.id,
-    data: lead,
-  });
-
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        opacity: isDragging ? 0.5 : 1,
-      }
-    : undefined;
-
   const formatarData = (data: string) => {
     return new Date(data).toLocaleDateString('pt-BR');
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`bg-[var(--theme-input)] rounded-lg p-4 border border-[var(--theme-card-border)] hover:border-primary transition-colors ${
-        isDragging ? 'shadow-lg' : ''
-      }`}
-    >
-      {/* Área arrastável */}
-      <div {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing">
-        <div className="flex items-start justify-between mb-2">
-          <h4 className="font-medium">{lead.nome}</h4>
-        </div>
-
-        <p className="text-sm text-primary mb-2">{lead.interesse}</p>
-
-        <div className="flex items-center gap-2 text-xs text-[var(--theme-text-muted)] mb-2">
-          <Phone size={12} />
-          <span>{lead.telefone || 'Sem telefone'}</span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-primary">
-            R$ {Number(lead.valor_estimado || 0).toLocaleString('pt-BR')}
-          </span>
-          <span className="text-xs text-[var(--theme-text-muted)]">{formatarData(lead.created_at)}</span>
-        </div>
+    <div className="bg-[var(--theme-input)] rounded-lg p-4 border border-[var(--theme-card-border)] hover:border-primary transition-colors">
+      <div className="flex items-start justify-between mb-2">
+        <h4 className="font-medium">{lead.nome}</h4>
       </div>
 
-      {/* Botões de ação - fora da área arrastável */}
+      <p className="text-sm text-primary mb-2">{lead.interesse}</p>
+
+      <div className="flex items-center gap-2 text-xs text-[var(--theme-text-muted)] mb-2">
+        <Phone size={12} />
+        <span>{lead.telefone || 'Sem telefone'}</span>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-primary">
+          R$ {Number(lead.valor_estimado || 0).toLocaleString('pt-BR')}
+        </span>
+        <span className="text-xs text-[var(--theme-text-muted)]">{formatarData(lead.created_at)}</span>
+      </div>
+
+      {/* Botões de ação */}
       <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-[var(--theme-card-border)]">
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onMensagem(lead);
-          }}
+          onClick={() => onMensagem(lead)}
           disabled={!lead.telefone}
           className="p-1.5 hover:bg-primary/20 rounded transition-colors disabled:opacity-50"
           title={lead.telefone ? 'Enviar mensagem' : 'Sem telefone'}
@@ -108,10 +72,7 @@ function LeadCard({
           <MessageSquare size={14} className="text-primary" />
         </button>
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(lead.id);
-          }}
+          onClick={() => onDelete(lead.id)}
           className="p-1.5 hover:bg-red-500/20 rounded transition-colors"
           title="Excluir lead"
         >
@@ -135,10 +96,6 @@ function Coluna({
   onDelete: (id: string) => void;
   onMensagem: (lead: Lead) => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: etapa.id,
-  });
-
   return (
     <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)]">
       <div className="p-4 border-b border-[var(--theme-card-border)]">
@@ -154,19 +111,14 @@ function Coluna({
         </p>
       </div>
 
-      <div
-        ref={setNodeRef}
-        className={`p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-300px)] overflow-auto transition-colors ${
-          isOver ? 'bg-primary/10' : ''
-        }`}
-      >
+      <div className="p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-300px)] overflow-auto">
         {leads.map((lead) => (
           <LeadCard key={lead.id} lead={lead} onDelete={onDelete} onMensagem={onMensagem} />
         ))}
 
         {leads.length === 0 && (
-          <div className={`text-center py-8 text-[var(--theme-text-muted)] border-2 border-dashed rounded-lg ${isOver ? 'border-[#10b981]' : 'border-[var(--theme-card-border)]'}`}>
-            <p className="text-sm">Arraste um lead para cá</p>
+          <div className="text-center py-8 text-[var(--theme-text-muted)] border-2 border-dashed rounded-lg border-[var(--theme-card-border)]">
+            <p className="text-sm">Nenhum lead nesta etapa</p>
           </div>
         )}
       </div>
@@ -184,16 +136,6 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editando, setEditando] = useState<Lead | null>(null);
-  const [activeId, setActiveId] = useState<string | null>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor)
-  );
 
   const novoLead: Lead = {
     id: '',
@@ -320,72 +262,6 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
     }
   };
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  };
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-
-    if (!over) return;
-
-    const leadId = active.id as string;
-    const novaEtapa = over.id as string;
-
-    if (!etapas.find((e) => e.id === novaEtapa)) return;
-
-    const lead = leads.find((l) => l.id === leadId);
-    if (!lead || lead.etapa === novaEtapa) return;
-
-    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, etapa: novaEtapa } : l)));
-
-    const { error } = await supabase
-      .from('leads_ia')
-      .update({ etapa: novaEtapa, updated_at: new Date().toISOString() })
-      .eq('id', leadId);
-
-    if (error) {
-      console.error('Erro ao mover lead:', error);
-      fetchLeads();
-    } else {
-      // Se moveu para convertido, cria cliente automaticamente
-      if (novaEtapa === 'convertido') {
-        await converterParaCliente(lead);
-      }
-    }
-  };
-
-  // Converter lead para cliente
-  const converterParaCliente = async (lead: Lead) => {
-    if (!lead.telefone || !CLINICA_ID) return;
-    
-    try {
-      // Verificar se já existe cliente com esse telefone
-      const { data: clienteExistente } = await supabase
-        .from('clientes')
-        .select('id')
-        .eq('clinica_id', CLINICA_ID)
-        .eq('telefone', lead.telefone)
-        .single();
-      
-      if (!clienteExistente) {
-        // Criar novo cliente
-        await supabase
-          .from('clientes')
-          .insert({
-            clinica_id: CLINICA_ID,
-            nome: lead.nome,
-            telefone: lead.telefone,
-          });
-        
-        showToast('Lead convertido para cliente!', 'success');
-      }
-    } catch (error) {
-      console.error('Erro ao converter para cliente:', error);
-    }
-  };
-
   const getLeadsPorEtapa = (etapaId: string) => {
     return leads.filter((lead) => lead.etapa === etapaId);
   };
@@ -393,8 +269,6 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
   const getTotalPorEtapa = (etapaId: string) => {
     return getLeadsPorEtapa(etapaId).reduce((acc, lead) => acc + Number(lead.valor_estimado || 0), 0);
   };
-
-  const activeLead = activeId ? leads.find((l) => l.id === activeId) : null;
 
   if (loading) {
     return (
@@ -409,7 +283,7 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Pipeline de Vendas</h1>
-          <p className="text-[var(--theme-text-muted)] text-sm">Arraste os cards para mover entre as etapas</p>
+          <p className="text-[var(--theme-text-muted)] text-sm">Acompanhe seus leads em cada etapa do funil</p>
         </div>
         <button
           onClick={handleNew}
@@ -420,37 +294,18 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
         </button>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {etapas.map((etapa) => (
-            <Coluna
-              key={etapa.id}
-              etapa={etapa}
-              leads={getLeadsPorEtapa(etapa.id)}
-              total={getTotalPorEtapa(etapa.id)}
-              onDelete={handleDelete}
-              onMensagem={handleMensagem}
-            />
-          ))}
-        </div>
-
-        <DragOverlay>
-          {activeLead ? (
-            <div className="bg-[var(--theme-input)] rounded-lg p-4 border-2 border-primary shadow-2xl w-64">
-              <h4 className="font-medium mb-1">{activeLead.nome}</h4>
-              <p className="text-sm text-primary">{activeLead.interesse}</p>
-              <p className="text-sm font-medium text-primary mt-2">
-                R$ {Number(activeLead.valor_estimado || 0).toLocaleString('pt-BR')}
-              </p>
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {etapas.map((etapa) => (
+          <Coluna
+            key={etapa.id}
+            etapa={etapa}
+            leads={getLeadsPorEtapa(etapa.id)}
+            total={getTotalPorEtapa(etapa.id)}
+            onDelete={handleDelete}
+            onMensagem={handleMensagem}
+          />
+        ))}
+      </div>
 
       {showModal && editando && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
