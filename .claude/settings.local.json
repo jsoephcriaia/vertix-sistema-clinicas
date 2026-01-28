@@ -10,7 +10,10 @@
       "Bash(npm install:*)",
       "Bash(git commit:*)",
       "Bash(npm run build:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(xargs:*)",
+      "Bash(npm run sync-n8n:*)",
+      "Bash(ls:*)"
     ]
   }
 }

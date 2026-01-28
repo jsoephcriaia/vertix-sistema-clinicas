@@ -6,7 +6,7 @@ import {
   MessageSquare,
   Kanban,
   Users,
-  UserCog,
+  Building2,
   Calendar,
   Settings,
   LogOut,
@@ -36,7 +36,7 @@ const menuItems = [
   { id: 'conversas', label: 'Conversas', icon: MessageSquare },
   { id: 'retornos', label: 'Agenda', icon: Calendar },
   { id: 'contatos', label: 'Contatos', icon: Users },
-  { id: 'profissionais', label: 'Profissionais', icon: UserCog },
+  { id: 'minha-clinica', label: 'Minha Clínica', icon: Building2 },
   { id: 'configuracoes', label: 'Configurações', icon: Settings },
 ];
 

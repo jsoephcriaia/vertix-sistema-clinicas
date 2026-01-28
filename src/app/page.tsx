@@ -9,12 +9,12 @@ import Dashboard from '@/components/Dashboard';
 import Conversas from '@/components/Conversas';
 import Pipeline from '@/components/Pipeline';
 import Contatos from '@/components/Contatos';
-import Profissionais from '@/components/Profissionais';
 import Retornos from '@/components/Retornos';
+import MinhaClinica from '@/components/MinhaClinica';
 import Configuracoes from '@/components/Configuracoes';
 import { Loader2 } from 'lucide-react';
 
-const VALID_PAGES = ['dashboard', 'conversas', 'pipeline', 'contatos', 'profissionais', 'retornos', 'configuracoes'];
+const VALID_PAGES = ['dashboard', 'conversas', 'pipeline', 'contatos', 'retornos', 'minha-clinica', 'configuracoes'];
 
 export default function Home() {
   const { usuario, clinica, loading } = useAuth();
@@ -87,10 +87,10 @@ export default function Home() {
         return <Pipeline onAbrirConversa={handleAbrirConversa} />;
       case 'contatos':
         return <Contatos onAbrirConversa={handleAbrirConversa} />;
-      case 'profissionais':
-        return <Profissionais />;
       case 'retornos':
         return <Retornos onAbrirConversa={handleAbrirConversa} />;
+      case 'minha-clinica':
+        return <MinhaClinica subPage={subPageFromUrl} setSubPage={handleSetSubPage} />;
       case 'configuracoes':
         return <Configuracoes subPage={subPageFromUrl} setSubPage={handleSetSubPage} />;
       default:

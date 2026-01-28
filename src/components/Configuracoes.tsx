@@ -1,20 +1,10 @@
 'use client';
 
 import {
-  Building2,
-  Scissors,
-  Clock,
-  HelpCircle,
-  FileText,
   Smartphone,
   Link,
   ChevronRight
 } from 'lucide-react';
-import ConfigClinica from './config/ConfigClinica';
-import ConfigProcedimentos from './config/ConfigProcedimentos';
-import ConfigHorarios from './config/ConfigHorarios';
-import ConfigFaq from './config/ConfigFaq';
-import ConfigPoliticas from './config/ConfigPoliticas';
 import ConfigWhatsApp from './config/ConfigWhatsApp';
 import ConfigIntegracoes from './config/ConfigIntegracoes';
 
@@ -24,11 +14,6 @@ interface ConfiguracoesProps {
 }
 
 const menuConfig = [
-  { id: 'clinica', label: 'Minha Clínica', icon: Building2, desc: 'Informações básicas da clínica' },
-  { id: 'procedimentos', label: 'Procedimentos', icon: Scissors, desc: 'Catálogo de serviços e preços' },
-  { id: 'horarios', label: 'Horários da Clínica', icon: Clock, desc: 'Horários de funcionamento geral' },
-  { id: 'faq', label: 'FAQ', icon: HelpCircle, desc: 'Perguntas frequentes' },
-  { id: 'politicas', label: 'Políticas', icon: FileText, desc: 'Regras e termos' },
   { id: 'whatsapp', label: 'WhatsApp', icon: Smartphone, desc: 'Conexão WhatsApp Business' },
   { id: 'integracoes', label: 'Integrações', icon: Link, desc: 'Google Agenda e Drive' },
 ];
@@ -37,16 +22,6 @@ export default function Configuracoes({ subPage, setSubPage }: ConfiguracoesProp
 
   const renderSubPage = () => {
     switch (subPage) {
-      case 'clinica':
-        return <ConfigClinica onBack={() => setSubPage(null)} />;
-      case 'procedimentos':
-        return <ConfigProcedimentos onBack={() => setSubPage(null)} />;
-      case 'horarios':
-        return <ConfigHorarios onBack={() => setSubPage(null)} />;
-      case 'faq':
-        return <ConfigFaq onBack={() => setSubPage(null)} />;
-      case 'politicas':
-        return <ConfigPoliticas onBack={() => setSubPage(null)} />;
       case 'whatsapp':
         return <ConfigWhatsApp onBack={() => setSubPage(null)} />;
       case 'integracoes':
