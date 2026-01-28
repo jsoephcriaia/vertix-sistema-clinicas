@@ -96,6 +96,10 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       if (data.instance?.status === 'connected') {
         setStatus('connected');
         setPhoneNumber(data.instance?.phone || '');
+
+        // Garantir que o webhook está configurado (auto-fix)
+        await ensureWebhookConfigured(token);
+
         return true;
       } else {
         setStatus('disconnected');
@@ -105,6 +109,47 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       console.error('Erro ao verificar status:', error);
       setStatus('disconnected');
       return false;
+    }
+  };
+
+  // Garante que o webhook está configurado corretamente
+  const ensureWebhookConfigured = async (token: string) => {
+    try {
+      const webhookUrl = `${window.location.origin}/api/webhook/uazapi`;
+
+      // Verificar webhook atual
+      const checkResponse = await fetch(`${UAZAPI_URL}/webhook/get`, {
+        method: 'GET',
+        headers: { 'token': token },
+      });
+
+      if (checkResponse.ok) {
+        const webhookData = await checkResponse.json();
+        const currentUrl = webhookData.webhook?.url || webhookData.webhookUrl || '';
+
+        // Se já está configurado corretamente, não faz nada
+        if (currentUrl === webhookUrl) {
+          console.log('Webhook já está configurado corretamente');
+          return;
+        }
+      }
+
+      // Configurar webhook
+      console.log('Configurando webhook automaticamente:', webhookUrl);
+      await fetch(`${UAZAPI_URL}/webhook/set`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': token,
+        },
+        body: JSON.stringify({
+          webhookUrl: webhookUrl,
+          webhookEnabled: true,
+        }),
+      });
+      console.log('Webhook configurado com sucesso');
+    } catch (error) {
+      console.error('Erro ao verificar/configurar webhook:', error);
     }
   };
 
