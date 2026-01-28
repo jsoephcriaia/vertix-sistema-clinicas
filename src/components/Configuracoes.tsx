@@ -4,8 +4,6 @@ import {
   Building2,
   Scissors,
   Clock,
-  Users,
-  UserCog,
   HelpCircle,
   FileText,
   Smartphone,
@@ -15,8 +13,6 @@ import {
 import ConfigClinica from './config/ConfigClinica';
 import ConfigProcedimentos from './config/ConfigProcedimentos';
 import ConfigHorarios from './config/ConfigHorarios';
-import ConfigHorariosProfissional from './config/ConfigHorariosProfissional';
-import ConfigEquipe from './config/ConfigEquipe';
 import ConfigFaq from './config/ConfigFaq';
 import ConfigPoliticas from './config/ConfigPoliticas';
 import ConfigWhatsApp from './config/ConfigWhatsApp';
@@ -31,8 +27,6 @@ const menuConfig = [
   { id: 'clinica', label: 'Minha Clínica', icon: Building2, desc: 'Informações básicas da clínica' },
   { id: 'procedimentos', label: 'Procedimentos', icon: Scissors, desc: 'Catálogo de serviços e preços' },
   { id: 'horarios', label: 'Horários da Clínica', icon: Clock, desc: 'Horários de funcionamento geral' },
-  { id: 'equipe', label: 'Equipe', icon: Users, desc: 'Profissionais da clínica' },
-  { id: 'horarios-profissionais', label: 'Horários Profissionais', icon: UserCog, desc: 'Disponibilidade individual' },
   { id: 'faq', label: 'FAQ', icon: HelpCircle, desc: 'Perguntas frequentes' },
   { id: 'politicas', label: 'Políticas', icon: FileText, desc: 'Regras e termos' },
   { id: 'whatsapp', label: 'WhatsApp', icon: Smartphone, desc: 'Conexão WhatsApp Business' },
@@ -49,10 +43,6 @@ export default function Configuracoes({ subPage, setSubPage }: ConfiguracoesProp
         return <ConfigProcedimentos onBack={() => setSubPage(null)} />;
       case 'horarios':
         return <ConfigHorarios onBack={() => setSubPage(null)} />;
-      case 'equipe':
-        return <ConfigEquipe onBack={() => setSubPage(null)} />;
-      case 'horarios-profissionais':
-        return <ConfigHorariosProfissional onBack={() => setSubPage(null)} />;
       case 'faq':
         return <ConfigFaq onBack={() => setSubPage(null)} />;
       case 'politicas':

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Phone, Clock, AlertTriangle, CheckCircle, Loader2, Search, MessageSquare, RefreshCw, Package, Edit, X, Save } from 'lucide-react';
+import { Calendar, Phone, Clock, AlertTriangle, CheckCircle, Loader2, Search, MessageSquare, RefreshCw, Package, Edit, X, Save, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
@@ -16,10 +16,13 @@ interface Retorno {
   lead_id: string | null;
   cliente_id: string | null;
   procedimento_id: string | null;
+  profissional_id: string | null;
   lead_nome: string;
   lead_telefone: string;
   lead_avatar: string | null;
   procedimento_nome: string | null;
+  profissional_nome: string | null;
+  profissional_avatar: string | null;
 }
 
 interface RetornosProps {
@@ -64,7 +67,8 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
         observacoes,
         lead_id,
         cliente_id,
-        procedimento_id
+        procedimento_id,
+        profissional_id
       `)
       .eq('clinica_id', CLINICA_ID)
       .in('status', ['agendado', 'confirmado'])
@@ -76,10 +80,11 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
       return;
     }
 
-    // Buscar dados dos leads, clientes e procedimentos separadamente
+    // Buscar dados dos leads, clientes, procedimentos e profissionais separadamente
     const leadIds = [...new Set(agendamentosData?.filter(a => a.lead_id).map(a => a.lead_id) || [])];
     const clienteIds = [...new Set(agendamentosData?.filter(a => a.cliente_id).map(a => a.cliente_id) || [])];
     const procedimentoIds = [...new Set(agendamentosData?.filter(a => a.procedimento_id).map(a => a.procedimento_id) || [])];
+    const profissionalIds = [...new Set(agendamentosData?.filter(a => a.profissional_id).map(a => a.profissional_id) || [])];
 
     // Buscar leads (incluindo avatar)
     let leadsMap: Record<string, { id: string; nome: string; telefone: string; avatar: string | null }> = {};
@@ -114,9 +119,22 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
         .from('procedimentos')
         .select('id, nome')
         .in('id', procedimentoIds);
-      
+
       if (procedimentosData) {
         procedimentosData.forEach(p => { procedimentosMap[p.id] = p; });
+      }
+    }
+
+    // Buscar profissionais
+    let profissionaisMap: Record<string, { id: string; nome: string; avatar: string | null }> = {};
+    if (profissionalIds.length > 0) {
+      const { data: profissionaisData } = await supabase
+        .from('equipe')
+        .select('id, nome, avatar')
+        .in('id', profissionalIds);
+
+      if (profissionaisData) {
+        profissionaisData.forEach(p => { profissionaisMap[p.id] = p; });
       }
     }
 
@@ -125,6 +143,7 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
       const lead = a.lead_id ? leadsMap[a.lead_id] : null;
       const cliente = a.cliente_id ? clientesMap[a.cliente_id] : null;
       const procedimento = a.procedimento_id ? procedimentosMap[a.procedimento_id] : null;
+      const profissional = a.profissional_id ? profissionaisMap[a.profissional_id] : null;
 
       return {
         ...a,
@@ -132,6 +151,8 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
         lead_telefone: lead?.telefone || cliente?.telefone || '',
         lead_avatar: lead?.avatar || null,
         procedimento_nome: procedimento?.nome || null,
+        profissional_nome: profissional?.nome || null,
+        profissional_avatar: profissional?.avatar || null,
       };
     }) || [];
 
@@ -472,7 +493,7 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-[var(--theme-text-muted)] mt-1">
+                      <div className="flex items-center gap-4 text-sm text-[var(--theme-text-muted)] mt-1 flex-wrap">
                         <div className="flex items-center gap-1">
                           <Phone size={14} />
                           <span>{retorno.lead_telefone || 'Sem telefone'}</span>
@@ -481,6 +502,16 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
                           <div className="flex items-center gap-1">
                             <Package size={14} />
                             <span>{retorno.procedimento_nome}</span>
+                          </div>
+                        )}
+                        {retorno.profissional_nome && (
+                          <div className="flex items-center gap-1">
+                            {retorno.profissional_avatar ? (
+                              <img src={retorno.profissional_avatar} alt={retorno.profissional_nome} className="w-4 h-4 rounded-full object-cover" />
+                            ) : (
+                              <User size={14} />
+                            )}
+                            <span>Com: {retorno.profissional_nome}</span>
                           </div>
                         )}
                       </div>
@@ -561,6 +592,18 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
                 <p className="text-sm text-[var(--theme-text-muted)]">
                   {editandoRetorno.procedimento_nome || 'Agendamento'}
                 </p>
+                {editandoRetorno.profissional_nome && (
+                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[var(--theme-card-border)]">
+                    {editandoRetorno.profissional_avatar ? (
+                      <img src={editandoRetorno.profissional_avatar} alt={editandoRetorno.profissional_nome} className="w-6 h-6 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
+                        {editandoRetorno.profissional_nome.charAt(0)}
+                      </div>
+                    )}
+                    <span className="text-sm text-[var(--theme-text-muted)]">Com: {editandoRetorno.profissional_nome}</span>
+                  </div>
+                )}
               </div>
 
               <div>

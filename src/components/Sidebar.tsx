@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   LayoutDashboard,
   MessageSquare,
   Kanban,
   Users,
+  UserCog,
   Calendar,
   Settings,
   LogOut,
@@ -34,6 +35,7 @@ const menuItems = [
   { id: 'conversas', label: 'Conversas', icon: MessageSquare },
   { id: 'pipeline', label: 'Pipeline', icon: Kanban },
   { id: 'clientes', label: 'Clientes', icon: Users },
+  { id: 'profissionais', label: 'Profissionais', icon: UserCog },
   { id: 'retornos', label: 'Agenda', icon: Calendar },
   { id: 'configuracoes', label: 'Configurações', icon: Settings },
 ];
@@ -49,7 +51,13 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
   const [editNome, setEditNome] = useState('');
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const inputAvatarRef = useRef<HTMLInputElement>(null);
+
+  // Reset avatar error quando o avatar mudar
+  useEffect(() => {
+    setAvatarError(false);
+  }, [usuario?.avatar]);
 
   const handleNavigation = (pageId: string) => {
     setCurrentPage(pageId);
@@ -241,8 +249,13 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
             className="w-full flex items-center gap-3 px-3 py-2 hover:bg-[var(--theme-sidebar-hover)] rounded-lg transition-colors group"
           >
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden relative">
-              {usuario?.avatar ? (
-                <img src={usuario.avatar} alt={usuario.nome} className="w-full h-full object-cover" />
+              {usuario?.avatar && !avatarError ? (
+                <img
+                  src={usuario.avatar}
+                  alt={usuario.nome}
+                  className="w-full h-full object-cover"
+                  onError={() => setAvatarError(true)}
+                />
               ) : (
                 usuario?.nome?.charAt(0) || 'U'
               )}
@@ -278,9 +291,14 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
               {/* Avatar */}
               <div className="flex flex-col items-center gap-3">
                 <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-white text-2xl font-bold overflow-hidden relative group">
-                  {usuario?.avatar ? (
+                  {usuario?.avatar && !avatarError ? (
                     <>
-                      <img src={usuario.avatar} alt={usuario?.nome} className="w-full h-full object-cover" />
+                      <img
+                        src={usuario.avatar}
+                        alt={usuario?.nome}
+                        className="w-full h-full object-cover"
+                        onError={() => setAvatarError(true)}
+                      />
                       <button
                         onClick={removerAvatar}
                         className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
