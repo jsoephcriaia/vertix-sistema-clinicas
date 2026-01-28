@@ -28,6 +28,12 @@ interface ChatwootAccountUser {
   role: string;
 }
 
+interface ChatwootWebhook {
+  id: number;
+  url: string;
+  subscriptions: string[];
+}
+
 export class ChatwootAdminClient {
   private baseUrl: string;
   private platformToken: string;
@@ -150,6 +156,38 @@ export class ChatwootAdminClient {
   }
 
   /**
+   * Cria um webhook para a conta (para receber eventos como message_created)
+   * Nota: Esta chamada usa o token do usuário, não o token da plataforma
+   */
+  async createWebhook(
+    accountId: number,
+    userToken: string,
+    webhookUrl: string,
+    subscriptions: string[] = ['message_created']
+  ): Promise<ChatwootWebhook> {
+    const url = `${this.baseUrl}/api/v1/accounts/${accountId}/webhooks`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api_access_token': userToken,
+      },
+      body: JSON.stringify({
+        url: webhookUrl,
+        subscriptions,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Chatwoot Webhook API Error: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Fluxo completo de criação de clínica no Chatwoot
    * Retorna todos os dados necessários para salvar na clínica
    */
@@ -189,6 +227,16 @@ export class ChatwootAdminClient {
     console.log('Criando inbox WhatsApp...');
     const inbox = await this.createApiInbox(account.id, apiToken, 'WhatsApp', webhookUrl);
     console.log('Inbox criado:', inbox.id);
+
+    // 6. Criar webhook para receber eventos (message_created)
+    console.log('Criando webhook para eventos...');
+    try {
+      const webhook = await this.createWebhook(account.id, apiToken, webhookUrl, ['message_created']);
+      console.log('Webhook criado:', webhook.id);
+    } catch (webhookError) {
+      // Não falha se o webhook não for criado, apenas loga o erro
+      console.warn('Aviso: Não foi possível criar webhook automaticamente:', webhookError);
+    }
 
     return {
       accountId: account.id,
