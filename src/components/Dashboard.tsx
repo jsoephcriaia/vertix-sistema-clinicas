@@ -398,102 +398,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Botão para expandir métricas detalhadas */}
-      <button
-        onClick={() => setShowDetalhes(!showDetalhes)}
-        className="w-full flex items-center justify-center gap-2 py-3 text-sm text-[var(--theme-text-secondary)] hover:text-[var(--theme-text)] transition-colors"
-      >
-        {showDetalhes ? (
-          <>
-            <ChevronUp size={18} />
-            Ocultar métricas detalhadas
-          </>
-        ) : (
-          <>
-            <ChevronDown size={18} />
-            Ver métricas detalhadas
-          </>
-        )}
-      </button>
-
-      {/* Métricas detalhadas - expansível */}
-      {showDetalhes && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
-          {/* Ticket Médio */}
-          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Receipt size={16} className="text-pink-500" />
-              <span className="text-xs text-[var(--theme-text-muted)]">Ticket Médio</span>
-            </div>
-            <p className="text-xl font-bold text-[var(--theme-text)]">
-              R$ {metricas.ticketMedio.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-            </p>
-          </div>
-
-          {/* Taxa No-Show */}
-          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <UserX size={16} className="text-orange-500" />
-              <span className="text-xs text-[var(--theme-text-muted)]">No-Show</span>
-            </div>
-            <p className="text-xl font-bold text-[var(--theme-text)]">
-              {metricas.taxaNoShow.toFixed(1)}%
-            </p>
-            <span className={`text-xs ${metricas.taxaNoShow <= 10 ? 'text-emerald-500' : 'text-orange-500'}`}>
-              {metricas.taxaNoShow <= 10 ? 'Bom' : 'Atenção'}
-            </span>
-          </div>
-
-          {/* Em Negociação */}
-          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <DollarSign size={16} className="text-amber-500" />
-              <span className="text-xs text-[var(--theme-text-muted)]">Em Negociação</span>
-            </div>
-            <p className="text-xl font-bold text-[var(--theme-text)]">
-              R$ {metricas.valorEmNegociacao.toLocaleString('pt-BR')}
-            </p>
-          </div>
-
-          {/* Clientes */}
-          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <UserCheck size={16} className="text-blue-500" />
-              <span className="text-xs text-[var(--theme-text-muted)]">Clientes</span>
-            </div>
-            <p className="text-xl font-bold text-[var(--theme-text)]">{metricas.totalClientes}</p>
-            <div className="flex gap-2 mt-1">
-              <span className="text-xs text-emerald-500">{metricas.clientesAtivos} ativos</span>
-              {metricas.clientesVip > 0 && (
-                <span className="text-xs text-amber-500 flex items-center gap-0.5">
-                  <Star size={10} /> {metricas.clientesVip} VIP
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Agendamentos Hoje */}
-          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock size={16} className="text-purple-500" />
-              <span className="text-xs text-[var(--theme-text-muted)]">Hoje</span>
-            </div>
-            <p className="text-xl font-bold text-[var(--theme-text)]">{metricas.agendamentosHoje}</p>
-            <span className="text-xs text-[var(--theme-text-muted)]">agendamentos</span>
-          </div>
-
-          {/* Pendentes */}
-          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertCircle size={16} className="text-yellow-500" />
-              <span className="text-xs text-[var(--theme-text-muted)]">Pendentes</span>
-            </div>
-            <p className="text-xl font-bold text-[var(--theme-text)]">{metricas.agendamentosPendentes}</p>
-            <span className="text-xs text-[var(--theme-text-muted)]">a confirmar</span>
-          </div>
-        </div>
-      )}
-
       {/* Gráficos lado a lado */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Faturamento Mensal - ocupa 3 colunas */}
@@ -642,6 +546,102 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Botão para expandir métricas detalhadas */}
+      <button
+        onClick={() => setShowDetalhes(!showDetalhes)}
+        className="w-full flex items-center justify-center gap-2 py-3 text-sm text-[var(--theme-text-secondary)] hover:text-[var(--theme-text)] transition-colors border border-[var(--theme-card-border)] rounded-xl hover:bg-[var(--theme-card)]"
+      >
+        {showDetalhes ? (
+          <>
+            <ChevronUp size={18} />
+            Ocultar métricas detalhadas
+          </>
+        ) : (
+          <>
+            <ChevronDown size={18} />
+            Ver métricas detalhadas
+          </>
+        )}
+      </button>
+
+      {/* Métricas detalhadas - expansível */}
+      {showDetalhes && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          {/* Ticket Médio */}
+          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Receipt size={16} className="text-pink-500" />
+              <span className="text-xs text-[var(--theme-text-muted)]">Ticket Médio</span>
+            </div>
+            <p className="text-xl font-bold text-[var(--theme-text)]">
+              R$ {metricas.ticketMedio.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+
+          {/* Taxa No-Show */}
+          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <UserX size={16} className="text-orange-500" />
+              <span className="text-xs text-[var(--theme-text-muted)]">No-Show</span>
+            </div>
+            <p className="text-xl font-bold text-[var(--theme-text)]">
+              {metricas.taxaNoShow.toFixed(1)}%
+            </p>
+            <span className={`text-xs ${metricas.taxaNoShow <= 10 ? 'text-emerald-500' : 'text-orange-500'}`}>
+              {metricas.taxaNoShow <= 10 ? 'Bom' : 'Atenção'}
+            </span>
+          </div>
+
+          {/* Em Negociação */}
+          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign size={16} className="text-amber-500" />
+              <span className="text-xs text-[var(--theme-text-muted)]">Em Negociação</span>
+            </div>
+            <p className="text-xl font-bold text-[var(--theme-text)]">
+              R$ {metricas.valorEmNegociacao.toLocaleString('pt-BR')}
+            </p>
+          </div>
+
+          {/* Clientes */}
+          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <UserCheck size={16} className="text-blue-500" />
+              <span className="text-xs text-[var(--theme-text-muted)]">Clientes</span>
+            </div>
+            <p className="text-xl font-bold text-[var(--theme-text)]">{metricas.totalClientes}</p>
+            <div className="flex gap-2 mt-1">
+              <span className="text-xs text-emerald-500">{metricas.clientesAtivos} ativos</span>
+              {metricas.clientesVip > 0 && (
+                <span className="text-xs text-amber-500 flex items-center gap-0.5">
+                  <Star size={10} /> {metricas.clientesVip} VIP
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Agendamentos Hoje */}
+          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock size={16} className="text-purple-500" />
+              <span className="text-xs text-[var(--theme-text-muted)]">Hoje</span>
+            </div>
+            <p className="text-xl font-bold text-[var(--theme-text)]">{metricas.agendamentosHoje}</p>
+            <span className="text-xs text-[var(--theme-text-muted)]">agendamentos</span>
+          </div>
+
+          {/* Pendentes */}
+          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle size={16} className="text-yellow-500" />
+              <span className="text-xs text-[var(--theme-text-muted)]">Pendentes</span>
+            </div>
+            <p className="text-xl font-bold text-[var(--theme-text)]">{metricas.agendamentosPendentes}</p>
+            <span className="text-xs text-[var(--theme-text-muted)]">a confirmar</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
