@@ -13,6 +13,7 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
   const [agenteIaPausado, setAgenteIaPausado] = useState(false);
   const [agenteSaving, setAgenteSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
   const iaAtiva = !agenteIaPausado;
 
@@ -39,6 +40,7 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
 
   const handleToggleAgente = async () => {
     setAgenteSaving(true);
+    setErro(null);
     const novoStatus = !agenteIaPausado;
 
     try {
@@ -55,6 +57,8 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
 
       setAgenteIaPausado(novoStatus);
     } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Erro desconhecido';
+      setErro(`Erro ao alterar: ${msg}. Verifique se a coluna agente_ia_pausado existe no banco.`);
       console.error('Erro ao alterar status do agente:', error);
     } finally {
       setAgenteSaving(false);
@@ -122,6 +126,12 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
             }`} />
           </button>
         </div>
+
+        {erro && (
+          <div className="mt-4 p-3 rounded-lg text-sm bg-red-500/10 text-red-400 border border-red-500/30">
+            {erro}
+          </div>
+        )}
 
         <div className={`mt-4 p-3 rounded-lg text-sm ${
           iaAtiva
