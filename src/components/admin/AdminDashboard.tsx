@@ -5,7 +5,7 @@ import { Building2, CheckCircle, AlertCircle, Clock, Plus, Loader2 } from 'lucid
 import { supabase } from '@/lib/supabase';
 
 interface AdminDashboardProps {
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, clinicaId?: string) => void;
 }
 
 interface DashboardStats {
