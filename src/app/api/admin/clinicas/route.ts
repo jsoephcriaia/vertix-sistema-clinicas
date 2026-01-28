@@ -84,25 +84,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Criar usuário no Supabase
+    // 2. Criar usuário no Supabase com senha hasheada
     const { data: usuario, error: usuarioError } = await supabase
-      .from('usuarios')
-      .insert({
-        clinica_id: clinica.id,
-        nome: usuarioNome,
-        email: usuarioEmail.toLowerCase(),
-        cargo: 'Administrador',
-        ativo: true,
-      })
-      .select()
-      .single();
+      .rpc('create_usuario_with_password', {
+        p_clinica_id: clinica.id,
+        p_nome: usuarioNome,
+        p_email: usuarioEmail.toLowerCase(),
+        p_cargo: 'Administrador',
+        p_senha: usuarioSenha
+      });
 
-    if (usuarioError) {
+    if (usuarioError || !usuario) {
       console.error('Erro ao criar usuário:', usuarioError);
       // Rollback: deletar clínica
       await supabase.from('clinicas').delete().eq('id', clinica.id);
       return NextResponse.json(
-        { error: `Erro ao criar usuário: ${usuarioError.message}` },
+        { error: `Erro ao criar usuário: ${usuarioError?.message || 'Erro desconhecido'}` },
         { status: 500 }
       );
     }

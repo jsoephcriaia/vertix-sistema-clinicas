@@ -46,43 +46,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, senha: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Buscar usuário pelo email
-      const { data: usuarioData, error: usuarioError } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('email', email.toLowerCase())
-        .eq('ativo', true)
-        .single();
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, senha }),
+      });
 
-      if (usuarioError || !usuarioData) {
-        return { success: false, error: 'Email não encontrado' };
-      }
+      const data = await response.json();
 
-      // Por enquanto, senha fixa para teste (depois integramos com Supabase Auth)
-      if (senha !== '123456') {
-        return { success: false, error: 'Senha incorreta' };
-      }
-
-      // Buscar dados da clínica
-      const { data: clinicaData, error: clinicaError } = await supabase
-        .from('clinicas')
-        .select('id, nome')
-        .eq('id', usuarioData.clinica_id)
-        .single();
-
-      if (clinicaError || !clinicaData) {
-        return { success: false, error: 'Clínica não encontrada' };
+      if (!response.ok || !data.success) {
+        return { success: false, error: data.error || 'Erro ao fazer login' };
       }
 
       // Salvar sessão
       const sessao = {
-        usuario: usuarioData,
-        clinica: clinicaData,
+        usuario: data.usuario,
+        clinica: data.clinica,
       };
       localStorage.setItem('vertix_sessao', JSON.stringify(sessao));
-      
-      setUsuario(usuarioData);
-      setClinica(clinicaData);
+
+      setUsuario(data.usuario);
+      setClinica(data.clinica);
 
       return { success: true };
     } catch (error) {
