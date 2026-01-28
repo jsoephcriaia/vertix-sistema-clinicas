@@ -3,10 +3,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://ocyjkukwgftezyspqjxr.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jeWprdWt3Z2Z0ZXp5c3BxanhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzNjQwOTgsImV4cCI6MjA4NDk0MDA5OH0.KXLUgBNFtfkKnmP3ReniJHSUIf0IRdYo-MnvEEPUMSo';
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
@@ -14,7 +16,7 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 // Função para renovar o token
 async function refreshAccessToken(refreshToken: string, clinicaId: string): Promise<string | null> {
   console.log('Renovando access_token...');
-  
+
   try {
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -34,6 +36,7 @@ async function refreshAccessToken(refreshToken: string, clinicaId: string): Prom
 
     if (data.access_token) {
       // Atualizar token no banco
+      const supabase = getSupabase();
       const expiryDate = new Date();
       expiryDate.setSeconds(expiryDate.getSeconds() + data.expires_in);
 
@@ -80,6 +83,7 @@ export async function POST(request: NextRequest) {
   console.log('=== UPLOAD API INICIADO ===');
 
   try {
+    const supabase = getSupabase();
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const clinicaId = formData.get('clinicaId') as string;

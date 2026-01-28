@@ -34,6 +34,12 @@ interface ChatwootWebhook {
   subscriptions: string[];
 }
 
+interface ChatwootLabel {
+  id: number;
+  title: string;
+  color: string;
+}
+
 export class ChatwootAdminClient {
   private baseUrl: string;
   private platformToken: string;
@@ -188,6 +194,40 @@ export class ChatwootAdminClient {
   }
 
   /**
+   * Cria uma label para a conta
+   * Nota: Esta chamada usa o token do usuário, não o token da plataforma
+   */
+  async createLabel(
+    accountId: number,
+    userToken: string,
+    title: string,
+    color: string = '#FF0000'
+  ): Promise<ChatwootLabel> {
+    const url = `${this.baseUrl}/api/v1/accounts/${accountId}/labels`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api_access_token': userToken,
+      },
+      body: JSON.stringify({
+        title,
+        description: '',
+        color,
+        show_on_sidebar: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Chatwoot Label API Error: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Fluxo completo de criação de clínica no Chatwoot
    * Retorna todos os dados necessários para salvar na clínica
    */
@@ -236,6 +276,16 @@ export class ChatwootAdminClient {
     } catch (webhookError) {
       // Não falha se o webhook não for criado, apenas loga o erro
       console.warn('Aviso: Não foi possível criar webhook automaticamente:', webhookError);
+    }
+
+    // 7. Criar label "humano" (para indicar atendimento humano)
+    console.log('Criando label humano...');
+    try {
+      const label = await this.createLabel(account.id, apiToken, 'humano', '#E74C3C');
+      console.log('Label humano criada:', label.id);
+    } catch (labelError) {
+      // Não falha se a label não for criada
+      console.warn('Aviso: Não foi possível criar label humano:', labelError);
     }
 
     return {

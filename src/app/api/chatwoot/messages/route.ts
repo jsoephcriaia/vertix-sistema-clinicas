@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabase()
     const clinicaId = request.nextUrl.searchParams.get('clinica_id')
     const conversationId = request.nextUrl.searchParams.get('conversation_id')
-    
+
     if (!clinicaId || !conversationId) {
       return NextResponse.json({ error: 'clinica_id e conversation_id required' }, { status: 400 })
     }
@@ -45,14 +48,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabase()
     const contentType = request.headers.get('content-type') || ''
-    
+
     let clinicaId: string
     let conversationId: string
     let content: string
     let replyTo: string | null = null
     let files: File[] = []
-    
+
     // Verifica se é FormData (com arquivos) ou JSON
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()
@@ -60,7 +64,7 @@ export async function POST(request: NextRequest) {
       conversationId = formData.get('conversation_id') as string
       content = formData.get('content') as string || ''
       replyTo = formData.get('reply_to') as string | null
-      
+
       // Pega os arquivos
       const attachments = formData.getAll('attachments[]')
       files = attachments.filter(a => a instanceof File) as File[]
@@ -71,7 +75,7 @@ export async function POST(request: NextRequest) {
       content = body.content
       replyTo = body.reply_to
     }
-    
+
     if (!clinicaId || !conversationId) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }

@@ -88,7 +88,6 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
 
       // Se retornou 401, a instância foi deletada no UAZAPI
       if (response.status === 401) {
-        console.log('Instância não existe mais no UAZAPI, limpando token...');
         await clearInstanceToken();
         return false;
       }
@@ -119,7 +118,6 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
     const currentClinicaId = clinicaIdParam || clinicaId;
 
     if (!currentClinicaId) {
-      console.error('clinicaId não disponível para configurar Chatwoot');
       return;
     }
 
@@ -136,14 +134,7 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
         return;
       }
 
-      console.log('=== DADOS CHATWOOT DA CLÍNICA ===');
-      console.log('chatwoot_url:', clinicaData?.chatwoot_url);
-      console.log('chatwoot_account_id:', clinicaData?.chatwoot_account_id);
-      console.log('chatwoot_inbox_id:', clinicaData?.chatwoot_inbox_id);
-      console.log('chatwoot_api_token:', clinicaData?.chatwoot_api_token ? '***' + clinicaData.chatwoot_api_token.slice(-4) : 'NULL');
-
       if (!clinicaData?.chatwoot_url || !clinicaData?.chatwoot_api_token) {
-        console.log('Chatwoot não configurado para esta clínica (faltam url ou token)');
         return;
       }
 
@@ -156,7 +147,6 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       if (checkResponse.ok) {
         const currentConfig = await checkResponse.json();
         if (currentConfig.chatwootEnabled === true || currentConfig.enabled === true) {
-          console.log('Chatwoot já está configurado no UAZAPI');
           return;
         }
       }
@@ -176,20 +166,12 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
         createNewConversion: false,
       };
 
-      console.log('=== CONFIGURAÇÃO SENDO ENVIADA PARA UAZAPI ===');
-      console.log('URL Chatwoot:', chatwootConfig.url);
-      console.log('Account ID:', chatwootConfig.accountId);
-      console.log('Inbox ID:', chatwootConfig.inboxId);
-      console.log('Token:', '***' + chatwootConfig.token.slice(-4));
-      console.log('Configurando integração Chatwoot no UAZAPI...');
-
       // Tentar diferentes métodos HTTP (POST, PUT, PATCH)
       const methods = ['POST', 'PUT', 'PATCH'];
       let success = false;
 
       for (const method of methods) {
         try {
-          console.log(`Tentando configurar Chatwoot via ${method}...`);
           const configResponse = await fetch(`${UAZAPI_URL}/chatwoot/config`, {
             method,
             headers: {
@@ -200,22 +182,12 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
           });
 
           if (configResponse.ok) {
-            const result = await configResponse.json();
-            console.log(`Integração Chatwoot configurada com sucesso via ${method}:`, result);
             success = true;
             break;
-          } else if (configResponse.status !== 405) {
-            // Se não for 405 (Method Not Allowed), logar o erro
-            const errorText = await configResponse.text();
-            console.error(`Erro ao configurar Chatwoot via ${method}:`, configResponse.status, errorText);
           }
-        } catch (e) {
-          console.log(`Erro no método ${method}:`, e);
+        } catch {
+          // Tenta próximo método
         }
-      }
-
-      if (!success) {
-        console.warn('Não foi possível configurar Chatwoot automaticamente. Configure manualmente no painel UAZAPI.');
       }
     } catch (error) {
       console.error('Erro ao configurar integração Chatwoot:', error);
@@ -397,7 +369,6 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
 
         for (const endpoint of logoutEndpoints) {
           try {
-            console.log(`Tentando logout via ${endpoint.method} ${endpoint.url}...`);
             const response = await fetch(endpoint.url, {
               method: endpoint.method,
               headers: {
@@ -407,15 +378,11 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
             });
 
             if (response.ok) {
-              const result = await response.json();
-              console.log('Logout bem sucedido:', result);
               logoutSuccess = true;
               break;
-            } else {
-              console.log(`Endpoint ${endpoint.url} retornou:`, response.status);
             }
-          } catch (e) {
-            console.log(`Erro no endpoint ${endpoint.url}:`, e);
+          } catch {
+            // Tenta próximo endpoint
           }
         }
 
@@ -431,19 +398,14 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
         if (statusResponse.ok) {
           const statusData = await statusResponse.json();
           if (statusData.instance?.status === 'connected') {
-            console.warn('Ainda conectado após logout. Tente desconectar pelo painel UAZAPI.');
             alert('Não foi possível desconectar automaticamente. Tente desconectar diretamente no painel UAZAPI ou pelo WhatsApp do celular (Dispositivos Conectados).');
             setStatus('connected');
             return;
           }
         }
-
-        if (!logoutSuccess) {
-          console.warn('Nenhum endpoint de logout funcionou, mas o status indica desconectado.');
-        }
       }
-    } catch (error) {
-      console.error('Erro ao desconectar:', error);
+    } catch {
+      // Erro ao desconectar
     }
 
     setStatus('disconnected');
