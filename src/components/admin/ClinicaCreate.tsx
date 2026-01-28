@@ -59,11 +59,26 @@ export default function ClinicaCreate({ onNavigate }: ClinicaCreateProps) {
   };
 
   const gerarSenhaAleatoria = () => {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const lower = 'abcdefghijklmnopqrstuvwxyz';
+    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numbers = '0123456789';
+    const special = '!@#$%&*';
+
+    // Garante pelo menos 1 de cada tipo
     let senha = '';
-    for (let i = 0; i < 12; i++) {
-      senha += chars.charAt(Math.floor(Math.random() * chars.length));
+    senha += lower.charAt(Math.floor(Math.random() * lower.length));
+    senha += upper.charAt(Math.floor(Math.random() * upper.length));
+    senha += numbers.charAt(Math.floor(Math.random() * numbers.length));
+    senha += special.charAt(Math.floor(Math.random() * special.length));
+
+    // Completa com caracteres aleatórios
+    const allChars = lower + upper + numbers + special;
+    for (let i = 0; i < 8; i++) {
+      senha += allChars.charAt(Math.floor(Math.random() * allChars.length));
     }
+
+    // Embaralha a senha
+    senha = senha.split('').sort(() => Math.random() - 0.5).join('');
     setFormData(prev => ({ ...prev, usuarioSenha: senha }));
   };
 
@@ -86,6 +101,11 @@ export default function ClinicaCreate({ onNavigate }: ClinicaCreateProps) {
     }
     if (!formData.usuarioSenha.trim() || formData.usuarioSenha.length < 6) {
       setError('Senha deve ter pelo menos 6 caracteres');
+      return false;
+    }
+    // Chatwoot exige caractere especial
+    if (!/[!@#$%^&*()_+\-=\[\]{}|'"/\\.,`~<>:;?]/.test(formData.usuarioSenha)) {
+      setError('Senha deve conter pelo menos 1 caractere especial (!@#$%&* etc)');
       return false;
     }
     setError('');
