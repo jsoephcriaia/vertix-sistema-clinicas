@@ -68,6 +68,22 @@ export default function Contatos({ onAbrirConversa }: ContatosProps) {
     ultimo_contato: null,
   };
 
+  // Máscara de telefone
+  const formatarTelefone = (valor: string): string => {
+    const numeros = valor.replace(/\D/g, '');
+
+    if (numeros.length <= 2) {
+      return numeros.length > 0 ? `(${numeros}` : '';
+    }
+    if (numeros.length <= 6) {
+      return `(${numeros.slice(0, 2)}) ${numeros.slice(2)}`;
+    }
+    if (numeros.length <= 10) {
+      return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 6)}-${numeros.slice(6)}`;
+    }
+    return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7, 11)}`;
+  };
+
   useEffect(() => {
     if (CLINICA_ID) {
       fetchContatos();
@@ -186,7 +202,7 @@ export default function Contatos({ onAbrirConversa }: ContatosProps) {
   };
 
   const handleSave = async () => {
-    if (!editando || !editando.nome) return;
+    if (!editando || !editando.nome || !editando.telefone) return;
 
     setSaving(true);
 
@@ -616,13 +632,14 @@ export default function Contatos({ onAbrirConversa }: ContatosProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Telefone</label>
+                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">WhatsApp *</label>
                   <input
                     type="text"
                     value={editando.telefone}
-                    onChange={(e) => setEditando({ ...editando, telefone: e.target.value })}
+                    onChange={(e) => setEditando({ ...editando, telefone: formatarTelefone(e.target.value) })}
                     className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                     placeholder="(11) 99999-9999"
+                    maxLength={15}
                   />
                 </div>
                 <div>
@@ -692,7 +709,7 @@ export default function Contatos({ onAbrirConversa }: ContatosProps) {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving || !editando.nome}
+                disabled={saving || !editando.nome || !editando.telefone}
                 className="px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors flex items-center gap-2"
               >
                 {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
