@@ -32,11 +32,11 @@ interface SidebarProps {
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'conversas', label: 'Conversas', icon: MessageSquare },
   { id: 'pipeline', label: 'Pipeline', icon: Kanban },
+  { id: 'conversas', label: 'Conversas', icon: MessageSquare },
+  { id: 'retornos', label: 'Agenda', icon: Calendar },
   { id: 'contatos', label: 'Contatos', icon: Users },
   { id: 'profissionais', label: 'Profissionais', icon: UserCog },
-  { id: 'retornos', label: 'Agenda', icon: Calendar },
   { id: 'configuracoes', label: 'Configurações', icon: Settings },
 ];
 
