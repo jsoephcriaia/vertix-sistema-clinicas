@@ -628,9 +628,9 @@ export default function Profissionais() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Coluna 1: Dados do Profissional */}
-          <div className="space-y-6">
+        <div className="space-y-6">
+          {/* Linha 1: Informações Básicas + Procedimentos (lado a lado em desktop) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Card de Informações Básicas */}
             <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] p-6">
               <h2 className="font-semibold mb-4">Informações Básicas</h2>
@@ -752,7 +752,7 @@ export default function Profissionais() {
             </div>
 
             {/* Procedimentos que realiza */}
-            <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] p-6">
+            <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] p-6 h-fit">
               <h2 className="font-semibold mb-4">Procedimentos que Realiza</h2>
 
               {/* Procedimentos selecionados como tags */}
@@ -851,8 +851,8 @@ export default function Profissionais() {
             </div>
           </div>
 
-          {/* Coluna 2: Horários e Bloqueios */}
-          <div className="space-y-6">
+          {/* Linha 2: Horários e Bloqueios (full width) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Horários Semanais */}
             <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] p-6">
               <div className="flex items-center justify-between mb-4">
