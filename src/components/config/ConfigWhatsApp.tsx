@@ -61,9 +61,9 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       if (data?.uazapi_instance_token) {
         setInstanceToken(data.uazapi_instance_token);
         setInstanceName(data.uazapi_instance_name || '');
-        
-        // Verificar status atual da instância
-        await checkInstanceStatus(data.uazapi_instance_token);
+
+        // Verificar status atual da instância (passa clinica.id diretamente para evitar race condition)
+        await checkInstanceStatus(data.uazapi_instance_token, clinica.id);
       } else {
         // Não tem instância configurada
         setStatus('disconnected');
@@ -75,7 +75,9 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
     }
   };
 
-  const checkInstanceStatus = async (token: string) => {
+  const checkInstanceStatus = async (token: string, clinicaIdParam?: string) => {
+    const currentClinicaId = clinicaIdParam || clinicaId;
+
     try {
       const response = await fetch(`${UAZAPI_URL}/instance/status`, {
         method: 'GET',
@@ -98,7 +100,7 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
         setPhoneNumber(data.instance?.phone || '');
 
         // Garantir que a integração Chatwoot está configurada
-        await ensureChatwootConfigured(token);
+        await ensureChatwootConfigured(token, currentClinicaId);
 
         return true;
       } else {
@@ -113,13 +115,20 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
   };
 
   // Configura a integração UAZAPI ↔ Chatwoot
-  const ensureChatwootConfigured = async (token: string) => {
+  const ensureChatwootConfigured = async (token: string, clinicaIdParam?: string) => {
+    const currentClinicaId = clinicaIdParam || clinicaId;
+
+    if (!currentClinicaId) {
+      console.error('clinicaId não disponível para configurar Chatwoot');
+      return;
+    }
+
     try {
       // Buscar dados do Chatwoot da clínica
       const { data: clinicaData, error } = await supabase
         .from('clinicas')
         .select('chatwoot_url, chatwoot_api_token, chatwoot_account_id, chatwoot_inbox_id')
-        .eq('id', clinicaId)
+        .eq('id', currentClinicaId)
         .single();
 
       if (error) {
