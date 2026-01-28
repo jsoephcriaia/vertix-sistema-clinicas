@@ -141,12 +141,11 @@ export default function ConfigAvancado({ onBack }: ConfigAvancadoProps) {
           {iaAtiva ? (
             <p>
               <strong>Secretária Ativa:</strong> As mensagens recebidas serão processadas automaticamente.
-              Para pausar em uma conversa específica, adicione a etiqueta &quot;humano&quot; no Chatwoot.
+              Para assumir uma conversa manualmente, use o botão &quot;Humano&quot; na conversa.
             </p>
           ) : (
             <p>
-              <strong>Secretária Pausada:</strong> Todas as conversas serão atendidas manualmente,
-              sem precisar usar etiquetas.
+              <strong>Secretária Pausada:</strong> Todas as conversas serão atendidas manualmente.
             </p>
           )}
         </div>
