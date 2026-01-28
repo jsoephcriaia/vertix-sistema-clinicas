@@ -1767,8 +1767,14 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
             onClick={() => setShowNovaConversa(false)}
           ></div>
           
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-[#1e293b] rounded-xl w-full max-w-md max-h-[80vh] flex flex-col">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowNovaConversa(false)}
+          >
+            <div
+              className="bg-[#1e293b] rounded-xl w-full max-w-md max-h-[80vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-4 border-b border-[#334155] flex items-center justify-between">
                 <h3 className="font-semibold text-lg">Nova Conversa</h3>
                 <button
