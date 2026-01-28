@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Phone, Clock, AlertTriangle, CheckCircle, Loader2, Search, MessageSquare, RefreshCw, Package, Edit, X, Save, User } from 'lucide-react';
+import { Calendar, Phone, Clock, AlertTriangle, CheckCircle, Loader2, Search, MessageSquare, RefreshCw, Package, Edit, X, Save, User, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
@@ -31,7 +31,7 @@ interface RetornosProps {
 
 export default function Retornos({ onAbrirConversa }: RetornosProps) {
   const { clinica } = useAuth();
-  const { showToast } = useAlert();
+  const { showToast, showConfirm } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [retornos, setRetornos] = useState<Retorno[]>([]);
@@ -163,7 +163,7 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
   const confirmarAgendamento = async (retornoId: string) => {
     const { error } = await supabase
       .from('agendamentos')
-      .update({ 
+      .update({
         status: 'confirmado',
         updated_at: new Date().toISOString()
       })
@@ -176,6 +176,53 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
       showToast('Agendamento confirmado!', 'success');
       fetchRetornos();
     }
+  };
+
+  const excluirAgendamento = async (retorno: Retorno) => {
+    showConfirm(
+      `Excluir o agendamento de "${retorno.lead_nome}"${retorno.procedimento_nome ? ` - ${retorno.procedimento_nome}` : ''}?`,
+      async () => {
+        try {
+          // Buscar o google_event_id antes de deletar
+          const { data: agendamentoData } = await supabase
+            .from('agendamentos')
+            .select('google_event_id')
+            .eq('id', retorno.id)
+            .single();
+
+          // Se tiver evento no Google Calendar, deletar
+          if (agendamentoData?.google_event_id) {
+            try {
+              await fetch('/api/google/calendar', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  clinicaId: CLINICA_ID,
+                  eventId: agendamentoData.google_event_id,
+                }),
+              });
+            } catch (calendarError) {
+              console.error('Erro ao deletar do Google Calendar:', calendarError);
+            }
+          }
+
+          // Deletar do banco
+          const { error } = await supabase
+            .from('agendamentos')
+            .delete()
+            .eq('id', retorno.id);
+
+          if (error) throw error;
+
+          showToast('Agendamento excluído!', 'success');
+          fetchRetornos();
+        } catch (error) {
+          console.error('Erro ao excluir:', error);
+          showToast('Erro ao excluir agendamento', 'error');
+        }
+      },
+      'Excluir agendamento'
+    );
   };
 
   const handleEnviarMensagem = (retorno: Retorno) => {
@@ -555,6 +602,13 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
                         Confirmar
                       </button>
                     )}
+                    <button
+                      onClick={() => excluirAgendamento(retorno)}
+                      className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm transition-colors"
+                      title="Excluir agendamento"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
 
