@@ -202,7 +202,7 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
       );
     }
     return (
-      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${isRetorno ? 'bg-blue-500' : 'bg-[#10b981]'}`}>
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-[var(--theme-text)] font-bold flex-shrink-0 ${isRetorno ? 'bg-blue-500' : 'bg-primary'}`}>
         {isRetorno ? <RefreshCw size={20} /> : nome.charAt(0).toUpperCase()}
       </div>
     );
@@ -270,7 +270,7 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={32} className="animate-spin text-[#10b981]" />
+        <Loader2 size={32} className="animate-spin text-primary" />
       </div>
     );
   }
@@ -279,51 +279,51 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Retornos e Agendamentos</h1>
-        <p className="text-[#64748b] text-sm">Agendamentos pendentes e retornos programados</p>
+        <p className="text-[var(--theme-text-muted)] text-sm">Agendamentos pendentes e retornos programados</p>
       </div>
 
       {/* Cards de filtro rápido */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <button
           onClick={() => { setFiltro('atrasados'); setMesSelecionado(''); }}
-          className={`p-4 rounded-xl border transition-colors text-left ${filtro === 'atrasados' && !mesSelecionado ? 'bg-red-500/20 border-red-500' : 'bg-[#1e293b] border-[#334155] hover:border-red-500/50'}`}
+          className={`p-4 rounded-xl border transition-colors text-left ${filtro === 'atrasados' && !mesSelecionado ? 'bg-red-500/20 border-red-500' : 'bg-[var(--theme-card)] border-[var(--theme-card-border)] hover:border-red-500/50'}`}
         >
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={20} className="text-red-400" />
-            <span className="text-sm text-[#64748b]">Atrasados</span>
+            <span className="text-sm text-[var(--theme-text-muted)]">Atrasados</span>
           </div>
           <p className="text-2xl font-bold text-red-400">{retornosAtrasados.length}</p>
         </button>
 
         <button
           onClick={() => { setFiltro('esta-semana'); setMesSelecionado(''); }}
-          className={`p-4 rounded-xl border transition-colors text-left ${filtro === 'esta-semana' && !mesSelecionado ? 'bg-yellow-500/20 border-yellow-500' : 'bg-[#1e293b] border-[#334155] hover:border-yellow-500/50'}`}
+          className={`p-4 rounded-xl border transition-colors text-left ${filtro === 'esta-semana' && !mesSelecionado ? 'bg-yellow-500/20 border-yellow-500' : 'bg-[var(--theme-card)] border-[var(--theme-card-border)] hover:border-yellow-500/50'}`}
         >
           <div className="flex items-center gap-2 mb-2">
             <Clock size={20} className="text-yellow-400" />
-            <span className="text-sm text-[#64748b]">Esta Semana</span>
+            <span className="text-sm text-[var(--theme-text-muted)]">Esta Semana</span>
           </div>
           <p className="text-2xl font-bold text-yellow-400">{retornosEstaSemana.length}</p>
         </button>
 
         <button
           onClick={() => { setFiltro('proxima-semana'); setMesSelecionado(''); }}
-          className={`p-4 rounded-xl border transition-colors text-left ${filtro === 'proxima-semana' && !mesSelecionado ? 'bg-blue-500/20 border-blue-500' : 'bg-[#1e293b] border-[#334155] hover:border-blue-500/50'}`}
+          className={`p-4 rounded-xl border transition-colors text-left ${filtro === 'proxima-semana' && !mesSelecionado ? 'bg-blue-500/20 border-blue-500' : 'bg-[var(--theme-card)] border-[var(--theme-card-border)] hover:border-blue-500/50'}`}
         >
           <div className="flex items-center gap-2 mb-2">
             <Calendar size={20} className="text-blue-400" />
-            <span className="text-sm text-[#64748b]">Próx. Semana</span>
+            <span className="text-sm text-[var(--theme-text-muted)]">Próx. Semana</span>
           </div>
           <p className="text-2xl font-bold text-blue-400">{retornosProximaSemana.length}</p>
         </button>
 
         <button
           onClick={() => { setFiltro('este-mes'); setMesSelecionado(''); }}
-          className={`p-4 rounded-xl border transition-colors text-left ${filtro === 'este-mes' && !mesSelecionado ? 'bg-green-500/20 border-green-500' : 'bg-[#1e293b] border-[#334155] hover:border-green-500/50'}`}
+          className={`p-4 rounded-xl border transition-colors text-left ${filtro === 'este-mes' && !mesSelecionado ? 'bg-green-500/20 border-green-500' : 'bg-[var(--theme-card)] border-[var(--theme-card-border)] hover:border-green-500/50'}`}
         >
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle size={20} className="text-green-400" />
-            <span className="text-sm text-[#64748b]">Este Mês</span>
+            <span className="text-sm text-[var(--theme-text-muted)]">Este Mês</span>
           </div>
           <p className="text-2xl font-bold text-green-400">{retornosEsteMes.length}</p>
         </button>
@@ -332,20 +332,20 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
       {/* Filtros adicionais */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" size={18} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--theme-text-muted)]" size={18} />
           <input
             type="text"
             placeholder="Buscar por nome, telefone ou procedimento..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            className="w-full bg-[#1e293b] border border-[#334155] rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-[#10b981]"
+            className="w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-primary"
           />
         </div>
 
         <select
           value={mesSelecionado}
           onChange={(e) => { setMesSelecionado(e.target.value); if (e.target.value) setFiltro('todos'); }}
-          className="bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-2.5 focus:outline-none focus:border-[#10b981] min-w-[200px]"
+          className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg px-4 py-2.5 focus:outline-none focus:border-primary min-w-[200px]"
         >
           <option value="">Todos os meses</option>
           {mesesDisponiveis.map(mes => (
@@ -355,7 +355,7 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
 
         <button
           onClick={() => { setFiltro('todos'); setMesSelecionado(''); setBusca(''); }}
-          className="px-4 py-2.5 bg-[#334155] hover:bg-[#475569] rounded-lg text-sm transition-colors"
+          className="px-4 py-2.5 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg text-sm transition-colors"
         >
           Limpar Filtros
         </button>
@@ -363,7 +363,7 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
 
       {/* Lista de retornos */}
       {retornosFiltrados.length === 0 ? (
-        <div className="text-center py-12 text-[#64748b]">
+        <div className="text-center py-12 text-[var(--theme-text-muted)]">
           <Calendar size={48} className="mx-auto mb-4 opacity-50" />
           <p>Nenhum agendamento nesta categoria</p>
         </div>
@@ -375,7 +375,7 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
             const atrasado = diasAtraso > 0;
 
             return (
-              <div key={retorno.id} className={`bg-[#1e293b] rounded-xl border p-5 ${atrasado ? 'border-red-500/50' : retorno.status === 'confirmado' ? 'border-green-500/30' : 'border-[#334155]'}`}>
+              <div key={retorno.id} className={`bg-[var(--theme-card)] rounded-xl border p-5 ${atrasado ? 'border-red-500/50' : retorno.status === 'confirmado' ? 'border-green-500/30' : 'border-[var(--theme-card-border)]'}`}>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="flex items-center gap-4 flex-1">
                     <Avatar 
@@ -402,7 +402,7 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-[#64748b] mt-1">
+                      <div className="flex items-center gap-4 text-sm text-[var(--theme-text-muted)] mt-1">
                         <div className="flex items-center gap-1">
                           <Phone size={14} />
                           <span>{retorno.lead_telefone || 'Sem telefone'}</span>
@@ -418,20 +418,20 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
                   </div>
 
                   <div className="text-center sm:text-right">
-                    <p className="text-xs text-[#64748b] mb-1">Data/Hora</p>
-                    <p className={`font-semibold ${atrasado ? 'text-red-400' : 'text-white'}`}>
+                    <p className="text-xs text-[var(--theme-text-muted)] mb-1">Data/Hora</p>
+                    <p className={`font-semibold ${atrasado ? 'text-red-400' : 'text-[var(--theme-text)]'}`}>
                       {formatarData(retorno.data_hora)} às {formatarHora(retorno.data_hora)}
                     </p>
                     {atrasado && <p className="text-xs text-red-400">{diasAtraso} dia{diasAtraso > 1 ? 's' : ''} atrasado</p>}
                     {!atrasado && diasPara === 0 && <p className="text-xs text-yellow-400">Hoje!</p>}
-                    {!atrasado && diasPara > 0 && <p className="text-xs text-[#64748b]">em {diasPara} dia{diasPara > 1 ? 's' : ''}</p>}
+                    {!atrasado && diasPara > 0 && <p className="text-xs text-[var(--theme-text-muted)]">em {diasPara} dia{diasPara > 1 ? 's' : ''}</p>}
                   </div>
 
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEnviarMensagem(retorno)}
                       disabled={!retorno.lead_telefone}
-                      className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] disabled:text-[#64748b] text-white rounded-lg text-sm flex items-center gap-2 transition-colors"
+                      className="px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-card-border)] disabled:text-[var(--theme-text-muted)] text-[var(--theme-text)] rounded-lg text-sm flex items-center gap-2 transition-colors"
                       title={retorno.lead_telefone ? 'Enviar mensagem' : 'Sem telefone'}
                     >
                       <MessageSquare size={16} />
@@ -450,14 +450,14 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
                 </div>
 
                 {retorno.observacoes && (
-                  <div className="mt-4 pt-4 border-t border-[#334155]">
-                    <p className="text-sm text-[#94a3b8]">{retorno.observacoes}</p>
+                  <div className="mt-4 pt-4 border-t border-[var(--theme-card-border)]">
+                    <p className="text-sm text-[var(--theme-text-secondary)]">{retorno.observacoes}</p>
                   </div>
                 )}
 
                 {retorno.valor && (
                   <div className="mt-2">
-                    <span className="text-sm text-[#10b981]">R$ {retorno.valor.toLocaleString('pt-BR')}</span>
+                    <span className="text-sm text-primary">R$ {retorno.valor.toLocaleString('pt-BR')}</span>
                   </div>
                 )}
               </div>

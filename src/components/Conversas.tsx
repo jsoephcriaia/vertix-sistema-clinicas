@@ -1072,7 +1072,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         target="_blank" 
         rel="noopener noreferrer"
         className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-          isEnviada ? 'bg-[#059669]' : 'bg-[#334155]'
+          isEnviada ? 'bg-primary-hover' : 'bg-[var(--theme-bg-tertiary)]'
         } hover:opacity-80 transition-opacity`}
       >
         <FileText size={20} />
@@ -1101,7 +1101,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     }
     
     return (
-      <div className={`${sizeClasses[size]} rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold`}>
+      <div className={`${sizeClasses[size]} rounded-full bg-primary flex items-center justify-center text-white font-bold`}>
         {conversa.nome.charAt(0).toUpperCase()}
       </div>
     );
@@ -1116,12 +1116,12 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     return (
       <div className="flex items-center justify-center h-[calc(100vh-48px)] -m-4 lg:-m-6">
         <div className="text-center p-8">
-          <div className="w-20 h-20 bg-[#334155] rounded-full flex items-center justify-center mx-auto mb-4">
-            <Settings size={40} className="text-[#64748b]" />
+          <div className="w-20 h-20 bg-[var(--theme-bg-tertiary)] rounded-full flex items-center justify-center mx-auto mb-4">
+            <Settings size={40} className="text-[var(--theme-text-muted)]" />
           </div>
           <h2 className="text-xl font-semibold mb-2">Chatwoot não configurado</h2>
-          <p className="text-[#64748b] mb-4">Configure a integração com o Chatwoot para ver as conversas.</p>
-          <p className="text-[#10b981]">
+          <p className="text-[var(--theme-text-muted)] mb-4">Configure a integração com o Chatwoot para ver as conversas.</p>
+          <p className="text-primary">
             Vá em Configurações → Integrações
           </p>
         </div>
@@ -1132,21 +1132,21 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   return (
     <div className="flex h-[calc(100vh-48px)] -m-4 lg:-m-6 overflow-hidden">
       {/* Lista de conversas */}
-      <div className="w-80 bg-[#1e293b] border-r border-[#334155] flex flex-col flex-shrink-0">
-        <div className="p-4 border-b border-[#334155]">
+      <div className="w-80 bg-[var(--theme-card)] border-r border-[var(--theme-card-border)] flex flex-col flex-shrink-0">
+        <div className="p-4 border-b border-[var(--theme-card-border)]">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Conversas</h2>
             <div className="flex items-center gap-1">
               <button 
                 onClick={abrirNovaConversa}
-                className="p-2 hover:bg-[#334155] rounded-lg transition-colors text-[#10b981]"
+                className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors text-primary"
                 title="Nova conversa"
               >
                 <Plus size={18} />
               </button>
               <button 
                 onClick={fetchConversas}
-                className="p-2 hover:bg-[#334155] rounded-lg transition-colors"
+                className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors"
                 title="Atualizar"
               >
                 <RefreshCw size={16} className={loadingConversas ? 'animate-spin' : ''} />
@@ -1155,19 +1155,19 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           </div>
           
           {/* Abas Abertas/Resolvidas */}
-          <div className="flex gap-1 mb-3 bg-[#0f172a] rounded-lg p-1">
+          <div className="flex gap-1 mb-3 bg-[var(--theme-bg)] rounded-lg p-1">
             <button
               onClick={() => setAbaAtiva('abertas')}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 abaAtiva === 'abertas' 
-                  ? 'bg-[#334155] text-white' 
-                  : 'text-[#64748b] hover:text-white'
+                  ? 'bg-[var(--theme-bg-tertiary)] text-white' 
+                  : 'text-[var(--theme-text-muted)] hover:text-white'
               }`}
             >
               <Clock size={14} />
               Abertas
               {contadorAbertas > 0 && (
-                <span className="bg-[#10b981] text-white text-xs px-1.5 py-0.5 rounded-full">
+                <span className="bg-primary text-white text-xs px-1.5 py-0.5 rounded-full">
                   {contadorAbertas}
                 </span>
               )}
@@ -1176,8 +1176,8 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
               onClick={() => setAbaAtiva('resolvidas')}
               className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 abaAtiva === 'resolvidas' 
-                  ? 'bg-[#334155] text-white' 
-                  : 'text-[#64748b] hover:text-white'
+                  ? 'bg-[var(--theme-bg-tertiary)] text-white' 
+                  : 'text-[var(--theme-text-muted)] hover:text-white'
               }`}
             >
               <CheckCircle size={14} />
@@ -1191,13 +1191,13 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           </div>
           
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--theme-text-muted)]" size={18} />
             <input
               type="text"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar conversa..."
-              className="w-full bg-[#0f172a] border border-[#334155] rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-[#10b981]"
+              className="w-full bg-[var(--theme-bg)] border border-[var(--theme-card-border)] rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-primary"
             />
           </div>
         </div>
@@ -1205,10 +1205,10 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {loadingConversas ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 size={24} className="animate-spin text-[#10b981]" />
+              <Loader2 size={24} className="animate-spin text-primary" />
             </div>
           ) : conversasFiltradas.length === 0 ? (
-            <div className="text-center py-8 text-[#64748b]">
+            <div className="text-center py-8 text-[var(--theme-text-muted)]">
               <p>Nenhuma conversa {abaAtiva === 'abertas' ? 'aberta' : 'resolvida'}</p>
             </div>
           ) : (
@@ -1216,8 +1216,8 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
               <button
                 key={conv.id}
                 onClick={() => selecionarConversa(conv)}
-                className={`w-full flex items-center gap-3 p-4 border-b border-[#334155] hover:bg-[#334155] transition-colors text-left ${
-                  conversaSelecionada?.id === conv.id ? 'bg-[#334155]' : ''
+                className={`w-full flex items-center gap-3 p-4 border-b border-[var(--theme-card-border)] hover:bg-[var(--theme-bg-tertiary)] transition-colors text-left ${
+                  conversaSelecionada?.id === conv.id ? 'bg-[var(--theme-bg-tertiary)]' : ''
                 }`}
               >
                 <div className="relative flex-shrink-0">
@@ -1231,12 +1231,12 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <p className="font-medium truncate">{conv.nome}</p>
-                    <span className="text-xs text-[#64748b] flex-shrink-0 ml-2">{conv.tempo}</span>
+                    <span className="text-xs text-[var(--theme-text-muted)] flex-shrink-0 ml-2">{conv.tempo}</span>
                   </div>
-                  <p className="text-sm text-[#64748b] truncate">{conv.ultima}</p>
+                  <p className="text-sm text-[var(--theme-text-muted)] truncate">{conv.ultima}</p>
                 </div>
                 {conv.naoLida && (
-                  <div className="w-3 h-3 rounded-full bg-[#10b981] flex-shrink-0"></div>
+                  <div className="w-3 h-3 rounded-full bg-primary flex-shrink-0"></div>
                 )}
               </button>
             ))
@@ -1246,9 +1246,9 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
 
       {/* Área de chat */}
       {conversaSelecionada ? (
-        <div className="flex-1 flex flex-col bg-[#0f172a] min-w-0 overflow-hidden">
+        <div className="flex-1 flex flex-col bg-[var(--theme-bg)] min-w-0 overflow-hidden">
           {/* Header do chat */}
-          <div className="bg-[#1e293b] border-b border-[#334155] p-4 flex-shrink-0">
+          <div className="bg-[var(--theme-card)] border-b border-[var(--theme-card-border)] p-4 flex-shrink-0">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 {renderAvatar(conversaSelecionada, 'md')}
@@ -1260,7 +1260,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                         type="text"
                         value={nomeTemp}
                         onChange={(e) => setNomeTemp(e.target.value)}
-                        className="bg-[#0f172a] border border-[#334155] rounded px-2 py-1 text-sm focus:outline-none focus:border-[#10b981] w-40"
+                        className="bg-[var(--theme-bg)] border border-[var(--theme-card-border)] rounded px-2 py-1 text-sm focus:outline-none focus:border-primary w-40"
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') salvarNome();
@@ -1270,13 +1270,13 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                       <button
                         onClick={salvarNome}
                         disabled={salvandoNome}
-                        className="p-1 hover:bg-[#334155] rounded text-[#10b981]"
+                        className="p-1 hover:bg-[var(--theme-bg-tertiary)] rounded text-primary"
                       >
                         {salvandoNome ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                       </button>
                       <button
                         onClick={() => setEditandoNome(false)}
-                        className="p-1 hover:bg-[#334155] rounded text-[#64748b]"
+                        className="p-1 hover:bg-[var(--theme-bg-tertiary)] rounded text-[var(--theme-text-muted)]"
                       >
                         <X size={14} />
                       </button>
@@ -1289,21 +1289,21 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                           setNomeTemp(conversaSelecionada.nome);
                           setEditandoNome(true);
                         }}
-                        className="p-1 hover:bg-[#334155] rounded text-[#64748b] hover:text-white"
+                        className="p-1 hover:bg-[var(--theme-bg-tertiary)] rounded text-[var(--theme-text-muted)] hover:text-white"
                         title="Editar nome"
                       >
                         <Edit3 size={12} />
                       </button>
                     </div>
                   )}
-                  <p className="text-xs text-[#64748b]">{conversaSelecionada.telefone}</p>
+                  <p className="text-xs text-[var(--theme-text-muted)]">{conversaSelecionada.telefone}</p>
                 </div>
                 
                 {/* Etapa do Pipeline */}
                 <div className="relative" ref={etapaDropdownRef}>
                   {loadingLead ? (
-                    <div className="px-3 py-1.5 rounded-lg bg-[#334155]">
-                      <Loader2 size={14} className="animate-spin text-[#64748b]" />
+                    <div className="px-3 py-1.5 rounded-lg bg-[var(--theme-bg-tertiary)]">
+                      <Loader2 size={14} className="animate-spin text-[var(--theme-text-muted)]" />
                     </div>
                   ) : leadIA ? (
                     <button
@@ -1321,20 +1321,20 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                       )}
                     </button>
                   ) : (
-                    <span className="text-xs text-[#64748b] px-3 py-1.5 bg-[#334155] rounded-lg">
+                    <span className="text-xs text-[var(--theme-text-muted)] px-3 py-1.5 bg-[var(--theme-bg-tertiary)] rounded-lg">
                       Sem lead
                     </span>
                   )}
                   
                   {/* Dropdown de etapas */}
                   {showEtapaDropdown && leadIA && (
-                    <div className="absolute top-full right-0 mt-1 bg-[#1e293b] border border-[#334155] rounded-lg shadow-lg z-50 min-w-[160px]">
+                    <div className="absolute top-full right-0 mt-1 bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg shadow-lg z-50 min-w-[160px]">
                       {ETAPAS_LEAD.map((etapa) => (
                         <button
                           key={etapa.id}
                           onClick={() => atualizarEtapaLead(etapa.id)}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[#334155] transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                            leadIA.etapa === etapa.id ? 'bg-[#334155]' : ''
+                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--theme-bg-tertiary)] transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                            leadIA.etapa === etapa.id ? 'bg-[var(--theme-bg-tertiary)]' : ''
                           }`}
                         >
                           <div className={`w-2 h-2 rounded-full ${etapa.cor}`}></div>
@@ -1380,7 +1380,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 <button
                   onClick={() => setShowPainelInteresse(true)}
                   disabled={!leadIA}
-                  className="p-2 rounded-lg transition-colors bg-[#10b981]/20 text-[#10b981] hover:bg-[#10b981]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 rounded-lg transition-colors bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   title={leadIA ? "Procedimentos de Interesse" : "Sem lead vinculado"}
                 >
                   <Package size={20} />
@@ -1401,7 +1401,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                   className={`p-2 rounded-lg transition-colors relative ${
                     conversaSelecionada.anotacao 
                       ? 'bg-yellow-500/20 text-yellow-400' 
-                      : 'bg-[#334155] text-[#94a3b8] hover:bg-[#475569]'
+                      : 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-secondary)] hover:bg-[var(--theme-card-border)]'
                   }`}
                   title="Anotações"
                 >
@@ -1416,7 +1416,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                     conversaSelecionada.humano
                       ? 'bg-orange-500 text-white'
-                      : 'bg-[#334155] text-[#94a3b8] hover:bg-[#475569]'
+                      : 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-secondary)] hover:bg-[var(--theme-card-border)]'
                   }`}
                 >
                   <User size={18} />
@@ -1433,10 +1433,10 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           >
             {loadingMensagens ? (
               <div className="flex items-center justify-center h-full">
-                <Loader2 size={32} className="animate-spin text-[#10b981]" />
+                <Loader2 size={32} className="animate-spin text-primary" />
               </div>
             ) : mensagens.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-[#64748b]">
+              <div className="flex items-center justify-center h-full text-[var(--theme-text-muted)]">
                 <p>Nenhuma mensagem ainda</p>
               </div>
             ) : (
@@ -1450,25 +1450,25 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                       {msg.tipo === 'recebida' && (
                         <button
                           onClick={() => setReplyingTo(msg)}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#334155] rounded transition-all self-center"
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--theme-bg-tertiary)] rounded transition-all self-center"
                           title="Responder"
                         >
-                          <Reply size={16} className="text-[#64748b]" />
+                          <Reply size={16} className="text-[var(--theme-text-muted)]" />
                         </button>
                       )}
                       
                       <div
                         className={`rounded-2xl px-4 py-2 ${
                           msg.tipo === 'enviada'
-                            ? 'bg-[#10b981] text-white rounded-br-md'
-                            : 'bg-[#1e293b] text-white rounded-bl-md'
+                            ? 'bg-primary text-white rounded-br-md'
+                            : 'bg-[var(--theme-card)] text-white rounded-bl-md'
                         }`}
                       >
                         {msg.replyTo && (
                           <div className={`text-xs mb-2 p-2 rounded border-l-2 ${
                             msg.tipo === 'enviada' 
-                              ? 'bg-[#059669] border-white/50' 
-                              : 'bg-[#334155] border-[#10b981]'
+                              ? 'bg-primary-hover border-white/50' 
+                              : 'bg-[var(--theme-bg-tertiary)] border-primary'
                           }`}>
                             <p className="opacity-75 truncate">{msg.replyTo.content || 'Mensagem'}</p>
                           </div>
@@ -1486,7 +1486,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                         
                         {msg.texto && <p className="break-words">{msg.texto}</p>}
                         
-                        <p className={`text-xs mt-1 ${msg.tipo === 'enviada' ? 'text-green-200' : 'text-[#64748b]'}`}>
+                        <p className={`text-xs mt-1 ${msg.tipo === 'enviada' ? 'text-green-200' : 'text-[var(--theme-text-muted)]'}`}>
                           {msg.hora}
                         </p>
                       </div>
@@ -1494,10 +1494,10 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                       {msg.tipo === 'enviada' && (
                         <button
                           onClick={() => setReplyingTo(msg)}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#334155] rounded transition-all self-center"
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--theme-bg-tertiary)] rounded transition-all self-center"
                           title="Responder"
                         >
-                          <Reply size={16} className="text-[#64748b]" />
+                          <Reply size={16} className="text-[var(--theme-text-muted)]" />
                         </button>
                       )}
                     </div>
@@ -1520,31 +1520,31 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
 
           {/* Reply preview */}
           {replyingTo && (
-            <div className="bg-[#1e293b] border-t border-[#334155] px-4 py-2 flex items-center gap-3 flex-shrink-0">
-              <div className="flex-1 border-l-2 border-[#10b981] pl-3">
-                <p className="text-xs text-[#10b981]">Respondendo</p>
-                <p className="text-sm text-[#94a3b8] truncate">{replyingTo.texto || 'Mídia'}</p>
+            <div className="bg-[var(--theme-card)] border-t border-[var(--theme-card-border)] px-4 py-2 flex items-center gap-3 flex-shrink-0">
+              <div className="flex-1 border-l-2 border-primary pl-3">
+                <p className="text-xs text-primary">Respondendo</p>
+                <p className="text-sm text-[var(--theme-text-secondary)] truncate">{replyingTo.texto || 'Mídia'}</p>
               </div>
               <button
                 onClick={() => setReplyingTo(null)}
-                className="p-1 hover:bg-[#334155] rounded"
+                className="p-1 hover:bg-[var(--theme-bg-tertiary)] rounded"
               >
-                <X size={18} className="text-[#64748b]" />
+                <X size={18} className="text-[var(--theme-text-muted)]" />
               </button>
             </div>
           )}
 
           {/* Preview de áudio gravado */}
           {audioUrl && !isRecording && (
-            <div className="bg-[#1e293b] border-t border-[#334155] px-4 py-3 flex-shrink-0">
+            <div className="bg-[var(--theme-card)] border-t border-[var(--theme-card-border)] px-4 py-3 flex-shrink-0">
               <div className="flex flex-col gap-2">
-                <div className="flex items-center h-12 bg-[#0f172a] rounded-lg overflow-hidden px-2">
+                <div className="flex items-center h-12 bg-[var(--theme-bg)] rounded-lg overflow-hidden px-2">
                   <div className="flex items-center gap-[2px] h-full w-full justify-center">
                     {audioWaveform.length > 0 ? (
                       audioWaveform.map((value, i) => (
                         <div 
                           key={i} 
-                          className="w-1 bg-[#10b981] rounded-full"
+                          className="w-1 bg-primary rounded-full"
                           style={{ height: `${Math.max(4, value * 40)}px` }}
                         />
                       ))
@@ -1553,7 +1553,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                         {[...Array(50)].map((_, i) => (
                           <div 
                             key={i} 
-                            className="w-1 bg-[#10b981] rounded-full"
+                            className="w-1 bg-primary rounded-full"
                             style={{ height: '8px' }}
                           />
                         ))}
@@ -1565,7 +1565,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 <div className="flex items-center gap-3">
                   <button
                     onClick={togglePlayPreview}
-                    className="p-2 bg-[#10b981] hover:bg-[#059669] rounded-full transition-colors"
+                    className="p-2 bg-primary hover:bg-primary-hover rounded-full transition-colors"
                   >
                     {isPlayingPreview ? <Pause size={18} /> : <Play size={18} />}
                   </button>
@@ -1575,11 +1575,11 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                     onEnded={() => setIsPlayingPreview(false)}
                     className="hidden"
                   />
-                  <span className="text-sm text-[#64748b]">{formatRecordingTime(recordingTime)}</span>
+                  <span className="text-sm text-[var(--theme-text-muted)]">{formatRecordingTime(recordingTime)}</span>
                   <div className="flex-1"></div>
                   <button
                     onClick={limparAudio}
-                    className="p-2 hover:bg-[#334155] rounded-lg text-red-400 transition-colors"
+                    className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg text-red-400 transition-colors"
                     title="Descartar áudio"
                   >
                     <X size={18} />
@@ -1587,7 +1587,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                   <button
                     onClick={enviarMensagem}
                     disabled={enviandoMensagem}
-                    className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg transition-colors flex items-center gap-2"
+                    className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors flex items-center gap-2"
                   >
                     {enviandoMensagem ? (
                       <Loader2 size={18} className="animate-spin" />
@@ -1605,10 +1605,10 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
 
           {/* Preview de arquivos selecionados */}
           {selectedFiles.length > 0 && (
-            <div className="bg-[#1e293b] border-t border-[#334155] px-4 py-2 flex-shrink-0">
+            <div className="bg-[var(--theme-card)] border-t border-[var(--theme-card-border)] px-4 py-2 flex-shrink-0">
               <div className="flex flex-wrap gap-2">
                 {selectedFiles.map((file, idx) => (
-                  <div key={idx} className="flex items-center gap-2 bg-[#334155] rounded-lg px-3 py-1">
+                  <div key={idx} className="flex items-center gap-2 bg-[var(--theme-bg-tertiary)] rounded-lg px-3 py-1">
                     <span className="text-sm truncate max-w-[150px]">{file.name}</span>
                     <button onClick={() => removeFile(idx)} className="hover:text-red-400">
                       <X size={14} />
@@ -1620,17 +1620,17 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           )}
 
           {/* Input de mensagem */}
-          <div className="bg-[#1e293b] border-t border-[#334155] p-4 flex-shrink-0">
+          <div className="bg-[var(--theme-card)] border-t border-[var(--theme-card-border)] p-4 flex-shrink-0">
             {isRecording ? (
               <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-center h-16 bg-[#0f172a] rounded-lg overflow-hidden px-2">
+                <div className="flex items-center justify-center h-16 bg-[var(--theme-bg)] rounded-lg overflow-hidden px-2">
                   <div className="flex items-center gap-[2px] h-full">
                     {audioWaveform.length === 0 ? (
                       <div className="flex items-center gap-[2px]">
                         {[...Array(50)].map((_, i) => (
                           <div 
                             key={i} 
-                            className="w-1 bg-[#10b981] rounded-full animate-pulse"
+                            className="w-1 bg-primary rounded-full animate-pulse"
                             style={{ 
                               height: `${Math.random() * 20 + 5}px`,
                               animationDelay: `${i * 50}ms`
@@ -1642,7 +1642,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                       audioWaveform.map((value, i) => (
                         <div 
                           key={i} 
-                          className="w-1 bg-[#10b981] rounded-full transition-all duration-75"
+                          className="w-1 bg-primary rounded-full transition-all duration-75"
                           style={{ height: `${Math.max(4, value * 50)}px` }}
                         />
                       ))
@@ -1666,7 +1666,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                   
                   <button
                     onClick={stopRecording}
-                    className="p-3 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg transition-colors"
+                    className="p-3 bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors"
                     title="Parar e revisar"
                   >
                     <Square size={20} />
@@ -1682,7 +1682,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-2 hover:bg-[#334155] rounded-lg transition-colors text-[#64748b] hover:text-white"
+                    className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors text-[var(--theme-text-muted)] hover:text-white"
                   >
                     <Smile size={22} />
                   </button>
@@ -1700,7 +1700,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2 hover:bg-[#334155] rounded-lg transition-colors text-[#64748b] hover:text-white"
+                  className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors text-[var(--theme-text-muted)] hover:text-white"
                 >
                   <Paperclip size={22} />
                 </button>
@@ -1718,7 +1718,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                   value={mensagem}
                   onChange={(e) => setMensagem(e.target.value)}
                   placeholder="Digite sua mensagem..."
-                  className="flex-1 bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="flex-1 bg-[var(--theme-bg)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   disabled={enviandoMensagem}
                 />
                 
@@ -1726,7 +1726,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                   <button 
                     type="submit"
                     disabled={enviandoMensagem}
-                    className="p-3 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] text-white rounded-lg transition-colors"
+                    className="p-3 bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] text-white rounded-lg transition-colors"
                   >
                     {enviandoMensagem ? (
                       <Loader2 size={20} className="animate-spin" />
@@ -1738,7 +1738,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                   <button
                     type="button"
                     onClick={startRecording}
-                    className="p-3 bg-[#334155] hover:bg-[#475569] text-white rounded-lg transition-colors"
+                    className="p-3 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] text-white rounded-lg transition-colors"
                     title="Gravar áudio"
                   >
                     <Mic size={20} />
@@ -1749,9 +1749,9 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center bg-[#0f172a]">
-          <div className="text-center text-[#64748b]">
-            <div className="w-20 h-20 bg-[#1e293b] rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="flex-1 flex items-center justify-center bg-[var(--theme-bg)]">
+          <div className="text-center text-[var(--theme-text-muted)]">
+            <div className="w-20 h-20 bg-[var(--theme-card)] rounded-full flex items-center justify-center mx-auto mb-4">
               <Send size={32} />
             </div>
             <p>Selecione uma conversa para começar</p>
@@ -1772,28 +1772,28 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
             onClick={() => setShowNovaConversa(false)}
           >
             <div
-              className="bg-[#1e293b] rounded-xl w-full max-w-md max-h-[80vh] flex flex-col"
+              className="bg-[var(--theme-card)] rounded-xl w-full max-w-md max-h-[80vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-4 border-b border-[#334155] flex items-center justify-between">
+              <div className="p-4 border-b border-[var(--theme-card-border)] flex items-center justify-between">
                 <h3 className="font-semibold text-lg">Nova Conversa</h3>
                 <button
                   onClick={() => setShowNovaConversa(false)}
-                  className="p-2 hover:bg-[#334155] rounded-lg transition-colors"
+                  className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
               
               {/* Abas Clientes/Leads */}
-              <div className="p-4 border-b border-[#334155]">
-                <div className="flex gap-1 mb-3 bg-[#0f172a] rounded-lg p-1">
+              <div className="p-4 border-b border-[var(--theme-card-border)]">
+                <div className="flex gap-1 mb-3 bg-[var(--theme-bg)] rounded-lg p-1">
                   <button
                     onClick={() => setAbaNovaConversa('clientes')}
                     className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       abaNovaConversa === 'clientes' 
-                        ? 'bg-[#334155] text-white' 
-                        : 'text-[#64748b] hover:text-white'
+                        ? 'bg-[var(--theme-bg-tertiary)] text-white' 
+                        : 'text-[var(--theme-text-muted)] hover:text-white'
                     }`}
                   >
                     Clientes ({clientes.length})
@@ -1802,8 +1802,8 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                     onClick={() => setAbaNovaConversa('leads')}
                     className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       abaNovaConversa === 'leads' 
-                        ? 'bg-[#334155] text-white' 
-                        : 'text-[#64748b] hover:text-white'
+                        ? 'bg-[var(--theme-bg-tertiary)] text-white' 
+                        : 'text-[var(--theme-text-muted)] hover:text-white'
                     }`}
                   >
                     Leads ({leads.length})
@@ -1811,13 +1811,13 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 </div>
                 
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" size={18} />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--theme-text-muted)]" size={18} />
                   <input
                     type="text"
                     value={buscaCliente}
                     onChange={(e) => setBuscaCliente(e.target.value)}
                     placeholder={abaNovaConversa === 'clientes' ? "Buscar cliente..." : "Buscar lead..."}
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-[#10b981]"
+                    className="w-full bg-[var(--theme-bg)] border border-[var(--theme-card-border)] rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-primary"
                   />
                 </div>
               </div>
@@ -1825,12 +1825,12 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
               <div className="flex-1 overflow-auto">
                 {loadingClientes ? (
                   <div className="flex items-center justify-center py-8">
-                    <Loader2 size={24} className="animate-spin text-[#10b981]" />
+                    <Loader2 size={24} className="animate-spin text-primary" />
                   </div>
                 ) : abaNovaConversa === 'clientes' ? (
                   // Lista de Clientes
                   clientesFiltrados.length === 0 ? (
-                    <div className="text-center py-8 text-[#64748b]">
+                    <div className="text-center py-8 text-[var(--theme-text-muted)]">
                       <p>Nenhum cliente encontrado</p>
                     </div>
                   ) : (
@@ -1839,23 +1839,23 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                         key={cliente.id}
                         onClick={() => iniciarConversa(cliente.telefone, cliente.nome)}
                         disabled={iniciandoConversa || !cliente.telefone}
-                        className="w-full flex items-center gap-3 p-4 hover:bg-[#334155] transition-colors text-left border-b border-[#334155] disabled:opacity-50"
+                        className="w-full flex items-center gap-3 p-4 hover:bg-[var(--theme-bg-tertiary)] transition-colors text-left border-b border-[var(--theme-card-border)] disabled:opacity-50"
                       >
-                        <div className="w-10 h-10 rounded-full bg-[#10b981] flex items-center justify-center text-white font-bold">
+                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
                           {cliente.nome.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{cliente.nome}</p>
-                          <p className="text-sm text-[#64748b]">{cliente.telefone || 'Sem telefone'}</p>
+                          <p className="text-sm text-[var(--theme-text-muted)]">{cliente.telefone || 'Sem telefone'}</p>
                         </div>
-                        <MessageSquare size={18} className="text-[#10b981]" />
+                        <MessageSquare size={18} className="text-primary" />
                       </button>
                     ))
                   )
                 ) : (
                   // Lista de Leads
                   leadsFiltrados.length === 0 ? (
-                    <div className="text-center py-8 text-[#64748b]">
+                    <div className="text-center py-8 text-[var(--theme-text-muted)]">
                       <p>Nenhum lead encontrado</p>
                     </div>
                   ) : (
@@ -1864,7 +1864,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                         key={lead.id}
                         onClick={() => iniciarConversa(lead.telefone, lead.nome)}
                         disabled={iniciandoConversa || !lead.telefone}
-                        className="w-full flex items-center gap-3 p-4 hover:bg-[#334155] transition-colors text-left border-b border-[#334155] disabled:opacity-50"
+                        className="w-full flex items-center gap-3 p-4 hover:bg-[var(--theme-bg-tertiary)] transition-colors text-left border-b border-[var(--theme-card-border)] disabled:opacity-50"
                       >
                         <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
                           {lead.nome.charAt(0).toUpperCase()}
@@ -1872,13 +1872,13 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{lead.nome}</p>
                           <div className="flex items-center gap-2">
-                            <p className="text-sm text-[#64748b]">{lead.telefone || 'Sem telefone'}</p>
+                            <p className="text-sm text-[var(--theme-text-muted)]">{lead.telefone || 'Sem telefone'}</p>
                             <span className={`text-xs px-2 py-0.5 rounded ${getEtapaInfo(lead.etapa).bgCor} ${getEtapaInfo(lead.etapa).textCor}`}>
                               {getEtapaInfo(lead.etapa).label}
                             </span>
                           </div>
                           {lead.interesse && (
-                            <p className="text-xs text-[#64748b] truncate">{lead.interesse}</p>
+                            <p className="text-xs text-[var(--theme-text-muted)] truncate">{lead.interesse}</p>
                           )}
                         </div>
                         <MessageSquare size={18} className="text-blue-400" />
@@ -1888,27 +1888,27 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 )}
               </div>
               
-              <div className="p-4 border-t border-[#334155]">
-                <p className="text-sm text-[#64748b] mb-3">Ou digite um novo número:</p>
+              <div className="p-4 border-t border-[var(--theme-card-border)]">
+                <p className="text-sm text-[var(--theme-text-muted)] mb-3">Ou digite um novo número:</p>
                 <div className="space-y-3">
                   <input
                     type="text"
                     value={novoContato.nome}
                     onChange={(e) => setNovoContato(prev => ({ ...prev, nome: e.target.value }))}
                     placeholder="Nome"
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-[#10b981]"
+                    className="w-full bg-[var(--theme-bg)] border border-[var(--theme-card-border)] rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary"
                   />
                   <input
                     type="text"
                     value={novoContato.telefone}
                     onChange={(e) => setNovoContato(prev => ({ ...prev, telefone: e.target.value }))}
                     placeholder="Telefone (ex: 5511999999999)"
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-[#10b981]"
+                    className="w-full bg-[var(--theme-bg)] border border-[var(--theme-card-border)] rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary"
                   />
                   <button
                     onClick={() => iniciarConversa(novoContato.telefone, novoContato.nome || 'Novo contato')}
                     disabled={!novoContato.telefone || iniciandoConversa}
-                    className="w-full bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] disabled:text-[#64748b] text-white py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="w-full bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] disabled:text-[var(--theme-text-muted)] text-white py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     {iniciandoConversa ? (
                       <Loader2 size={18} className="animate-spin" />
@@ -1934,45 +1934,45 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
             onClick={() => setShowAnotacao(false)}
           ></div>
           
-          <div className="fixed right-0 top-0 h-full w-96 max-w-full bg-[#1e293b] border-l border-[#334155] z-50 flex flex-col">
-            <div className="p-4 border-b border-[#334155] flex items-center justify-between">
+          <div className="fixed right-0 top-0 h-full w-96 max-w-full bg-[var(--theme-card)] border-l border-[var(--theme-card-border)] z-50 flex flex-col">
+            <div className="p-4 border-b border-[var(--theme-card-border)] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <StickyNote size={20} className="text-yellow-400" />
                 <h3 className="font-semibold">Anotações</h3>
               </div>
               <button
                 onClick={() => setShowAnotacao(false)}
-                className="p-2 hover:bg-[#334155] rounded-lg transition-colors"
+                className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
             
             <div className="p-4 flex-1 flex flex-col">
-              <p className="text-sm text-[#64748b] mb-2">
+              <p className="text-sm text-[var(--theme-text-muted)] mb-2">
                 Anotações sobre: <span className="text-white">{conversaSelecionada.nome}</span>
               </p>
               <textarea
                 value={anotacaoTemp}
                 onChange={(e) => setAnotacaoTemp(e.target.value)}
                 placeholder="Adicione anotações sobre esta conversa..."
-                className="flex-1 bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981] resize-none text-sm"
+                className="flex-1 bg-[var(--theme-bg)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary resize-none text-sm"
               />
-              <p className="text-xs text-[#64748b] mt-2">
+              <p className="text-xs text-[var(--theme-text-muted)] mt-2">
                 Estas anotações são internas e não são visíveis para o cliente.
               </p>
             </div>
 
-            <div className="p-4 border-t border-[#334155] flex gap-3">
+            <div className="p-4 border-t border-[var(--theme-card-border)] flex gap-3">
               <button
                 onClick={() => setShowAnotacao(false)}
-                className="flex-1 px-4 py-2 bg-[#334155] hover:bg-[#475569] rounded-lg transition-colors"
+                className="flex-1 px-4 py-2 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={salvarAnotacao}
-                className="flex-1 px-4 py-2 bg-[#10b981] hover:bg-[#059669] rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 bg-primary hover:bg-primary-hover rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 <Check size={18} />
                 Salvar

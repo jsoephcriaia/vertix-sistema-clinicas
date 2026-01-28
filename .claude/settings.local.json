@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(git restore:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nSincroniza avatares do Chatwoot com leads_ia\n\n- fetchLeadIA agora salva avatar do Chatwoot na tabela leads_ia ao selecionar conversa\n- Cria endpoint GET /api/sync-avatars para sincronização em batch\n- Adiciona CLAUDE.md com documentação do projeto\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nMelhora Dashboard, adiciona upload de logo e click-outside em modais\n\nDashboard:\n- Adiciona gráficos com recharts \\(faturamento mensal, leads por etapa, procedimentos mais agendados\\)\n- Adiciona novas métricas: taxa de conversão, taxa de no-show, ticket médio\n- Layout reorganizado com 7 cards de KPIs\n\nConfigClinica:\n- Implementa upload de logo via Google Drive\n- Mostra preview da logo quando existente\n- Valida tipo \\(imagem\\) e tamanho \\(2MB\\)\n\nAPI Upload:\n- Suporta tipo=''logo'' para salvar em clinicas.logo_url\n\nModais:\n- Adiciona click-outside para fechar em 8 modais \\(Clientes, Pipeline, ConfigProcedimentos, ConfigEquipe, ConfigHorarios, ConfigFaq, ConfigPoliticas\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(npm install:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

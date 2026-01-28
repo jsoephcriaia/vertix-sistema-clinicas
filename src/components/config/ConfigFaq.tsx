@@ -159,7 +159,7 @@ export default function ConfigFaq({ onBack }: ConfigFaqProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={32} className="animate-spin text-[#10b981]" />
+        <Loader2 size={32} className="animate-spin text-primary" />
       </div>
     );
   }
@@ -168,17 +168,17 @@ export default function ConfigFaq({ onBack }: ConfigFaqProps) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-2 hover:bg-[#334155] rounded-lg transition-colors">
+          <button onClick={onBack} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors">
             <ArrowLeft size={20} />
           </button>
           <div>
             <h1 className="text-2xl font-bold">FAQ - Perguntas Frequentes</h1>
-            <p className="text-[#64748b] text-sm">Perguntas que a IA usará para responder clientes</p>
+            <p className="text-[var(--theme-text-muted)] text-sm">Perguntas que a IA usará para responder clientes</p>
           </div>
         </div>
         <button
           onClick={handleNew}
-          className="bg-[#10b981] hover:bg-[#059669] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
         >
           <Plus size={20} />
           Nova Pergunta
@@ -190,13 +190,13 @@ export default function ConfigFaq({ onBack }: ConfigFaqProps) {
           <HelpCircle size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-blue-400 font-medium">Dica</p>
-            <p className="text-sm text-[#94a3b8]">Cadastre as perguntas mais comuns dos seus clientes. A Secretária de IA usará essas respostas para responder automaticamente no WhatsApp.</p>
+            <p className="text-sm text-[var(--theme-text-secondary)]">Cadastre as perguntas mais comuns dos seus clientes. A Secretária de IA usará essas respostas para responder automaticamente no WhatsApp.</p>
           </div>
         </div>
       </div>
 
       {faqs.length === 0 ? (
-        <div className="text-center py-12 text-[#64748b]">
+        <div className="text-center py-12 text-[var(--theme-text-muted)]">
           <HelpCircle size={48} className="mx-auto mb-4 opacity-50" />
           <p>Nenhuma pergunta cadastrada</p>
           <p className="text-sm">Clique em "Nova Pergunta" para adicionar</p>
@@ -204,35 +204,35 @@ export default function ConfigFaq({ onBack }: ConfigFaqProps) {
       ) : (
         <div className="space-y-3">
           {faqs.map((faq, index) => (
-            <div key={faq.id} className="bg-[#1e293b] rounded-xl border border-[#334155]">
+            <div key={faq.id} className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)]">
               <div
                 className="flex items-center gap-4 p-4 cursor-pointer"
                 onClick={() => setExpandido(expandido === faq.id ? null : faq.id)}
               >
-                <span className="w-8 h-8 rounded-full bg-[#10b981]/20 text-[#10b981] flex items-center justify-center text-sm font-medium">
+                <span className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-medium">
                   {index + 1}
                 </span>
                 <p className="flex-1 font-medium">{faq.pergunta}</p>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={(e) => { e.stopPropagation(); moveUp(index); }}
-                    className="p-1.5 hover:bg-[#334155] rounded transition-colors"
+                    className="p-1.5 hover:bg-[var(--theme-bg-tertiary)] rounded transition-colors"
                     disabled={index === 0}
                   >
-                    <ChevronUp size={16} className={index === 0 ? 'text-[#334155]' : 'text-[#64748b]'} />
+                    <ChevronUp size={16} className={index === 0 ? 'text-[#334155]' : 'text-[var(--theme-text-muted)]'} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); moveDown(index); }}
-                    className="p-1.5 hover:bg-[#334155] rounded transition-colors"
+                    className="p-1.5 hover:bg-[var(--theme-bg-tertiary)] rounded transition-colors"
                     disabled={index === faqs.length - 1}
                   >
-                    <ChevronDown size={16} className={index === faqs.length - 1 ? 'text-[#334155]' : 'text-[#64748b]'} />
+                    <ChevronDown size={16} className={index === faqs.length - 1 ? 'text-[#334155]' : 'text-[var(--theme-text-muted)]'} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleEdit(faq); }}
-                    className="p-1.5 hover:bg-[#334155] rounded transition-colors"
+                    className="p-1.5 hover:bg-[var(--theme-bg-tertiary)] rounded transition-colors"
                   >
-                    <Edit size={16} className="text-[#64748b]" />
+                    <Edit size={16} className="text-[var(--theme-text-muted)]" />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(faq.id); }}
@@ -242,13 +242,13 @@ export default function ConfigFaq({ onBack }: ConfigFaqProps) {
                   </button>
                   <ChevronDown 
                     size={20} 
-                    className={`text-[#64748b] transition-transform ${expandido === faq.id ? 'rotate-180' : ''}`} 
+                    className={`text-[var(--theme-text-muted)] transition-transform ${expandido === faq.id ? 'rotate-180' : ''}`} 
                   />
                 </div>
               </div>
               {expandido === faq.id && (
                 <div className="px-4 pb-4 pt-0">
-                  <div className="pl-12 text-[#94a3b8] bg-[#0f172a] rounded-lg p-4">
+                  <div className="pl-12 text-[var(--theme-text-secondary)] bg-[var(--theme-input)] rounded-lg p-4">
                     {faq.resposta}
                   </div>
                 </div>
@@ -260,51 +260,51 @@ export default function ConfigFaq({ onBack }: ConfigFaqProps) {
 
       {showModal && editando && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-[#334155] flex items-center justify-between">
+          <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-[var(--theme-card-border)] flex items-center justify-between">
               <h2 className="text-xl font-semibold">
                 {editando.id ? 'Editar Pergunta' : 'Nova Pergunta'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[#334155] rounded-lg">
+              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg">
                 <X size={20} />
               </button>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Pergunta *</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Pergunta *</label>
                 <input
                   type="text"
                   value={editando.pergunta}
                   onChange={(e) => setEditando({ ...editando, pergunta: e.target.value })}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="Ex: Quais formas de pagamento vocês aceitam?"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Resposta *</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Resposta *</label>
                 <textarea
                   value={editando.resposta}
                   onChange={(e) => setEditando({ ...editando, resposta: e.target.value })}
                   rows={5}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="Digite a resposta completa que a IA deve usar..."
                 />
               </div>
             </div>
 
-            <div className="p-6 border-t border-[#334155] flex justify-end gap-3">
+            <div className="p-6 border-t border-[var(--theme-card-border)] flex justify-end gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-[#334155] hover:bg-[#475569] rounded-lg transition-colors"
+                className="px-4 py-2 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving || !editando.pergunta || !editando.resposta}
-                className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] disabled:text-[#64748b] rounded-lg transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] disabled:text-[var(--theme-text-muted)] rounded-lg transition-colors flex items-center gap-2"
               >
                 {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                 {saving ? 'Salvando...' : 'Salvar'}

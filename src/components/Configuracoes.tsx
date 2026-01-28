@@ -1,6 +1,6 @@
 'use client';
 
-import { 
+import {
   Building2,
   Scissors,
   Clock,
@@ -37,7 +37,7 @@ const menuConfig = [
 ];
 
 export default function Configuracoes({ subPage, setSubPage }: ConfiguracoesProps) {
-  
+
   const renderSubPage = () => {
     switch (subPage) {
       case 'clinica':
@@ -68,8 +68,8 @@ export default function Configuracoes({ subPage, setSubPage }: ConfiguracoesProp
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Configurações</h1>
-        <p className="text-[#64748b] text-sm mt-1">Gerencie as informações da sua clínica</p>
+        <h1 className="text-2xl font-bold text-[var(--theme-text)]">Configurações</h1>
+        <p className="text-[var(--theme-text-muted)] text-sm mt-1">Gerencie as informações da sua clínica</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -79,17 +79,17 @@ export default function Configuracoes({ subPage, setSubPage }: ConfiguracoesProp
             <button
               key={item.id}
               onClick={() => setSubPage(item.id)}
-              className="bg-[#1e293b] rounded-xl border border-[#334155] p-5 hover:border-[#10b981] transition-colors text-left group"
+              className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] p-5 hover:border-primary transition-colors text-left group"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-[#10b981]/20 flex items-center justify-center">
-                  <Icon size={24} className="text-[#10b981]" />
+                <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <Icon size={24} className="text-primary" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold group-hover:text-[#10b981] transition-colors">{item.label}</h3>
-                  <p className="text-sm text-[#64748b]">{item.desc}</p>
+                  <h3 className="font-semibold text-[var(--theme-text)] group-hover:text-primary transition-colors">{item.label}</h3>
+                  <p className="text-sm text-[var(--theme-text-muted)]">{item.desc}</p>
                 </div>
-                <ChevronRight size={20} className="text-[#64748b] group-hover:text-[#10b981] transition-colors" />
+                <ChevronRight size={20} className="text-[var(--theme-text-muted)] group-hover:text-primary transition-colors" />
               </div>
             </button>
           );

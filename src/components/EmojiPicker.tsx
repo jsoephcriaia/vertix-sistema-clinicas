@@ -141,20 +141,20 @@ export default function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
   }, [search]);
 
   return (
-    <div className="absolute bottom-full left-0 mb-2 bg-[#1e293b] border border-[#334155] rounded-lg shadow-xl w-72 max-h-72 overflow-hidden z-50">
-      <div className="p-2 border-b border-[#334155]">
+    <div className="absolute bottom-full left-0 mb-2 bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg shadow-xl w-72 max-h-72 overflow-hidden z-50">
+      <div className="p-2 border-b border-[var(--theme-card-border)]">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar emoji... (ex: feliz, amor, ok)"
-          className="w-full bg-[#0f172a] border border-[#334155] rounded px-2 py-1.5 text-sm focus:outline-none focus:border-[#10b981]"
+          className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded px-2 py-1.5 text-sm focus:outline-none focus:border-primary"
           autoFocus
         />
       </div>
       <div className="p-2 grid grid-cols-8 gap-1 max-h-52 overflow-auto">
         {filteredEmojis.length === 0 ? (
-          <p className="col-span-8 text-center text-[#64748b] text-sm py-4">Nenhum emoji encontrado</p>
+          <p className="col-span-8 text-center text-[var(--theme-text-muted)] text-sm py-4">Nenhum emoji encontrado</p>
         ) : (
           filteredEmojis.map((item, idx) => (
             <button
@@ -163,7 +163,7 @@ export default function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
                 onSelect(item.emoji);
                 onClose();
               }}
-              className="w-8 h-8 flex items-center justify-center hover:bg-[#334155] rounded text-xl transition-colors"
+              className="w-8 h-8 flex items-center justify-center hover:bg-[var(--theme-bg-tertiary)] rounded text-xl transition-colors"
               title={item.keywords.join(', ')}
             >
               {item.emoji}

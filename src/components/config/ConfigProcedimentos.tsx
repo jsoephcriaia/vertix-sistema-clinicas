@@ -277,7 +277,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={32} className="animate-spin text-[#10b981]" />
+        <Loader2 size={32} className="animate-spin text-primary" />
       </div>
     );
   }
@@ -286,17 +286,17 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
     <div>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-2 hover:bg-[#334155] rounded-lg transition-colors">
+          <button onClick={onBack} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors">
             <ArrowLeft size={20} />
           </button>
           <div>
             <h1 className="text-2xl font-bold">Procedimentos</h1>
-            <p className="text-[#64748b] text-sm">Cadastre os serviços oferecidos pela clínica</p>
+            <p className="text-[var(--theme-text-muted)] text-sm">Cadastre os serviços oferecidos pela clínica</p>
           </div>
         </div>
         <button
           onClick={handleNew}
-          className="bg-[#10b981] hover:bg-[#059669] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
         >
           <Plus size={20} />
           Novo Procedimento
@@ -309,7 +309,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
             <AlertTriangle size={20} className="text-yellow-400 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-yellow-400 font-medium">Google Drive não conectado</p>
-              <p className="text-sm text-[#94a3b8]">
+              <p className="text-sm text-[var(--theme-text-secondary)]">
                 Para fazer upload de imagens dos procedimentos, conecte o Google Drive em Configurações → Integrações.
               </p>
             </div>
@@ -318,7 +318,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
       )}
 
       {procedimentos.length === 0 ? (
-        <div className="text-center py-12 text-[#64748b]">
+        <div className="text-center py-12 text-[var(--theme-text-muted)]">
           <DollarSign size={48} className="mx-auto mb-4 opacity-50" />
           <p>Nenhum procedimento cadastrado</p>
           <p className="text-sm">Clique em "Novo Procedimento" para adicionar</p>
@@ -328,16 +328,16 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
           {procedimentos.map((proc) => (
             <div
               key={proc.id}
-              className={`bg-[#1e293b] rounded-xl border ${proc.ativo ? 'border-[#334155]' : 'border-red-500/30'} p-5`}
+              className={`bg-[var(--theme-card)] rounded-xl border ${proc.ativo ? 'border-[var(--theme-card-border)]' : 'border-red-500/30'} p-5`}
             >
               <div className="flex items-start gap-4">
                 {/* Imagem do procedimento */}
-                <div className="w-20 h-20 rounded-lg bg-[#334155] flex-shrink-0 overflow-hidden">
+                <div className="w-20 h-20 rounded-lg bg-[var(--theme-bg-tertiary)] flex-shrink-0 overflow-hidden">
                   {proc.imagem_url ? (
                     <img src={proc.imagem_url} alt={proc.nome} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <Image size={24} className="text-[#64748b]" />
+                      <Image size={24} className="text-[var(--theme-text-muted)]" />
                     </div>
                   )}
                 </div>
@@ -354,17 +354,17 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
                       </span>
                     )}
                   </div>
-                  <p className="text-[#94a3b8] text-sm mb-3">{proc.descricao}</p>
+                  <p className="text-[var(--theme-text-secondary)] text-sm mb-3">{proc.descricao}</p>
                   <div className="flex flex-wrap gap-4 text-sm">
-                    <span className="flex items-center gap-1 text-[#10b981]">
+                    <span className="flex items-center gap-1 text-primary">
                       <DollarSign size={16} />
                       R$ {Number(proc.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
-                    <span className="flex items-center gap-1 text-[#64748b]">
+                    <span className="flex items-center gap-1 text-[var(--theme-text-muted)]">
                       <Clock size={16} />
                       {proc.duracao_minutos} min
                     </span>
-                    <span className="flex items-center gap-1 text-[#64748b]">
+                    <span className="flex items-center gap-1 text-[var(--theme-text-muted)]">
                       <Calendar size={16} />
                       Retorno: {proc.retorno_dias} dias
                     </span>
@@ -380,15 +380,15 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => toggleAtivo(proc.id, proc.ativo)}
-                    className={`px-3 py-1 rounded text-sm ${proc.ativo ? 'bg-green-500/20 text-green-400' : 'bg-[#334155] text-[#64748b]'}`}
+                    className={`px-3 py-1 rounded text-sm ${proc.ativo ? 'bg-green-500/20 text-green-400' : 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-muted)]'}`}
                   >
                     {proc.ativo ? 'Ativo' : 'Inativo'}
                   </button>
                   <button
                     onClick={() => handleEdit(proc)}
-                    className="p-2 hover:bg-[#334155] rounded-lg transition-colors"
+                    className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors"
                   >
-                    <Edit size={18} className="text-[#64748b]" />
+                    <Edit size={18} className="text-[var(--theme-text-muted)]" />
                   </button>
                   <button
                     onClick={() => handleDelete(proc.id)}
@@ -405,12 +405,12 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
 
       {showModal && editando && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-[#334155] flex items-center justify-between">
+          <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-[var(--theme-card-border)] flex items-center justify-between">
               <h2 className="text-xl font-semibold">
                 {editando.id ? 'Editar Procedimento' : 'Novo Procedimento'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[#334155] rounded-lg">
+              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg">
                 <X size={20} />
               </button>
             </div>
@@ -419,13 +419,13 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
               {/* Upload de Imagens */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-[#64748b] mb-2">Imagem do Procedimento</label>
+                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Imagem do Procedimento</label>
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-full h-32 rounded-lg bg-[#334155] flex items-center justify-center overflow-hidden">
+                    <div className="w-full h-32 rounded-lg bg-[var(--theme-bg-tertiary)] flex items-center justify-center overflow-hidden">
                       {editando.imagem_url ? (
                         <img src={editando.imagem_url} alt="Imagem" className="w-full h-full object-cover" />
                       ) : (
-                        <Image size={32} className="text-[#64748b]" />
+                        <Image size={32} className="text-[var(--theme-text-muted)]" />
                       )}
                     </div>
                     <input
@@ -438,7 +438,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
                     <button
                       onClick={() => inputImagemRef.current?.click()}
                       disabled={uploadingImagem}
-                      className="w-full px-4 py-2 bg-[#334155] hover:bg-[#475569] rounded-lg text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="w-full px-4 py-2 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       {uploadingImagem ? (
                         <><Loader2 size={16} className="animate-spin" /> Enviando...</>
@@ -450,13 +450,13 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
                 </div>
 
                 <div>
-                  <label className="block text-sm text-[#64748b] mb-2">Antes e Depois</label>
+                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Antes e Depois</label>
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-full h-32 rounded-lg bg-[#334155] flex items-center justify-center overflow-hidden">
+                    <div className="w-full h-32 rounded-lg bg-[var(--theme-bg-tertiary)] flex items-center justify-center overflow-hidden">
                       {editando.imagem_antes_depois_url ? (
                         <img src={editando.imagem_antes_depois_url} alt="Antes e Depois" className="w-full h-full object-cover" />
                       ) : (
-                        <ImagePlus size={32} className="text-[#64748b]" />
+                        <ImagePlus size={32} className="text-[var(--theme-text-muted)]" />
                       )}
                     </div>
                     <input
@@ -469,7 +469,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
                     <button
                       onClick={() => inputAntesDepoisRef.current?.click()}
                       disabled={uploadingAntesDepois}
-                      className="w-full px-4 py-2 bg-[#334155] hover:bg-[#475569] rounded-lg text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="w-full px-4 py-2 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       {uploadingAntesDepois ? (
                         <><Loader2 size={16} className="animate-spin" /> Enviando...</>
@@ -482,61 +482,61 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
               </div>
 
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Nome do Procedimento *</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Nome do Procedimento *</label>
                 <input
                   type="text"
                   value={editando.nome}
                   onChange={(e) => setEditando({ ...editando, nome: e.target.value })}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="Ex: Limpeza de Pele"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Descrição</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Descrição</label>
                 <textarea
                   value={editando.descricao || ''}
                   onChange={(e) => setEditando({ ...editando, descricao: e.target.value })}
                   rows={3}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="Descreva o procedimento..."
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm text-[#64748b] mb-2">Preço (R$) *</label>
+                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Preço (R$) *</label>
                   <input
                     type="number"
                     value={editando.preco}
                     onChange={(e) => setEditando({ ...editando, preco: Number(e.target.value) })}
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                    className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-[#64748b] mb-2">Duração (minutos)</label>
+                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Duração (minutos)</label>
                   <input
                     type="number"
                     value={editando.duracao_minutos}
                     onChange={(e) => setEditando({ ...editando, duracao_minutos: Number(e.target.value) })}
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                    className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-[#64748b] mb-2">Retorno (dias)</label>
+                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Retorno (dias)</label>
                   <input
                     type="number"
                     value={editando.retorno_dias}
                     onChange={(e) => setEditando({ ...editando, retorno_dias: Number(e.target.value) })}
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                    className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                     placeholder="Ex: 30"
                   />
-                  <p className="text-xs text-[#64748b] mt-1">Dias para sugerir retorno do cliente</p>
+                  <p className="text-xs text-[var(--theme-text-muted)] mt-1">Dias para sugerir retorno do cliente</p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">
                   <AlertTriangle size={14} className="inline mr-1 text-orange-400" />
                   Contraindicações (opcional)
                 </label>
@@ -544,13 +544,13 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
                   value={editando.contraindicacoes || ''}
                   onChange={(e) => setEditando({ ...editando, contraindicacoes: e.target.value })}
                   rows={2}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="Ex: Gestantes, pessoas com alergia a..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">
                   <Tag size={14} className="inline mr-1 text-yellow-400" />
                   Promoção Ativa (opcional)
                 </label>
@@ -558,23 +558,23 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
                   type="text"
                   value={editando.promocao || ''}
                   onChange={(e) => setEditando({ ...editando, promocao: e.target.value })}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="Ex: 10% OFF até sexta"
                 />
               </div>
             </div>
 
-            <div className="p-6 border-t border-[#334155] flex justify-end gap-3">
+            <div className="p-6 border-t border-[var(--theme-card-border)] flex justify-end gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-[#334155] hover:bg-[#475569] rounded-lg transition-colors"
+                className="px-4 py-2 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving || !editando.nome}
-                className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] disabled:text-[#64748b] rounded-lg transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] disabled:text-[var(--theme-text-muted)] rounded-lg transition-colors flex items-center gap-2"
               >
                 {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                 {saving ? 'Salvando...' : 'Salvar'}

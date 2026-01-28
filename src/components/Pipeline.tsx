@@ -69,7 +69,7 @@ function LeadCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-[#0f172a] rounded-lg p-4 border border-[#334155] hover:border-[#10b981] transition-colors ${
+      className={`bg-[var(--theme-input)] rounded-lg p-4 border border-[var(--theme-card-border)] hover:border-primary transition-colors ${
         isDragging ? 'shadow-lg' : ''
       }`}
     >
@@ -79,33 +79,33 @@ function LeadCard({
           <h4 className="font-medium">{lead.nome}</h4>
         </div>
 
-        <p className="text-sm text-[#10b981] mb-2">{lead.interesse}</p>
+        <p className="text-sm text-primary mb-2">{lead.interesse}</p>
 
-        <div className="flex items-center gap-2 text-xs text-[#64748b] mb-2">
+        <div className="flex items-center gap-2 text-xs text-[var(--theme-text-muted)] mb-2">
           <Phone size={12} />
           <span>{lead.telefone || 'Sem telefone'}</span>
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-[#10b981]">
+          <span className="text-sm font-medium text-primary">
             R$ {Number(lead.valor_estimado || 0).toLocaleString('pt-BR')}
           </span>
-          <span className="text-xs text-[#64748b]">{formatarData(lead.created_at)}</span>
+          <span className="text-xs text-[var(--theme-text-muted)]">{formatarData(lead.created_at)}</span>
         </div>
       </div>
 
       {/* Botões de ação - fora da área arrastável */}
-      <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-[#334155]">
+      <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t border-[var(--theme-card-border)]">
         <button
           onClick={(e) => {
             e.stopPropagation();
             onMensagem(lead);
           }}
           disabled={!lead.telefone}
-          className="p-1.5 hover:bg-[#10b981]/20 rounded transition-colors disabled:opacity-50"
+          className="p-1.5 hover:bg-primary/20 rounded transition-colors disabled:opacity-50"
           title={lead.telefone ? 'Enviar mensagem' : 'Sem telefone'}
         >
-          <MessageSquare size={14} className="text-[#10b981]" />
+          <MessageSquare size={14} className="text-primary" />
         </button>
         <button
           onClick={(e) => {
@@ -140,16 +140,16 @@ function Coluna({
   });
 
   return (
-    <div className="bg-[#1e293b] rounded-xl border border-[#334155]">
-      <div className="p-4 border-b border-[#334155]">
+    <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)]">
+      <div className="p-4 border-b border-[var(--theme-card-border)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className={`w-3 h-3 rounded-full ${etapa.cor}`}></div>
             <h3 className="font-semibold">{etapa.label}</h3>
-            <span className="text-xs bg-[#334155] px-2 py-0.5 rounded-full">{leads.length}</span>
+            <span className="text-xs bg-[var(--theme-bg-tertiary)] px-2 py-0.5 rounded-full">{leads.length}</span>
           </div>
         </div>
-        <p className={`text-xs mt-1 ${etapa.id === 'perdido' ? 'text-red-400' : 'text-[#10b981]'}`}>
+        <p className={`text-xs mt-1 ${etapa.id === 'perdido' ? 'text-red-400' : 'text-primary'}`}>
           R$ {total.toLocaleString('pt-BR')}
         </p>
       </div>
@@ -157,7 +157,7 @@ function Coluna({
       <div
         ref={setNodeRef}
         className={`p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-300px)] overflow-auto transition-colors ${
-          isOver ? 'bg-[#10b981]/10' : ''
+          isOver ? 'bg-primary/10' : ''
         }`}
       >
         {leads.map((lead) => (
@@ -165,7 +165,7 @@ function Coluna({
         ))}
 
         {leads.length === 0 && (
-          <div className={`text-center py-8 text-[#64748b] border-2 border-dashed rounded-lg ${isOver ? 'border-[#10b981]' : 'border-[#334155]'}`}>
+          <div className={`text-center py-8 text-[var(--theme-text-muted)] border-2 border-dashed rounded-lg ${isOver ? 'border-[#10b981]' : 'border-[var(--theme-card-border)]'}`}>
             <p className="text-sm">Arraste um lead para cá</p>
           </div>
         )}
@@ -399,7 +399,7 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={32} className="animate-spin text-[#10b981]" />
+        <Loader2 size={32} className="animate-spin text-primary" />
       </div>
     );
   }
@@ -409,11 +409,11 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Pipeline de Vendas</h1>
-          <p className="text-[#64748b] text-sm">Arraste os cards para mover entre as etapas</p>
+          <p className="text-[var(--theme-text-muted)] text-sm">Arraste os cards para mover entre as etapas</p>
         </div>
         <button
           onClick={handleNew}
-          className="bg-[#10b981] hover:bg-[#059669] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
         >
           <Plus size={20} />
           Novo Lead
@@ -441,10 +441,10 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
 
         <DragOverlay>
           {activeLead ? (
-            <div className="bg-[#0f172a] rounded-lg p-4 border-2 border-[#10b981] shadow-2xl w-64">
+            <div className="bg-[var(--theme-input)] rounded-lg p-4 border-2 border-primary shadow-2xl w-64">
               <h4 className="font-medium mb-1">{activeLead.nome}</h4>
-              <p className="text-sm text-[#10b981]">{activeLead.interesse}</p>
-              <p className="text-sm font-medium text-[#10b981] mt-2">
+              <p className="text-sm text-primary">{activeLead.interesse}</p>
+              <p className="text-sm font-medium text-primary mt-2">
                 R$ {Number(activeLead.valor_estimado || 0).toLocaleString('pt-BR')}
               </p>
             </div>
@@ -454,65 +454,65 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
 
       {showModal && editando && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-[#334155] flex items-center justify-between">
+          <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-[var(--theme-card-border)] flex items-center justify-between">
               <h2 className="text-xl font-semibold">Novo Lead</h2>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[#334155] rounded-lg">
+              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg">
                 <X size={20} />
               </button>
             </div>
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Nome *</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Nome *</label>
                 <input
                   type="text"
                   value={editando.nome}
                   onChange={(e) => setEditando({ ...editando, nome: e.target.value })}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="Nome do lead"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Telefone</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Telefone</label>
                 <input
                   type="text"
                   value={editando.telefone}
                   onChange={(e) => setEditando({ ...editando, telefone: e.target.value })}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="(11) 99999-9999"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Interesse</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Interesse</label>
                 <input
                   type="text"
                   value={editando.interesse}
                   onChange={(e) => setEditando({ ...editando, interesse: e.target.value })}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="Ex: Harmonização Facial"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Valor Estimado</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Valor Estimado</label>
                 <input
                   type="number"
                   value={editando.valor_estimado}
                   onChange={(e) => setEditando({ ...editando, valor_estimado: Number(e.target.value) })}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="0"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Etapa</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Etapa</label>
                 <select
                   value={editando.etapa}
                   onChange={(e) => setEditando({ ...editando, etapa: e.target.value })}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                 >
                   {etapas.map((e) => (
                     <option key={e.id} value={e.id}>{e.label}</option>
@@ -521,17 +521,17 @@ export default function Pipeline({ onAbrirConversa }: PipelineProps) {
               </div>
             </div>
 
-            <div className="p-6 border-t border-[#334155] flex justify-end gap-3">
+            <div className="p-6 border-t border-[var(--theme-card-border)] flex justify-end gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-[#334155] hover:bg-[#475569] rounded-lg transition-colors"
+                className="px-4 py-2 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving || !editando.nome}
-                className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] rounded-lg transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors flex items-center gap-2"
               >
                 {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                 Salvar

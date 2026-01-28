@@ -122,7 +122,7 @@ export default function ConfigPoliticas({ onBack }: ConfigPoliticasProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={32} className="animate-spin text-[#10b981]" />
+        <Loader2 size={32} className="animate-spin text-primary" />
       </div>
     );
   }
@@ -131,17 +131,17 @@ export default function ConfigPoliticas({ onBack }: ConfigPoliticasProps) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-2 hover:bg-[#334155] rounded-lg transition-colors">
+          <button onClick={onBack} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors">
             <ArrowLeft size={20} />
           </button>
           <div>
             <h1 className="text-2xl font-bold">Políticas</h1>
-            <p className="text-[#64748b] text-sm">Regras e termos que a IA informará aos clientes</p>
+            <p className="text-[var(--theme-text-muted)] text-sm">Regras e termos que a IA informará aos clientes</p>
           </div>
         </div>
         <button
           onClick={handleNew}
-          className="bg-[#10b981] hover:bg-[#059669] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
         >
           <Plus size={20} />
           Nova Política
@@ -153,13 +153,13 @@ export default function ConfigPoliticas({ onBack }: ConfigPoliticasProps) {
           <FileText size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-blue-400 font-medium">Importante</p>
-            <p className="text-sm text-[#94a3b8]">Essas políticas serão usadas pela Secretária de IA para informar clientes sobre regras da clínica. Seja claro e objetivo.</p>
+            <p className="text-sm text-[var(--theme-text-secondary)]">Essas políticas serão usadas pela Secretária de IA para informar clientes sobre regras da clínica. Seja claro e objetivo.</p>
           </div>
         </div>
       </div>
 
       {politicas.length === 0 ? (
-        <div className="text-center py-12 text-[#64748b]">
+        <div className="text-center py-12 text-[var(--theme-text-muted)]">
           <FileText size={48} className="mx-auto mb-4 opacity-50" />
           <p>Nenhuma política cadastrada</p>
           <p className="text-sm">Clique em "Nova Política" para adicionar</p>
@@ -167,15 +167,15 @@ export default function ConfigPoliticas({ onBack }: ConfigPoliticasProps) {
       ) : (
         <div className="space-y-4">
           {politicas.map((politica) => (
-            <div key={politica.id} className="bg-[#1e293b] rounded-xl border border-[#334155] p-5">
+            <div key={politica.id} className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] p-5">
               <div className="flex items-start justify-between mb-3">
                 <h3 className="font-semibold text-lg">{politica.titulo}</h3>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleEdit(politica)}
-                    className="p-2 hover:bg-[#334155] rounded-lg transition-colors"
+                    className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors"
                   >
-                    <Edit size={16} className="text-[#64748b]" />
+                    <Edit size={16} className="text-[var(--theme-text-muted)]" />
                   </button>
                   <button
                     onClick={() => handleDelete(politica.id)}
@@ -185,7 +185,7 @@ export default function ConfigPoliticas({ onBack }: ConfigPoliticasProps) {
                   </button>
                 </div>
               </div>
-              <p className="text-[#94a3b8] text-sm">{politica.conteudo}</p>
+              <p className="text-[var(--theme-text-secondary)] text-sm">{politica.conteudo}</p>
             </div>
           ))}
         </div>
@@ -193,51 +193,51 @@ export default function ConfigPoliticas({ onBack }: ConfigPoliticasProps) {
 
       {showModal && editando && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-[#334155] flex items-center justify-between">
+          <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-[var(--theme-card-border)] flex items-center justify-between">
               <h2 className="text-xl font-semibold">
                 {editando.id ? 'Editar Política' : 'Nova Política'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[#334155] rounded-lg">
+              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg">
                 <X size={20} />
               </button>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Título *</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Título *</label>
                 <input
                   type="text"
                   value={editando.titulo}
                   onChange={(e) => setEditando({ ...editando, titulo: e.target.value })}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="Ex: Política de Cancelamento"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Conteúdo *</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Conteúdo *</label>
                 <textarea
                   value={editando.conteudo}
                   onChange={(e) => setEditando({ ...editando, conteudo: e.target.value })}
                   rows={6}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="Descreva a política em detalhes..."
                 />
               </div>
             </div>
 
-            <div className="p-6 border-t border-[#334155] flex justify-end gap-3">
+            <div className="p-6 border-t border-[var(--theme-card-border)] flex justify-end gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-[#334155] hover:bg-[#475569] rounded-lg transition-colors"
+                className="px-4 py-2 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving || !editando.titulo || !editando.conteudo}
-                className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] disabled:text-[#64748b] rounded-lg transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] disabled:text-[var(--theme-text-muted)] rounded-lg transition-colors flex items-center gap-2"
               >
                 {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                 {saving ? 'Salvando...' : 'Salvar'}

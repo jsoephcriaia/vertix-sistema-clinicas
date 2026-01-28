@@ -481,9 +481,9 @@ export default function PainelAgendamentos({
       />
 
       {/* Painel */}
-      <div className="fixed right-0 top-0 h-full w-[420px] max-w-full bg-[#1e293b] border-l border-[#334155] z-50 flex flex-col">
+      <div className="fixed right-0 top-0 h-full w-[420px] max-w-full bg-[var(--theme-card)] border-l border-[var(--theme-card-border)] z-50 flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-[#334155]">
+        <div className="p-4 border-b border-[var(--theme-card-border)]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-500/20 rounded-lg">
@@ -491,12 +491,12 @@ export default function PainelAgendamentos({
               </div>
               <div>
                 <h3 className="font-semibold">Agendamentos</h3>
-                <p className="text-sm text-[#64748b]">{leadNome}</p>
+                <p className="text-sm text-[var(--theme-text-muted)]">{leadNome}</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-[#334155] rounded-lg transition-colors"
+              className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors"
             >
               <X size={20} />
             </button>
@@ -506,7 +506,7 @@ export default function PainelAgendamentos({
         {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-4">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm text-[#64748b]">
+            <span className="text-sm text-[var(--theme-text-muted)]">
               {agendamentosPendentes.length} pendente{agendamentosPendentes.length !== 1 ? 's' : ''}
             </span>
             <button
@@ -520,7 +520,7 @@ export default function PainelAgendamentos({
 
           {/* Formulário novo agendamento - aparece no topo */}
           {showNovoAgendamento && (
-            <div className="mb-4 p-4 bg-[#0f172a] rounded-lg border border-purple-500/50">
+            <div className="mb-4 p-4 bg-[var(--theme-input)] rounded-lg border border-purple-500/50">
               <h4 className="font-medium mb-3 flex items-center gap-2">
                 <Calendar size={16} className="text-purple-400" />
                 Novo Agendamento
@@ -528,32 +528,32 @@ export default function PainelAgendamentos({
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs text-[#64748b] mb-1">Data *</label>
+                    <label className="block text-xs text-[var(--theme-text-muted)] mb-1">Data *</label>
                     <input
                       type="date"
                       value={dataAgendamento}
                       onChange={(e) => setDataAgendamento(e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
-                      className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
+                      className="w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-[#64748b] mb-1">Hora *</label>
+                    <label className="block text-xs text-[var(--theme-text-muted)] mb-1">Hora *</label>
                     <input
                       type="time"
                       value={horaAgendamento}
                       onChange={(e) => setHoraAgendamento(e.target.value)}
-                      className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
+                      className="w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs text-[#64748b] mb-1">Procedimento</label>
+                  <label className="block text-xs text-[var(--theme-text-muted)] mb-1">Procedimento</label>
                   <select
                     value={procedimentoAgendamento}
                     onChange={(e) => setProcedimentoAgendamento(e.target.value)}
-                    className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
+                    className="w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
                   >
                     <option value="">Selecione (opcional)</option>
                     {procedimentos.map((p) => (
@@ -565,22 +565,22 @@ export default function PainelAgendamentos({
                 </div>
 
                 <div>
-                  <label className="block text-xs text-[#64748b] mb-1">Valor</label>
+                  <label className="block text-xs text-[var(--theme-text-muted)] mb-1">Valor</label>
                   <input
                     type="number"
                     value={valorAgendamento}
                     onChange={(e) => setValorAgendamento(e.target.value)}
-                    className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
+                    className="w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500"
                     placeholder="R$ 0,00"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-[#64748b] mb-1">Observações</label>
+                  <label className="block text-xs text-[var(--theme-text-muted)] mb-1">Observações</label>
                   <textarea
                     value={observacoesAgendamento}
                     onChange={(e) => setObservacoesAgendamento(e.target.value)}
-                    className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500 resize-none"
+                    className="w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500 resize-none"
                     rows={2}
                     placeholder="Observações opcionais..."
                   />
@@ -589,14 +589,14 @@ export default function PainelAgendamentos({
                 <div className="flex gap-2 pt-2">
                   <button
                     onClick={limparFormulario}
-                    className="flex-1 px-4 py-2.5 bg-[#334155] hover:bg-[#475569] rounded-lg text-sm transition-colors"
+                    className="flex-1 px-4 py-2.5 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg text-sm transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={criarAgendamento}
                     disabled={!dataAgendamento || !horaAgendamento || salvandoAgendamento}
-                    className="flex-1 px-4 py-2.5 bg-purple-500 hover:bg-purple-600 disabled:bg-[#334155] disabled:text-[#64748b] rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-2.5 bg-purple-500 hover:bg-purple-600 disabled:bg-[var(--theme-bg-tertiary)] disabled:text-[var(--theme-text-muted)] rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
                   >
                     {salvandoAgendamento ? (
                       <Loader2 size={16} className="animate-spin" />
@@ -619,7 +619,7 @@ export default function PainelAgendamentos({
           ) : agendamentos.length === 0 ? (
             <div className="text-center py-12">
               <Calendar size={48} className="mx-auto text-[#334155] mb-3" />
-              <p className="text-[#64748b]">Nenhum agendamento</p>
+              <p className="text-[var(--theme-text-muted)]">Nenhum agendamento</p>
               <p className="text-xs text-[#475569] mt-1">Clique em "Agendar" para criar</p>
             </div>
           ) : (
@@ -627,7 +627,7 @@ export default function PainelAgendamentos({
               {/* Pendentes */}
               {agendamentosPendentes.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-medium text-[#64748b] uppercase mb-2">Próximos</h4>
+                  <h4 className="text-xs font-medium text-[var(--theme-text-muted)] uppercase mb-2">Próximos</h4>
                   <div className="space-y-2">
                     {agendamentosPendentes.map((ag) => {
                       const { data, hora, isPast } = formatarDataHora(ag.data_hora);
@@ -636,10 +636,10 @@ export default function PainelAgendamentos({
                       return (
                         <div
                           key={ag.id}
-                          className={`p-3 bg-[#0f172a] rounded-lg border ${
+                          className={`p-3 bg-[var(--theme-input)] rounded-lg border ${
                             isPast && ag.status === 'agendado' 
                               ? 'border-orange-500/50' 
-                              : 'border-[#334155]'
+                              : 'border-[var(--theme-card-border)]'
                           }`}
                         >
                           <div className="flex items-start justify-between mb-2">
@@ -655,7 +655,7 @@ export default function PainelAgendamentos({
                                   </span>
                                 )}
                               </div>
-                              <p className="text-sm text-[#64748b]">
+                              <p className="text-sm text-[var(--theme-text-muted)]">
                                 {data} às {hora}
                               </p>
                             </div>
@@ -665,13 +665,13 @@ export default function PainelAgendamentos({
                           </div>
 
                           {ag.valor && (
-                            <p className="text-sm text-[#10b981] mb-2">
+                            <p className="text-sm text-primary mb-2">
                               R$ {ag.valor.toLocaleString('pt-BR')}
                             </p>
                           )}
 
                           {ag.observacoes && (
-                            <p className="text-xs text-[#64748b] mb-2 bg-[#1e293b] p-2 rounded">
+                            <p className="text-xs text-[var(--theme-text-muted)] mb-2 bg-[var(--theme-card)] p-2 rounded">
                               {ag.observacoes}
                             </p>
                           )}
@@ -726,7 +726,7 @@ export default function PainelAgendamentos({
               {/* Histórico */}
               {agendamentosPassados.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-medium text-[#64748b] uppercase mb-2 mt-6">Histórico</h4>
+                  <h4 className="text-xs font-medium text-[var(--theme-text-muted)] uppercase mb-2 mt-6">Histórico</h4>
                   <div className="space-y-2">
                     {agendamentosPassados.slice(0, 5).map((ag) => {
                       const { data, hora } = formatarDataHora(ag.data_hora);
@@ -735,12 +735,12 @@ export default function PainelAgendamentos({
                       return (
                         <div
                           key={ag.id}
-                          className="p-3 bg-[#0f172a]/50 rounded-lg border border-[#334155]/50"
+                          className="p-3 bg-[var(--theme-input)]/50 rounded-lg border border-[var(--theme-card-border)]/50"
                         >
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-sm">{ag.procedimento?.nome || 'Consulta'}</p>
-                              <p className="text-xs text-[#64748b]">{data}</p>
+                              <p className="text-xs text-[var(--theme-text-muted)]">{data}</p>
                             </div>
                             <span className={`text-xs px-2 py-0.5 rounded ${statusInfo.bg} ${statusInfo.cor}`}>
                               {statusInfo.label}

@@ -185,13 +185,13 @@ export function AlertProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`bg-[#1e293b] border border-[#334155] border-l-4 ${getToastBorder(toast.type)} rounded-lg shadow-lg p-4 flex items-center gap-3 min-w-[280px] max-w-[400px] animate-in slide-in-from-right duration-300`}
+            className={`bg-[var(--theme-card)] border border-[var(--theme-card-border)] border-l-4 ${getToastBorder(toast.type)} rounded-lg shadow-lg p-4 flex items-center gap-3 min-w-[280px] max-w-[400px] animate-in slide-in-from-right duration-300`}
           >
             {getToastIcon(toast.type)}
             <p className="text-white text-sm flex-1">{toast.message}</p>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-[#64748b] hover:text-white transition-colors"
+              className="text-[var(--theme-text-muted)] hover:text-white transition-colors"
             >
               <X size={16} />
             </button>
@@ -210,7 +210,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
           {/* Modal */}
           <div className="fixed inset-0 flex items-center justify-center z-[101] p-4">
             <div
-              className="bg-[#1e293b] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200"
+              className="bg-[var(--theme-card)] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header com ícone */}
@@ -225,7 +225,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
                     {options.title}
                   </h3>
                 )}
-                <p className="text-[#94a3b8]">
+                <p className="text-[var(--theme-text-secondary)]">
                   {options.message}
                 </p>
               </div>
@@ -237,7 +237,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
                     <button
                       onClick={handleCancel}
                       disabled={isLoading}
-                      className="flex-1 px-4 py-3 bg-[#334155] hover:bg-[#475569] text-white rounded-xl transition-colors font-medium disabled:opacity-50"
+                      className="flex-1 px-4 py-3 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] text-white rounded-xl transition-colors font-medium disabled:opacity-50"
                     >
                       {options.cancelText || 'Cancelar'}
                     </button>

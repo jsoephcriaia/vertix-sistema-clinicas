@@ -257,43 +257,43 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
   return (
     <div>
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={onBack} className="p-2 hover:bg-[#334155] rounded-lg transition-colors">
+        <button onClick={onBack} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors">
           <ArrowLeft size={20} />
         </button>
         <div>
           <h1 className="text-2xl font-bold">WhatsApp</h1>
-          <p className="text-[#64748b] text-sm">Conecte o WhatsApp da clínica para receber mensagens</p>
+          <p className="text-[var(--theme-text-muted)] text-sm">Conecte o WhatsApp da clínica para receber mensagens</p>
         </div>
       </div>
 
       <div className="max-w-xl mx-auto">
         {/* Status: Carregando inicial */}
         {status === 'loading' && (
-          <div className="bg-[#1e293b] rounded-xl p-8 text-center border border-[#334155]">
-            <Loader2 size={48} className="animate-spin text-[#10b981] mx-auto mb-6" />
+          <div className="bg-[var(--theme-card)] rounded-xl p-8 text-center border border-[var(--theme-card-border)]">
+            <Loader2 size={48} className="animate-spin text-primary mx-auto mb-6" />
             <h2 className="text-xl font-semibold mb-2">Verificando conexão...</h2>
-            <p className="text-[#64748b]">Aguarde um momento</p>
+            <p className="text-[var(--theme-text-muted)]">Aguarde um momento</p>
           </div>
         )}
 
         {/* Status: Desconectado */}
         {status === 'disconnected' && (
-          <div className="bg-[#1e293b] rounded-xl p-8 text-center border border-[#334155]">
-            <div className="w-20 h-20 bg-[#0f172a] rounded-full flex items-center justify-center mx-auto mb-6">
-              <Smartphone size={40} className="text-[#64748b]" />
+          <div className="bg-[var(--theme-card)] rounded-xl p-8 text-center border border-[var(--theme-card-border)]">
+            <div className="w-20 h-20 bg-[var(--theme-input)] rounded-full flex items-center justify-center mx-auto mb-6">
+              <Smartphone size={40} className="text-[var(--theme-text-muted)]" />
             </div>
             <h2 className="text-xl font-semibold mb-2">WhatsApp não conectado</h2>
-            <p className="text-[#64748b] mb-6">
+            <p className="text-[var(--theme-text-muted)] mb-6">
               Conecte seu WhatsApp para que a Secretária de IA possa atender seus clientes automaticamente
             </p>
             {instanceToken && (
-              <p className="text-xs text-[#64748b] mb-4">
-                Instância: <span className="text-[#10b981]">{instanceName}</span>
+              <p className="text-xs text-[var(--theme-text-muted)] mb-4">
+                Instância: <span className="text-primary">{instanceName}</span>
               </p>
             )}
             <button
               onClick={connectWhatsApp}
-              className="bg-[#10b981] hover:bg-[#059669] text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              className="bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
               {instanceToken ? 'Reconectar WhatsApp' : 'Conectar WhatsApp'}
             </button>
@@ -302,34 +302,34 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
 
         {/* Status: Gerando QR */}
         {status === 'generating' && (
-          <div className="bg-[#1e293b] rounded-xl p-8 text-center border border-[#334155]">
-            <Loader2 size={48} className="animate-spin text-[#10b981] mx-auto mb-6" />
+          <div className="bg-[var(--theme-card)] rounded-xl p-8 text-center border border-[var(--theme-card-border)]">
+            <Loader2 size={48} className="animate-spin text-primary mx-auto mb-6" />
             <h2 className="text-xl font-semibold mb-2">Gerando QR Code...</h2>
-            <p className="text-[#64748b]">Aguarde um momento</p>
+            <p className="text-[var(--theme-text-muted)]">Aguarde um momento</p>
           </div>
         )}
 
         {/* Status: QR Code */}
         {status === 'qrcode' && (
-          <div className="bg-[#1e293b] rounded-xl p-8 text-center border border-[#334155]">
+          <div className="bg-[var(--theme-card)] rounded-xl p-8 text-center border border-[var(--theme-card-border)]">
             <h2 className="text-xl font-semibold mb-4">Escaneie o QR Code</h2>
             
             {qrcode && (
               <img
                 src={qrcode}
                 alt="QR Code"
-                className="mx-auto mb-4 rounded-lg border-4 border-[#334155]"
+                className="mx-auto mb-4 rounded-lg border-4 border-[var(--theme-card-border)]"
                 style={{ maxWidth: '280px' }}
               />
             )}
 
-            <p className="text-[#64748b] text-sm mb-4">
-              Atualizando em <span className="text-[#10b981] font-bold">{countdown}s</span>...
+            <p className="text-[var(--theme-text-muted)] text-sm mb-4">
+              Atualizando em <span className="text-primary font-bold">{countdown}s</span>...
             </p>
 
-            <div className="bg-[#0f172a] rounded-lg p-4 text-left text-sm">
+            <div className="bg-[var(--theme-input)] rounded-lg p-4 text-left text-sm">
               <p className="font-medium mb-2">Como conectar:</p>
-              <ol className="list-decimal list-inside text-[#94a3b8] space-y-1">
+              <ol className="list-decimal list-inside text-[var(--theme-text-secondary)] space-y-1">
                 <li>Abra o <strong>WhatsApp</strong> no seu celular</li>
                 <li>Toque em <strong>Menu (⋮)</strong> ou <strong>Configurações</strong></li>
                 <li>Toque em <strong>Dispositivos Conectados</strong></li>
@@ -340,7 +340,7 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
 
             <button
               onClick={resetAndRetry}
-              className="mt-4 text-[#64748b] hover:text-white text-sm transition-colors"
+              className="mt-4 text-[var(--theme-text-muted)] hover:text-white text-sm transition-colors"
             >
               Cancelar
             </button>
@@ -349,26 +349,26 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
 
         {/* Status: Conectado */}
         {status === 'connected' && (
-          <div className="bg-[#1e293b] rounded-xl p-8 border border-[#10b981]">
+          <div className="bg-[var(--theme-card)] rounded-xl p-8 border border-[#10b981]">
             <div className="text-center mb-6">
-              <div className="w-20 h-20 bg-[#10b981]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle size={40} className="text-[#10b981]" />
+              <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle size={40} className="text-primary" />
               </div>
               <h2 className="text-xl font-semibold mb-2">WhatsApp Conectado!</h2>
-              <p className="text-[#10b981]">Seu WhatsApp está pronto para uso</p>
+              <p className="text-primary">Seu WhatsApp está pronto para uso</p>
             </div>
 
-            <div className="bg-[#0f172a] rounded-lg p-4 mb-6">
+            <div className="bg-[var(--theme-input)] rounded-lg p-4 mb-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-[#10b981] flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
                   <Smartphone size={24} className="text-white" />
                 </div>
                 <div>
                   <p className="font-medium">{phoneNumber || 'Número conectado'}</p>
-                  <p className="text-sm text-[#64748b]">Instância: {instanceName}</p>
+                  <p className="text-sm text-[var(--theme-text-muted)]">Instância: {instanceName}</p>
                 </div>
                 <div className="ml-auto">
-                  <span className="px-3 py-1 rounded-full text-xs bg-[#10b981]/20 text-[#10b981]">
+                  <span className="px-3 py-1 rounded-full text-xs bg-primary/20 text-primary">
                     ● Online
                   </span>
                 </div>
@@ -387,7 +387,7 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
 
         {/* Status: Erro */}
         {status === 'error' && (
-          <div className="bg-[#1e293b] rounded-xl p-8 text-center border border-red-500">
+          <div className="bg-[var(--theme-card)] rounded-xl p-8 text-center border border-red-500">
             <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
               <XCircle size={40} className="text-red-500" />
             </div>
@@ -395,7 +395,7 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
             <p className="text-red-400 mb-6">{errorMessage}</p>
             <button
               onClick={resetAndRetry}
-              className="bg-[#334155] hover:bg-[#475569] text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
+              className="bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 mx-auto"
             >
               <RefreshCw size={18} />
               Tentar novamente

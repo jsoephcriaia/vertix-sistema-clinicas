@@ -194,7 +194,7 @@ export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={32} className="animate-spin text-[#10b981]" />
+        <Loader2 size={32} className="animate-spin text-primary" />
       </div>
     );
   }
@@ -202,33 +202,33 @@ export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
   return (
     <div>
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={onBack} className="p-2 hover:bg-[#334155] rounded-lg transition-colors">
+        <button onClick={onBack} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors">
           <ArrowLeft size={20} />
         </button>
         <div>
           <h1 className="text-2xl font-bold">Horários de Atendimento</h1>
-          <p className="text-[#64748b] text-sm">Configure os dias e horários de funcionamento</p>
+          <p className="text-[var(--theme-text-muted)] text-sm">Configure os dias e horários de funcionamento</p>
         </div>
       </div>
 
       <div className="space-y-6">
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
+        <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] p-6">
           <h2 className="font-semibold mb-4 flex items-center gap-2">
-            <Clock size={20} className="text-[#10b981]" />
+            <Clock size={20} className="text-primary" />
             Horários por Dia da Semana
           </h2>
           <div className="space-y-4">
             {horarios.map((h) => (
-              <div key={h.dia_semana} className={`flex flex-wrap items-center gap-4 p-4 rounded-lg ${h.ativo ? 'bg-[#0f172a]' : 'bg-[#0f172a]/50'}`}>
+              <div key={h.dia_semana} className={`flex flex-wrap items-center gap-4 p-4 rounded-lg ${h.ativo ? 'bg-[var(--theme-input)]' : 'bg-[var(--theme-input)]/50'}`}>
                 <div className="w-36">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={h.ativo}
                       onChange={(e) => handleHorarioChange(h.dia_semana, 'ativo', e.target.checked)}
-                      className="w-4 h-4 rounded border-[#334155] bg-[#0f172a] text-[#10b981] focus:ring-[#10b981]"
+                      className="w-4 h-4 rounded border-[var(--theme-card-border)] bg-[var(--theme-input)] text-primary focus:ring-[#10b981]"
                     />
-                    <span className={h.ativo ? 'text-white' : 'text-[#64748b]'}>{diasSemana[h.dia_semana]}</span>
+                    <span className={h.ativo ? 'text-white' : 'text-[var(--theme-text-muted)]'}>{diasSemana[h.dia_semana]}</span>
                   </label>
                 </div>
                 {h.ativo && (
@@ -238,43 +238,43 @@ export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
                         type="time"
                         value={h.abertura}
                         onChange={(e) => handleHorarioChange(h.dia_semana, 'abertura', e.target.value)}
-                        className="bg-[#334155] border border-[#475569] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-[#10b981]"
+                        className="bg-[var(--theme-bg-tertiary)] border border-[#475569] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary"
                       />
-                      <span className="text-[#64748b]">às</span>
+                      <span className="text-[var(--theme-text-muted)]">às</span>
                       <input
                         type="time"
                         value={h.fechamento}
                         onChange={(e) => handleHorarioChange(h.dia_semana, 'fechamento', e.target.value)}
-                        className="bg-[#334155] border border-[#475569] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-[#10b981]"
+                        className="bg-[var(--theme-bg-tertiary)] border border-[#475569] rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary"
                       />
                     </div>
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="text-[#64748b]">Intervalo:</span>
+                      <span className="text-[var(--theme-text-muted)]">Intervalo:</span>
                       <input
                         type="time"
                         value={h.intervalo_inicio}
                         onChange={(e) => handleHorarioChange(h.dia_semana, 'intervalo_inicio', e.target.value)}
-                        className="bg-[#334155] border border-[#475569] rounded px-2 py-1 text-sm focus:outline-none focus:border-[#10b981] w-24"
+                        className="bg-[var(--theme-bg-tertiary)] border border-[#475569] rounded px-2 py-1 text-sm focus:outline-none focus:border-primary w-24"
                       />
-                      <span className="text-[#64748b]">-</span>
+                      <span className="text-[var(--theme-text-muted)]">-</span>
                       <input
                         type="time"
                         value={h.intervalo_fim}
                         onChange={(e) => handleHorarioChange(h.dia_semana, 'intervalo_fim', e.target.value)}
-                        className="bg-[#334155] border border-[#475569] rounded px-2 py-1 text-sm focus:outline-none focus:border-[#10b981] w-24"
+                        className="bg-[var(--theme-bg-tertiary)] border border-[#475569] rounded px-2 py-1 text-sm focus:outline-none focus:border-primary w-24"
                       />
                     </div>
                   </>
                 )}
                 {!h.ativo && (
-                  <span className="text-[#64748b] text-sm">Fechado</span>
+                  <span className="text-[var(--theme-text-muted)] text-sm">Fechado</span>
                 )}
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-[#1e293b] rounded-xl border border-[#334155] p-6">
+        <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold flex items-center gap-2">
               <Ban size={20} className="text-red-400" />
@@ -282,7 +282,7 @@ export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
             </h2>
             <button
               onClick={() => setShowBloqueioModal(true)}
-              className="px-3 py-1.5 bg-[#334155] hover:bg-[#475569] rounded-lg text-sm flex items-center gap-2 transition-colors"
+              className="px-3 py-1.5 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg text-sm flex items-center gap-2 transition-colors"
             >
               <Plus size={16} />
               Adicionar Bloqueio
@@ -290,14 +290,14 @@ export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
           </div>
           
           {bloqueios.length === 0 ? (
-            <p className="text-[#64748b] text-center py-8">Nenhum bloqueio configurado</p>
+            <p className="text-[var(--theme-text-muted)] text-center py-8">Nenhum bloqueio configurado</p>
           ) : (
             <div className="space-y-3">
               {bloqueios.map((b) => (
-                <div key={b.id} className="flex items-center justify-between p-3 bg-[#0f172a] rounded-lg">
+                <div key={b.id} className="flex items-center justify-between p-3 bg-[var(--theme-input)] rounded-lg">
                   <div>
                     <p className="font-medium">{b.descricao}</p>
-                    <p className="text-sm text-[#64748b]">
+                    <p className="text-sm text-[var(--theme-text-muted)]">
                       {new Date(b.data + 'T00:00:00').toLocaleDateString('pt-BR')} • {b.hora_inicio} - {b.hora_fim}
                       {b.recorrente && <span className="ml-2 text-blue-400">(Semanal)</span>}
                     </p>
@@ -318,7 +318,7 @@ export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+            className="bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
             {saving ? 'Salvando...' : 'Salvar Alterações'}
@@ -328,50 +328,50 @@ export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
 
       {showBloqueioModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowBloqueioModal(false)}>
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Novo Bloqueio</h2>
-              <button onClick={() => setShowBloqueioModal(false)} className="p-2 hover:bg-[#334155] rounded-lg">
+              <button onClick={() => setShowBloqueioModal(false)} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg">
                 <X size={20} />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Descrição</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Descrição</label>
                 <input
                   type="text"
                   value={novoBloqueio.descricao}
                   onChange={(e) => setNovoBloqueio(prev => ({ ...prev, descricao: e.target.value }))}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-2 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-2 focus:outline-none focus:border-primary"
                   placeholder="Ex: Feriado, Reunião..."
                 />
               </div>
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Data</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Data</label>
                 <input
                   type="date"
                   value={novoBloqueio.data}
                   onChange={(e) => setNovoBloqueio(prev => ({ ...prev, data: e.target.value }))}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-2 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-2 focus:outline-none focus:border-primary"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-[#64748b] mb-2">Hora Início</label>
+                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Hora Início</label>
                   <input
                     type="time"
                     value={novoBloqueio.hora_inicio}
                     onChange={(e) => setNovoBloqueio(prev => ({ ...prev, hora_inicio: e.target.value }))}
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-2 focus:outline-none focus:border-[#10b981]"
+                    className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-2 focus:outline-none focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-[#64748b] mb-2">Hora Fim</label>
+                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Hora Fim</label>
                   <input
                     type="time"
                     value={novoBloqueio.hora_fim}
                     onChange={(e) => setNovoBloqueio(prev => ({ ...prev, hora_fim: e.target.value }))}
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-2 focus:outline-none focus:border-[#10b981]"
+                    className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-2 focus:outline-none focus:border-primary"
                   />
                 </div>
               </div>
@@ -380,7 +380,7 @@ export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
                   type="checkbox"
                   checked={novoBloqueio.recorrente}
                   onChange={(e) => setNovoBloqueio(prev => ({ ...prev, recorrente: e.target.checked }))}
-                  className="w-4 h-4 rounded border-[#334155] bg-[#0f172a] text-[#10b981] focus:ring-[#10b981]"
+                  className="w-4 h-4 rounded border-[var(--theme-card-border)] bg-[var(--theme-input)] text-primary focus:ring-[#10b981]"
                 />
                 <span className="text-sm">Repetir semanalmente</span>
               </label>
@@ -388,13 +388,13 @@ export default function ConfigHorarios({ onBack }: ConfigHorariosProps) {
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setShowBloqueioModal(false)}
-                className="px-4 py-2 bg-[#334155] hover:bg-[#475569] rounded-lg transition-colors"
+                className="px-4 py-2 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleAddBloqueio}
-                className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] rounded-lg transition-colors"
+                className="px-4 py-2 bg-primary hover:bg-primary-hover rounded-lg transition-colors"
               >
                 Adicionar
               </button>

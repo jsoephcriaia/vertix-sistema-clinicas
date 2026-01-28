@@ -360,7 +360,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
       );
     }
     return (
-      <div className="w-14 h-14 rounded-full bg-[#10b981] flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+      <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
         {nome.charAt(0).toUpperCase()}
       </div>
     );
@@ -369,7 +369,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={32} className="animate-spin text-[#10b981]" />
+        <Loader2 size={32} className="animate-spin text-primary" />
       </div>
     );
   }
@@ -379,11 +379,11 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Clientes</h1>
-          <p className="text-[#64748b] text-sm">{clientes.length} clientes cadastrados</p>
+          <p className="text-[var(--theme-text-muted)] text-sm">{clientes.length} clientes cadastrados</p>
         </div>
         <button
           onClick={handleNew}
-          className="bg-[#10b981] hover:bg-[#059669] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
         >
           <Plus size={20} />
           Novo Cliente
@@ -393,19 +393,19 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" size={18} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--theme-text-muted)]" size={18} />
           <input
             type="text"
             placeholder="Buscar por nome, telefone ou email..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            className="w-full bg-[#1e293b] border border-[#334155] rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-[#10b981]"
+            className="w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-primary"
           />
         </div>
         <select
           value={filtroStatus}
           onChange={(e) => setFiltroStatus(e.target.value)}
-          className="bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-2.5 focus:outline-none focus:border-[#10b981]"
+          className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg px-4 py-2.5 focus:outline-none focus:border-primary"
         >
           <option value="todos">Todos os status</option>
           <option value="ativo">Ativos</option>
@@ -416,7 +416,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
 
       {/* Lista de Clientes */}
       {clientesFiltrados.length === 0 ? (
-        <div className="text-center py-12 text-[#64748b]">
+        <div className="text-center py-12 text-[var(--theme-text-muted)]">
           <User size={48} className="mx-auto mb-4 opacity-50" />
           <p>Nenhum cliente encontrado</p>
         </div>
@@ -425,7 +425,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
           {clientesFiltrados.map((cliente) => (
             <div
               key={cliente.id}
-              className="bg-[#1e293b] rounded-xl border border-[#334155] p-5 hover:border-[#10b981] transition-colors"
+              className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] p-5 hover:border-primary transition-colors"
             >
               <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                 {/* Avatar e Info Principal */}
@@ -436,7 +436,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                       <h3 className="font-semibold truncate">{cliente.nome}</h3>
                       {getStatusBadge(cliente.status)}
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#64748b]">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--theme-text-muted)]">
                       <span className="flex items-center gap-1">
                         <Phone size={14} />
                         {cliente.telefone || 'Sem telefone'}
@@ -454,26 +454,26 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                 {/* Métricas */}
                 <div className="flex flex-wrap gap-6 lg:gap-8">
                   <div className="text-center">
-                    <p className="text-xs text-[#64748b]">Total Gasto</p>
-                    <p className="font-semibold text-[#10b981]">
+                    <p className="text-xs text-[var(--theme-text-muted)]">Total Gasto</p>
+                    <p className="font-semibold text-primary">
                       R$ {Number(cliente.total_gasto || 0).toLocaleString('pt-BR')}
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-[#64748b]">Procedimentos</p>
+                    <p className="text-xs text-[var(--theme-text-muted)]">Procedimentos</p>
                     <p className="font-semibold">{cliente.total_procedimentos || 0}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-[#64748b]">Último Atend.</p>
+                    <p className="text-xs text-[var(--theme-text-muted)]">Último Atend.</p>
                     <p className="font-semibold">{formatarData(cliente.ultimo_atendimento)}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-[#64748b]">Próx. Retorno</p>
+                    <p className="text-xs text-[var(--theme-text-muted)]">Próx. Retorno</p>
                     <p className={`font-semibold ${cliente.proximo_retorno && new Date(cliente.proximo_retorno) < new Date() ? 'text-red-400' : ''}`}>
                       {formatarData(cliente.proximo_retorno)}
                     </p>
                     {cliente.proximo_procedimento && (
-                      <p className="text-xs text-[#64748b]">{cliente.proximo_procedimento}</p>
+                      <p className="text-xs text-[var(--theme-text-muted)]">{cliente.proximo_procedimento}</p>
                     )}
                   </div>
                 </div>
@@ -490,17 +490,17 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                   <button
                     onClick={() => handleEnviarMensagem(cliente)}
                     disabled={!cliente.telefone}
-                    className="p-2 hover:bg-[#10b981]/20 rounded-lg transition-colors disabled:opacity-50"
+                    className="p-2 hover:bg-primary/20 rounded-lg transition-colors disabled:opacity-50"
                     title={cliente.telefone ? 'Enviar mensagem' : 'Sem telefone'}
                   >
-                    <MessageSquare size={18} className="text-[#10b981]" />
+                    <MessageSquare size={18} className="text-primary" />
                   </button>
                   <button
                     onClick={() => handleEdit(cliente)}
-                    className="p-2 hover:bg-[#334155] rounded-lg transition-colors"
+                    className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors"
                     title="Editar"
                   >
-                    <Edit size={18} className="text-[#64748b]" />
+                    <Edit size={18} className="text-[var(--theme-text-muted)]" />
                   </button>
                   <button
                     onClick={() => handleDelete(cliente.id, cliente.nome)}
@@ -513,8 +513,8 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
               </div>
 
               {cliente.observacoes && (
-                <div className="mt-4 pt-4 border-t border-[#334155]">
-                  <p className="text-sm text-[#94a3b8]">{cliente.observacoes}</p>
+                <div className="mt-4 pt-4 border-t border-[var(--theme-card-border)]">
+                  <p className="text-sm text-[var(--theme-text-secondary)]">{cliente.observacoes}</p>
                 </div>
               )}
             </div>
@@ -525,57 +525,57 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
       {/* Modal */}
       {showModal && editando && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-[#334155] flex items-center justify-between">
+          <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-[var(--theme-card-border)] flex items-center justify-between">
               <h2 className="text-xl font-semibold">
                 {editando.id ? 'Editar Cliente' : 'Novo Cliente'}
               </h2>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[#334155] rounded-lg">
+              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg">
                 <X size={20} />
               </button>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Nome *</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Nome *</label>
                 <input
                   type="text"
                   value={editando.nome}
                   onChange={(e) => setEditando({ ...editando, nome: e.target.value })}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="Nome completo"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-[#64748b] mb-2">Telefone</label>
+                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Telefone</label>
                   <input
                     type="text"
                     value={editando.telefone}
                     onChange={(e) => setEditando({ ...editando, telefone: e.target.value })}
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                    className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                     placeholder="+5511999999999"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-[#64748b] mb-2">Email</label>
+                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Email</label>
                   <input
                     type="email"
                     value={editando.email}
                     onChange={(e) => setEditando({ ...editando, email: e.target.value })}
-                    className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                    className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                     placeholder="email@exemplo.com"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Status</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Status</label>
                 <select
                   value={editando.status}
                   onChange={(e) => setEditando({ ...editando, status: e.target.value })}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                 >
                   <option value="ativo">Ativo</option>
                   <option value="vip">VIP</option>
@@ -584,28 +584,28 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
               </div>
 
               <div>
-                <label className="block text-sm text-[#64748b] mb-2">Observações</label>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Observações</label>
                 <textarea
                   value={editando.observacoes}
                   onChange={(e) => setEditando({ ...editando, observacoes: e.target.value })}
                   rows={3}
-                  className="w-full bg-[#0f172a] border border-[#334155] rounded-lg px-4 py-3 focus:outline-none focus:border-[#10b981]"
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
                   placeholder="Observações sobre o cliente..."
                 />
               </div>
             </div>
 
-            <div className="p-6 border-t border-[#334155] flex justify-end gap-3">
+            <div className="p-6 border-t border-[var(--theme-card-border)] flex justify-end gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-[#334155] hover:bg-[#475569] rounded-lg transition-colors"
+                className="px-4 py-2 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving || !editando.nome}
-                className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] rounded-lg transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] rounded-lg transition-colors flex items-center gap-2"
               >
                 {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                 Salvar
@@ -618,15 +618,15 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
       {/* Modal Histórico */}
       {showHistorico && clienteHistorico && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => { setShowHistorico(false); setClienteHistorico(null); }}>
-          <div className="bg-[#1e293b] rounded-xl border border-[#334155] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-[#334155] flex items-center justify-between">
+          <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-[var(--theme-card-border)] flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold">Histórico de Procedimentos</h2>
-                <p className="text-sm text-[#64748b]">{clienteHistorico.nome}</p>
+                <p className="text-sm text-[var(--theme-text-muted)]">{clienteHistorico.nome}</p>
               </div>
               <button
                 onClick={() => { setShowHistorico(false); setClienteHistorico(null); }}
-                className="p-2 hover:bg-[#334155] rounded-lg"
+                className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg"
               >
                 <X size={20} />
               </button>
@@ -638,7 +638,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                   <Loader2 size={32} className="animate-spin text-purple-400" />
                 </div>
               ) : historicoProcedimentos.length === 0 ? (
-                <div className="text-center py-12 text-[#64748b]">
+                <div className="text-center py-12 text-[var(--theme-text-muted)]">
                   <History size={48} className="mx-auto mb-4 opacity-50" />
                   <p>Nenhum procedimento encontrado</p>
                 </div>
@@ -664,7 +664,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                     return (
                       <div 
                         key={item.id} 
-                        className="flex items-center justify-between p-4 bg-[#0f172a] rounded-lg border border-[#334155]"
+                        className="flex items-center justify-between p-4 bg-[var(--theme-input)] rounded-lg border border-[var(--theme-card-border)]"
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
@@ -675,7 +675,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-[#64748b]">
+                          <p className="text-sm text-[var(--theme-text-muted)]">
                             {data.toLocaleDateString('pt-BR')} às {data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
@@ -684,7 +684,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                             {statusLabels[item.status] || item.status}
                           </span>
                           {item.valor && (
-                            <p className="text-sm text-[#10b981] mt-1">
+                            <p className="text-sm text-primary mt-1">
                               R$ {item.valor.toLocaleString('pt-BR')}
                             </p>
                           )}
@@ -694,28 +694,28 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
                   })}
 
                   {/* Resumo */}
-                  <div className="mt-6 pt-4 border-t border-[#334155]">
+                  <div className="mt-6 pt-4 border-t border-[var(--theme-card-border)]">
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
-                        <p className="text-2xl font-bold text-[#10b981]">
+                        <p className="text-2xl font-bold text-primary">
                           {historicoProcedimentos.filter(h => h.status === 'realizado').length}
                         </p>
-                        <p className="text-xs text-[#64748b]">Realizados</p>
+                        <p className="text-xs text-[var(--theme-text-muted)]">Realizados</p>
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-yellow-400">
                           {historicoProcedimentos.filter(h => ['agendado', 'confirmado'].includes(h.status)).length}
                         </p>
-                        <p className="text-xs text-[#64748b]">Pendentes</p>
+                        <p className="text-xs text-[var(--theme-text-muted)]">Pendentes</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-[#10b981]">
+                        <p className="text-2xl font-bold text-primary">
                           R$ {historicoProcedimentos
                             .filter(h => h.status === 'realizado')
                             .reduce((sum, h) => sum + (h.valor || 0), 0)
                             .toLocaleString('pt-BR')}
                         </p>
-                        <p className="text-xs text-[#64748b]">Total Gasto</p>
+                        <p className="text-xs text-[var(--theme-text-muted)]">Total Gasto</p>
                       </div>
                     </div>
                   </div>
