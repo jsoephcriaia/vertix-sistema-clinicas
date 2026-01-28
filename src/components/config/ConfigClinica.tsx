@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Save, Upload, MapPin, Phone, Mail, Instagram, Facebook, Globe, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { useAlert } from '@/components/Alert';
 
 interface ConfigClinicaProps {
   onBack: () => void;
@@ -11,6 +12,7 @@ interface ConfigClinicaProps {
 
 export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
   const { clinica } = useAuth();
+  const { showToast } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
   const [loading, setLoading] = useState(true);
@@ -78,17 +80,17 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
 
   const handleUploadLogo = async (file: File) => {
     if (!driveConectado) {
-      alert('Conecte o Google Drive nas Integrações antes de fazer upload de imagens.');
+      showToast('Conecte o Google Drive nas Integrações antes de fazer upload.', 'warning');
       return;
     }
 
     if (!file.type.startsWith('image/')) {
-      alert('Por favor, selecione apenas arquivos de imagem.');
+      showToast('Por favor, selecione apenas arquivos de imagem.', 'error');
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      alert('A imagem deve ter no máximo 2MB.');
+      showToast('A imagem deve ter no máximo 2MB.', 'error');
       return;
     }
 
@@ -112,10 +114,10 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
       }
 
       setLogoUrl(result.imageUrl);
-      alert('Logo enviada com sucesso!');
+      showToast('Logo enviada com sucesso!', 'success');
     } catch (error) {
       console.error('Erro ao enviar logo:', error);
-      alert('Erro ao enviar logo: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      showToast('Erro ao enviar logo: ' + (error instanceof Error ? error.message : 'Erro desconhecido'), 'error');
     } finally {
       setUploadingLogo(false);
     }
@@ -154,9 +156,9 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
 
     if (error) {
       console.error('Erro ao salvar:', error);
-      alert('Erro ao salvar dados');
+      showToast('Erro ao salvar dados', 'error');
     } else {
-      alert('Dados salvos com sucesso!');
+      showToast('Dados salvos com sucesso!', 'success');
     }
 
     setSaving(false);

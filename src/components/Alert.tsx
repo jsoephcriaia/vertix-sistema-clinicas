@@ -15,6 +15,12 @@ interface AlertOptions {
   onCancel?: () => void;
 }
 
+interface Toast {
+  id: number;
+  message: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+}
+
 interface AlertContextType {
   showAlert: (options: AlertOptions) => void;
   showConfirm: (message: string, onConfirm: () => void | Promise<void>, title?: string) => void;
@@ -23,6 +29,7 @@ interface AlertContextType {
   showWarning: (message: string, title?: string) => void;
   showLoading: (message: string, title?: string) => void;
   hideAlert: () => void;
+  showToast: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
 const AlertContext = createContext<AlertContextType | null>(null);
@@ -39,6 +46,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [options, setOptions] = useState<AlertOptions | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showAlert = (opts: AlertOptions) => {
     setOptions(opts);
@@ -77,6 +85,20 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     setIsOpen(false);
     setOptions(null);
     setIsLoading(false);
+  };
+
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 3000);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
   };
 
   const handleConfirm = async () => {
@@ -128,21 +150,66 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const getToastIcon = (type: string) => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle size={20} className="text-emerald-500 flex-shrink-0" />;
+      case 'error':
+        return <AlertCircle size={20} className="text-red-500 flex-shrink-0" />;
+      case 'warning':
+        return <AlertTriangle size={20} className="text-amber-500 flex-shrink-0" />;
+      default:
+        return <Info size={20} className="text-blue-500 flex-shrink-0" />;
+    }
+  };
+
+  const getToastBorder = (type: string) => {
+    switch (type) {
+      case 'success':
+        return 'border-l-emerald-500';
+      case 'error':
+        return 'border-l-red-500';
+      case 'warning':
+        return 'border-l-amber-500';
+      default:
+        return 'border-l-blue-500';
+    }
+  };
+
   return (
-    <AlertContext.Provider value={{ showAlert, showConfirm, showSuccess, showError, showWarning, showLoading, hideAlert }}>
+    <AlertContext.Provider value={{ showAlert, showConfirm, showSuccess, showError, showWarning, showLoading, hideAlert, showToast }}>
       {children}
-      
+
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-[200] flex flex-col gap-2">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`bg-[#1e293b] border border-[#334155] border-l-4 ${getToastBorder(toast.type)} rounded-lg shadow-lg p-4 flex items-center gap-3 min-w-[280px] max-w-[400px] animate-in slide-in-from-right duration-300`}
+          >
+            {getToastIcon(toast.type)}
+            <p className="text-white text-sm flex-1">{toast.message}</p>
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="text-[#64748b] hover:text-white transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+
       {isOpen && options && (
         <>
           {/* Overlay */}
-          <div 
+          <div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
             onClick={options.type !== 'loading' && options.type !== 'confirm' ? hideAlert : undefined}
           />
-          
+
           {/* Modal */}
           <div className="fixed inset-0 flex items-center justify-center z-[101] p-4">
-            <div 
+            <div
               className="bg-[#1e293b] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200"
               onClick={(e) => e.stopPropagation()}
             >
@@ -150,7 +217,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
               <div className="pt-8 pb-4 flex justify-center">
                 {getIcon()}
               </div>
-              
+
               {/* Conteúdo */}
               <div className="px-6 pb-6 text-center">
                 {options.title && (
@@ -162,7 +229,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
                   {options.message}
                 </p>
               </div>
-              
+
               {/* Botões */}
               {options.type !== 'loading' && (
                 <div className="px-6 pb-6 flex gap-3">
