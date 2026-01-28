@@ -82,7 +82,7 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
 
       showToast('Perfil atualizado!', 'success');
       setShowPerfilModal(false);
-      if (refreshUsuario) refreshUsuario();
+      if (refreshUsuario) await refreshUsuario();
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
       showToast('Erro ao salvar perfil', 'error');
@@ -129,7 +129,9 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
         .eq('id', usuario.id);
 
       showToast('Avatar atualizado!', 'success');
-      if (refreshUsuario) refreshUsuario();
+      // Aguardar um pouco antes de atualizar para garantir que o banco foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (refreshUsuario) await refreshUsuario();
     } catch (error) {
       console.error('Erro ao enviar avatar:', error);
       showToast('Erro ao enviar avatar', 'error');
@@ -148,7 +150,7 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
         .eq('id', usuario.id);
 
       showToast('Avatar removido!', 'success');
-      if (refreshUsuario) refreshUsuario();
+      if (refreshUsuario) await refreshUsuario();
     } catch (error) {
       console.error('Erro ao remover avatar:', error);
       showToast('Erro ao remover avatar', 'error');
