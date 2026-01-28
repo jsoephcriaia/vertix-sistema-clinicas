@@ -117,39 +117,45 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
     try {
       const webhookUrl = `${window.location.origin}/api/webhook/uazapi`;
 
-      // Verificar webhook atual
-      const checkResponse = await fetch(`${UAZAPI_URL}/webhook/get`, {
-        method: 'GET',
-        headers: { 'token': token },
-      });
+      // Tentar diferentes endpoints de webhook do UAZAPI
+      const endpoints = [
+        { url: `${UAZAPI_URL}/instance/setWebhook`, method: 'POST' },
+        { url: `${UAZAPI_URL}/instance/webhook`, method: 'PUT' },
+        { url: `${UAZAPI_URL}/webhook`, method: 'POST' },
+      ];
 
-      if (checkResponse.ok) {
-        const webhookData = await checkResponse.json();
-        const currentUrl = webhookData.webhook?.url || webhookData.webhookUrl || '';
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`Tentando configurar webhook via ${endpoint.url}...`);
+          const response = await fetch(endpoint.url, {
+            method: endpoint.method,
+            headers: {
+              'Content-Type': 'application/json',
+              'token': token,
+            },
+            body: JSON.stringify({
+              webhookUrl: webhookUrl,
+              url: webhookUrl,
+              webhook: webhookUrl,
+              enabled: true,
+              webhookEnabled: true,
+            }),
+          });
 
-        // Se já está configurado corretamente, não faz nada
-        if (currentUrl === webhookUrl) {
-          console.log('Webhook já está configurado corretamente');
-          return;
+          if (response.ok) {
+            const result = await response.json();
+            console.log('Webhook configurado com sucesso via:', endpoint.url, result);
+            return;
+          }
+          console.log(`Endpoint ${endpoint.url} retornou:`, response.status);
+        } catch (e) {
+          console.log(`Erro no endpoint ${endpoint.url}:`, e);
         }
       }
 
-      // Configurar webhook
-      console.log('Configurando webhook automaticamente:', webhookUrl);
-      await fetch(`${UAZAPI_URL}/webhook/set`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'token': token,
-        },
-        body: JSON.stringify({
-          webhookUrl: webhookUrl,
-          webhookEnabled: true,
-        }),
-      });
-      console.log('Webhook configurado com sucesso');
+      console.warn('Nenhum endpoint de webhook funcionou. Configure manualmente no painel UAZAPI.');
     } catch (error) {
-      console.error('Erro ao verificar/configurar webhook:', error);
+      console.error('Erro ao configurar webhook:', error);
     }
   };
 
@@ -212,26 +218,8 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       }
 
       // Configurar webhook do UAZAPI para receber mensagens
-      const webhookUrl = `${window.location.origin}/api/webhook/uazapi`;
-      console.log('Configurando webhook UAZAPI:', webhookUrl);
-
-      try {
-        await fetch(`${UAZAPI_URL}/webhook/set`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'token': token,
-          },
-          body: JSON.stringify({
-            webhookUrl: webhookUrl,
-            webhookEnabled: true,
-          }),
-        });
-        console.log('Webhook configurado com sucesso');
-      } catch (webhookError) {
-        console.error('Erro ao configurar webhook:', webhookError);
-        // Continua mesmo se falhar - pode ser configurado manualmente
-      }
+      console.log('Configurando webhook UAZAPI...');
+      await ensureWebhookConfigured(token);
 
       // Gerar QR Code (conectar)
       const connectResponse = await fetch(`${UAZAPI_URL}/instance/connect`, {

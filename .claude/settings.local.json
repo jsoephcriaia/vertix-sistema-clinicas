@@ -13,7 +13,9 @@
       "Bash(npx tsc:*)",
       "Bash(xargs:*)",
       "Bash(npm run sync-n8n:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebFetch(domain:docs.uazapi.com)",
+      "WebFetch(domain:www.postman.com)"
     ]
   }
 }
