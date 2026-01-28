@@ -205,7 +205,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   // Buscar lead quando selecionar conversa (só quando muda o ID)
   useEffect(() => {
     if (conversaSelecionada && CLINICA_ID) {
-      fetchLeadIA(conversaSelecionada.id, conversaSelecionada.telefone);
+      fetchLeadIA(conversaSelecionada.id, conversaSelecionada.telefone, conversaSelecionada.avatar);
     } else {
       setLeadIA(null);
     }
@@ -248,7 +248,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   }, [audioUrl]);
 
   // Buscar lead pelo conversation_id ou telefone
-  const fetchLeadIA = async (conversationId: number, telefone: string) => {
+  const fetchLeadIA = async (conversationId: number, telefone: string, avatar?: string) => {
     if (!CLINICA_ID) return;
     
     setLoadingLead(true);
@@ -276,8 +276,17 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
       }
       
       if (data && !error) {
+        // Sincroniza avatar do Chatwoot → leads_ia
+        if (avatar && avatar !== data.avatar) {
+          await supabase
+            .from('leads_ia')
+            .update({ avatar })
+            .eq('id', data.id);
+          data.avatar = avatar;
+        }
+
         setLeadIA(data);
-        
+
         // Se o lead tem nome, atualiza o nome da conversa selecionada
         if (data.nome && conversaSelecionada) {
           setConversaSelecionada(prev => prev ? { ...prev, nome: data.nome } : null);
