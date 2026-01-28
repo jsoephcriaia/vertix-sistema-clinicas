@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Save, Upload, MapPin, Phone, Mail, Instagram, Facebook, Globe, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Upload, MapPin, Phone, Mail, Instagram, Facebook, Globe, Loader2, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
@@ -132,6 +132,23 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
     e.target.value = '';
   };
 
+  const handleDeleteLogo = async () => {
+    try {
+      const { error } = await supabase
+        .from('clinicas')
+        .update({ logo_url: null, updated_at: new Date().toISOString() })
+        .eq('id', CLINICA_ID);
+
+      if (error) throw error;
+
+      setLogoUrl(null);
+      showToast('Logo removida com sucesso!', 'success');
+    } catch (error) {
+      console.error('Erro ao remover logo:', error);
+      showToast('Erro ao remover logo', 'error');
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
 
@@ -191,9 +208,18 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
         <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] p-6">
           <h2 className="font-semibold mb-4">Logo da Clínica</h2>
           <div className="flex items-center gap-4">
-            <div className="w-24 h-24 rounded-xl bg-[var(--theme-bg-tertiary)] flex items-center justify-center overflow-hidden">
+            <div className="w-24 h-24 rounded-xl bg-[var(--theme-bg-tertiary)] flex items-center justify-center overflow-hidden relative group">
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                <>
+                  <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                  <button
+                    onClick={handleDeleteLogo}
+                    className="absolute top-1 right-1 p-1.5 bg-red-500 hover:bg-red-600 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remover logo"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </>
               ) : (
                 <Upload size={32} className="text-[var(--theme-text-muted)]" />
               )}

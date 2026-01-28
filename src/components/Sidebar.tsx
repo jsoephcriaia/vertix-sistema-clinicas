@@ -1,22 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import { 
-  LayoutDashboard, 
-  MessageSquare, 
-  Kanban, 
-  Users, 
+import { useState, useRef } from 'react';
+import {
+  LayoutDashboard,
+  MessageSquare,
+  Kanban,
+  Users,
   Calendar,
   Settings,
   LogOut,
   Menu,
   X,
   Sun,
-  Moon
+  Moon,
+  Edit,
+  Save,
+  Upload,
+  Loader2,
+  Trash2
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 import { useAlert } from '@/components/Alert';
+import { supabase } from '@/lib/supabase';
 
 interface SidebarProps {
   currentPage: string;
@@ -33,10 +39,17 @@ const menuItems = [
 ];
 
 export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
-  const { usuario, clinica, logout } = useAuth();
+  const { usuario, clinica, logout, refreshUsuario } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { showConfirm } = useAlert();
+  const { showConfirm, showToast } = useAlert();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Estado do perfil
+  const [showPerfilModal, setShowPerfilModal] = useState(false);
+  const [editNome, setEditNome] = useState('');
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const inputAvatarRef = useRef<HTMLInputElement>(null);
 
   const handleNavigation = (pageId: string) => {
     setCurrentPage(pageId);
@@ -48,6 +61,98 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
       logout();
       window.location.reload();
     }, 'Sair do sistema');
+  };
+
+  const abrirPerfilModal = () => {
+    setEditNome(usuario?.nome || '');
+    setShowPerfilModal(true);
+  };
+
+  const salvarPerfil = async () => {
+    if (!usuario?.id || !editNome.trim()) return;
+
+    setSalvandoPerfil(true);
+    try {
+      const { error } = await supabase
+        .from('usuarios')
+        .update({ nome: editNome.trim(), updated_at: new Date().toISOString() })
+        .eq('id', usuario.id);
+
+      if (error) throw error;
+
+      showToast('Perfil atualizado!', 'success');
+      setShowPerfilModal(false);
+      if (refreshUsuario) refreshUsuario();
+    } catch (error) {
+      console.error('Erro ao salvar perfil:', error);
+      showToast('Erro ao salvar perfil', 'error');
+    } finally {
+      setSalvandoPerfil(false);
+    }
+  };
+
+  const handleUploadAvatar = async (file: File) => {
+    if (!usuario?.id || !clinica?.id) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Selecione uma imagem válida', 'error');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('A imagem deve ter no máximo 2MB', 'error');
+      return;
+    }
+
+    setUploadingAvatar(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('clinicaId', clinica.id);
+      formData.append('tipo', 'avatar');
+      formData.append('usuarioId', usuario.id);
+
+      const response = await fetch('/api/google/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.error) throw new Error(result.error);
+
+      // Atualizar avatar no banco
+      await supabase
+        .from('usuarios')
+        .update({ avatar: result.imageUrl, updated_at: new Date().toISOString() })
+        .eq('id', usuario.id);
+
+      showToast('Avatar atualizado!', 'success');
+      if (refreshUsuario) refreshUsuario();
+    } catch (error) {
+      console.error('Erro ao enviar avatar:', error);
+      showToast('Erro ao enviar avatar', 'error');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const removerAvatar = async () => {
+    if (!usuario?.id) return;
+
+    try {
+      await supabase
+        .from('usuarios')
+        .update({ avatar: null, updated_at: new Date().toISOString() })
+        .eq('id', usuario.id);
+
+      showToast('Avatar removido!', 'success');
+      if (refreshUsuario) refreshUsuario();
+    } catch (error) {
+      console.error('Erro ao remover avatar:', error);
+      showToast('Erro ao remover avatar', 'error');
+    }
   };
 
   return (
@@ -129,15 +234,23 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
         </div>
 
         <div className="p-3 border-t border-[var(--theme-sidebar-border)]">
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-              {usuario?.nome?.charAt(0) || 'U'}
+          <button
+            onClick={abrirPerfilModal}
+            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-[var(--theme-sidebar-hover)] rounded-lg transition-colors group"
+          >
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden relative">
+              {usuario?.avatar ? (
+                <img src={usuario.avatar} alt={usuario.nome} className="w-full h-full object-cover" />
+              ) : (
+                usuario?.nome?.charAt(0) || 'U'
+              )}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-medium text-[var(--theme-sidebar-text)] truncate">{usuario?.nome || 'Usuário'}</p>
               <p className="text-xs text-[var(--theme-sidebar-text-muted)] truncate">{usuario?.email}</p>
             </div>
-          </div>
+            <Edit size={14} className="text-[var(--theme-sidebar-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2 mt-1 text-[var(--theme-sidebar-text-muted)] hover:text-red-400 hover:bg-[var(--theme-sidebar-hover)] rounded-lg transition-colors"
@@ -147,6 +260,104 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
           </button>
         </div>
       </aside>
+
+      {/* Modal de Edição de Perfil */}
+      {showPerfilModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowPerfilModal(false)}>
+          <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-[var(--theme-card-border)] flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Editar Perfil</h2>
+              <button onClick={() => setShowPerfilModal(false)} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Avatar */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-white text-2xl font-bold overflow-hidden relative group">
+                  {usuario?.avatar ? (
+                    <>
+                      <img src={usuario.avatar} alt={usuario?.nome} className="w-full h-full object-cover" />
+                      <button
+                        onClick={removerAvatar}
+                        className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remover avatar"
+                      >
+                        <Trash2 size={24} className="text-red-400" />
+                      </button>
+                    </>
+                  ) : (
+                    usuario?.nome?.charAt(0) || 'U'
+                  )}
+                </div>
+                <input
+                  ref={inputAvatarRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadAvatar(file);
+                    e.target.value = '';
+                  }}
+                />
+                <button
+                  onClick={() => inputAvatarRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="px-4 py-2 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg text-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {uploadingAvatar ? (
+                    <><Loader2 size={16} className="animate-spin" /> Enviando...</>
+                  ) : (
+                    <><Upload size={16} /> Alterar Foto</>
+                  )}
+                </button>
+              </div>
+
+              {/* Nome */}
+              <div>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Nome</label>
+                <input
+                  type="text"
+                  value={editNome}
+                  onChange={(e) => setEditNome(e.target.value)}
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
+                  placeholder="Seu nome"
+                />
+              </div>
+
+              {/* Email (somente leitura) */}
+              <div>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Email</label>
+                <input
+                  type="email"
+                  value={usuario?.email || ''}
+                  disabled
+                  className="w-full bg-[var(--theme-bg-tertiary)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 text-[var(--theme-text-muted)] cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-[var(--theme-card-border)] flex justify-end gap-3">
+              <button
+                onClick={() => setShowPerfilModal(false)}
+                className="px-4 py-2 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarPerfil}
+                disabled={salvandoPerfil || !editNome.trim()}
+                className="px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] disabled:text-[var(--theme-text-muted)] rounded-lg transition-colors flex items-center gap-2"
+              >
+                {salvandoPerfil ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {salvandoPerfil ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

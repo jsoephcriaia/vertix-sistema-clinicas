@@ -217,71 +217,9 @@ export default function PainelInteresse({
             </button>
           </div>
 
-          {loadingLeadProcedimentos ? (
-            <div className="flex justify-center py-12">
-              <Loader2 size={28} className="animate-spin text-primary" />
-            </div>
-          ) : leadProcedimentos.length === 0 ? (
-            <div className="text-center py-12">
-              <Package size={48} className="mx-auto text-[#334155] mb-3" />
-              <p className="text-[var(--theme-text-muted)]">Nenhum procedimento vinculado</p>
-              <p className="text-xs text-[#475569] mt-1">Clique em "Adicionar" para vincular</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {leadProcedimentos.map((lp) => (
-                <div
-                  key={lp.id}
-                  className="flex items-center justify-between p-3 bg-[var(--theme-input)] rounded-lg border border-[var(--theme-card-border)]"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium">{lp.procedimento?.nome}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {lp.valor_personalizado && lp.valor_personalizado !== lp.procedimento?.preco ? (
-                        <>
-                          <span className="text-xs text-[var(--theme-text-muted)] line-through">
-                            R$ {lp.procedimento?.preco?.toLocaleString('pt-BR')}
-                          </span>
-                          <span className="text-sm text-primary font-medium">
-                            R$ {lp.valor_personalizado.toLocaleString('pt-BR')}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-sm text-primary">
-                          R$ {lp.procedimento?.preco?.toLocaleString('pt-BR')}
-                        </span>
-                      )}
-                      {lp.procedimento?.retorno_dias && (
-                        <span className="text-xs text-[var(--theme-text-muted)] bg-[var(--theme-bg-tertiary)] px-2 py-0.5 rounded">
-                          Retorno: {lp.procedimento.retorno_dias} dias
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => removerProcedimento(lp.id)}
-                    className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-
-              {/* Total */}
-              {leadProcedimentos.length > 0 && (
-                <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-[#10b981]/30 mt-4">
-                  <span className="font-medium text-primary">Total Estimado</span>
-                  <span className="font-bold text-lg text-primary">
-                    R$ {valorTotal.toLocaleString('pt-BR')}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Formulário adicionar procedimento */}
+          {/* Formulário adicionar procedimento - NO TOPO */}
           {showAddProcedimento && (
-            <div className="mt-4 p-4 bg-[var(--theme-input)] rounded-lg border border-[var(--theme-card-border)]">
+            <div className="mb-4 p-4 bg-primary/10 rounded-lg border border-primary/30">
               <h4 className="font-medium mb-3">Adicionar Procedimento</h4>
               <div className="space-y-3">
                 <div>
@@ -348,6 +286,69 @@ export default function PainelInteresse({
               </div>
             </div>
           )}
+
+          {loadingLeadProcedimentos ? (
+            <div className="flex justify-center py-12">
+              <Loader2 size={28} className="animate-spin text-primary" />
+            </div>
+          ) : leadProcedimentos.length === 0 ? (
+            <div className="text-center py-12">
+              <Package size={48} className="mx-auto text-[#334155] mb-3" />
+              <p className="text-[var(--theme-text-muted)]">Nenhum procedimento vinculado</p>
+              <p className="text-xs text-[#475569] mt-1">Clique em "Adicionar" para vincular</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {leadProcedimentos.map((lp) => (
+                <div
+                  key={lp.id}
+                  className="flex items-center justify-between p-3 bg-[var(--theme-input)] rounded-lg border border-[var(--theme-card-border)]"
+                >
+                  <div className="flex-1">
+                    <p className="font-medium">{lp.procedimento?.nome}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {lp.valor_personalizado && lp.valor_personalizado !== lp.procedimento?.preco ? (
+                        <>
+                          <span className="text-xs text-[var(--theme-text-muted)] line-through">
+                            R$ {lp.procedimento?.preco?.toLocaleString('pt-BR')}
+                          </span>
+                          <span className="text-sm text-primary font-medium">
+                            R$ {lp.valor_personalizado.toLocaleString('pt-BR')}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-sm text-primary">
+                          R$ {lp.procedimento?.preco?.toLocaleString('pt-BR')}
+                        </span>
+                      )}
+                      {lp.procedimento?.retorno_dias && (
+                        <span className="text-xs text-[var(--theme-text-muted)] bg-[var(--theme-bg-tertiary)] px-2 py-0.5 rounded">
+                          Retorno: {lp.procedimento.retorno_dias} dias
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removerProcedimento(lp.id)}
+                    className="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-400"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+
+              {/* Total */}
+              {leadProcedimentos.length > 0 && (
+                <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-[#10b981]/30 mt-4">
+                  <span className="font-medium text-primary">Total Estimado</span>
+                  <span className="font-bold text-lg text-primary">
+                    R$ {valorTotal.toLocaleString('pt-BR')}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
     </>

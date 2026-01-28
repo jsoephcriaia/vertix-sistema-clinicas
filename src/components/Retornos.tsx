@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Phone, Clock, AlertTriangle, CheckCircle, Loader2, Search, MessageSquare, RefreshCw, Package } from 'lucide-react';
+import { Calendar, Phone, Clock, AlertTriangle, CheckCircle, Loader2, Search, MessageSquare, RefreshCw, Package, Edit, X, Save } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
@@ -36,6 +36,12 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
   const [filtro, setFiltro] = useState('todos');
   const [busca, setBusca] = useState('');
   const [mesSelecionado, setMesSelecionado] = useState('');
+
+  // Estado para edição
+  const [editandoRetorno, setEditandoRetorno] = useState<Retorno | null>(null);
+  const [editData, setEditData] = useState('');
+  const [editHora, setEditHora] = useState('');
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   useEffect(() => {
     if (CLINICA_ID) {
@@ -159,6 +165,70 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
 
     if (onAbrirConversa) {
       onAbrirConversa(retorno.lead_telefone, retorno.lead_nome);
+    }
+  };
+
+  const abrirEdicao = (retorno: Retorno) => {
+    const dataHora = new Date(retorno.data_hora);
+    setEditData(dataHora.toISOString().split('T')[0]);
+    setEditHora(dataHora.toTimeString().slice(0, 5));
+    setEditandoRetorno(retorno);
+  };
+
+  const salvarEdicao = async () => {
+    if (!editandoRetorno || !editData || !editHora) return;
+
+    setSalvandoEdicao(true);
+
+    try {
+      const novaDataHora = new Date(`${editData}T${editHora}:00`).toISOString();
+
+      // Atualizar no Supabase
+      const { error } = await supabase
+        .from('agendamentos')
+        .update({
+          data_hora: novaDataHora,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editandoRetorno.id);
+
+      if (error) throw error;
+
+      // Buscar o google_event_id para atualizar no Calendar
+      const { data: agendamentoData } = await supabase
+        .from('agendamentos')
+        .select('google_event_id')
+        .eq('id', editandoRetorno.id)
+        .single();
+
+      // Se tiver evento no Google Calendar, atualizar
+      if (agendamentoData?.google_event_id) {
+        try {
+          await fetch('/api/google/calendar', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clinicaId: CLINICA_ID,
+              eventId: agendamentoData.google_event_id,
+              title: `${editandoRetorno.procedimento_nome || 'Agendamento'} - ${editandoRetorno.lead_nome}`,
+              startTime: novaDataHora,
+              endTime: new Date(new Date(novaDataHora).getTime() + 60 * 60 * 1000).toISOString(),
+            }),
+          });
+        } catch (calendarError) {
+          console.error('Erro ao atualizar Google Calendar:', calendarError);
+          // Não falhar a operação se o Calendar falhar
+        }
+      }
+
+      showToast('Agendamento atualizado!', 'success');
+      setEditandoRetorno(null);
+      fetchRetornos();
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      showToast('Erro ao salvar agendamento', 'error');
+    } finally {
+      setSalvandoEdicao(false);
     }
   };
 
@@ -437,6 +507,14 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
                       <MessageSquare size={16} />
                       Mensagem
                     </button>
+                    <button
+                      onClick={() => abrirEdicao(retorno)}
+                      className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-sm flex items-center gap-2 transition-colors"
+                      title="Editar data/hora"
+                    >
+                      <Edit size={16} />
+                      Editar
+                    </button>
                     {retorno.status === 'agendado' && (
                       <button
                         onClick={() => confirmarAgendamento(retorno.id)}
@@ -463,6 +541,70 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Modal de Edição */}
+      {editandoRetorno && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditandoRetorno(null)}>
+          <div className="bg-[var(--theme-card)] rounded-xl border border-[var(--theme-card-border)] w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-[var(--theme-card-border)] flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Editar Agendamento</h2>
+              <button onClick={() => setEditandoRetorno(null)} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-[var(--theme-bg-tertiary)] rounded-lg p-3 mb-4">
+                <p className="font-medium">{editandoRetorno.lead_nome}</p>
+                <p className="text-sm text-[var(--theme-text-muted)]">
+                  {editandoRetorno.procedimento_nome || 'Agendamento'}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Data</label>
+                <input
+                  type="date"
+                  value={editData}
+                  onChange={(e) => setEditData(e.target.value)}
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Horário</label>
+                <input
+                  type="time"
+                  value={editHora}
+                  onChange={(e) => setEditHora(e.target.value)}
+                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <p className="text-xs text-[var(--theme-text-muted)]">
+                A alteração será sincronizada automaticamente com o Google Calendar.
+              </p>
+            </div>
+
+            <div className="p-6 border-t border-[var(--theme-card-border)] flex justify-end gap-3">
+              <button
+                onClick={() => setEditandoRetorno(null)}
+                className="px-4 py-2 bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-card-border)] rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarEdicao}
+                disabled={salvandoEdicao || !editData || !editHora}
+                className="px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] disabled:text-[var(--theme-text-muted)] rounded-lg transition-colors flex items-center gap-2"
+              >
+                {salvandoEdicao ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {salvandoEdicao ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

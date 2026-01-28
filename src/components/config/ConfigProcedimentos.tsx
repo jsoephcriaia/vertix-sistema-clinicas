@@ -421,9 +421,18 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
                 <div>
                   <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Imagem do Procedimento</label>
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-full h-32 rounded-lg bg-[var(--theme-bg-tertiary)] flex items-center justify-center overflow-hidden">
+                    <div className="w-full h-32 rounded-lg bg-[var(--theme-bg-tertiary)] flex items-center justify-center overflow-hidden relative group">
                       {editando.imagem_url ? (
-                        <img src={editando.imagem_url} alt="Imagem" className="w-full h-full object-cover" />
+                        <>
+                          <img src={editando.imagem_url} alt="Imagem" className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => setEditando({ ...editando, imagem_url: '' })}
+                            className="absolute top-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remover imagem"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
                       ) : (
                         <Image size={32} className="text-[var(--theme-text-muted)]" />
                       )}
@@ -452,9 +461,18 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
                 <div>
                   <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Antes e Depois</label>
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-full h-32 rounded-lg bg-[var(--theme-bg-tertiary)] flex items-center justify-center overflow-hidden">
+                    <div className="w-full h-32 rounded-lg bg-[var(--theme-bg-tertiary)] flex items-center justify-center overflow-hidden relative group">
                       {editando.imagem_antes_depois_url ? (
-                        <img src={editando.imagem_antes_depois_url} alt="Antes e Depois" className="w-full h-full object-cover" />
+                        <>
+                          <img src={editando.imagem_antes_depois_url} alt="Antes e Depois" className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => setEditando({ ...editando, imagem_antes_depois_url: '' })}
+                            className="absolute top-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remover imagem"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
                       ) : (
                         <ImagePlus size={32} className="text-[var(--theme-text-muted)]" />
                       )}
