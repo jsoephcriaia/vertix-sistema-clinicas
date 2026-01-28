@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DollarSign, Calendar, TrendingUp, Users, Loader2, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { DollarSign, Calendar, TrendingUp, Users, Loader2, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronUp, Receipt, UserX, Clock, UserCheck, Star, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface Metricas {
   faturamentoRealizado: number;
@@ -15,6 +15,17 @@ interface Metricas {
   leadsMesAnterior: number;
   taxaConversao: number;
   taxaConversaoMesAnterior: number;
+  // Métricas detalhadas
+  ticketMedio: number;
+  taxaNoShow: number;
+  valorEmNegociacao: number;
+  totalClientes: number;
+  clientesAtivos: number;
+  clientesVip: number;
+  agendamentosHoje: number;
+  agendamentosPendentes: number;
+  leadsConvertidos: number;
+  leadsPerdidos: number;
 }
 
 interface LeadRecente {
@@ -41,6 +52,7 @@ export default function Dashboard() {
   const [leadsRecentes, setLeadsRecentes] = useState<LeadRecente[]>([]);
   const [faturamentoMensal, setFaturamentoMensal] = useState<FaturamentoMensal[]>([]);
   const [leadsPorEtapa, setLeadsPorEtapa] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [showDetalhes, setShowDetalhes] = useState(false);
 
   useEffect(() => {
     if (CLINICA_ID) {
@@ -53,9 +65,17 @@ export default function Dashboard() {
 
     try {
       const hoje = new Date();
-      const inicioMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      hoje.setHours(0, 0, 0, 0);
+      const fimDeHoje = new Date(hoje);
+      fimDeHoje.setHours(23, 59, 59, 999);
       const inicioMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
       const fimMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+
+      // Buscar clientes
+      const { data: clientes } = await supabase
+        .from('clientes')
+        .select('*')
+        .eq('clinica_id', CLINICA_ID);
 
       // Buscar leads
       const { data: leads } = await supabase
@@ -72,15 +92,23 @@ export default function Dashboard() {
       // Buscar lead_procedimentos
       const { data: leadProcedimentos } = await supabase
         .from('lead_procedimentos')
-        .select(`*, procedimento:procedimentos(nome, preco)`)
+        .select(`*, procedimento:procedimentos(nome, preco), lead:leads_ia(etapa)`)
         .eq('clinica_id', CLINICA_ID);
 
+      const clientesData = clientes || [];
       const leadsData = leads || [];
       const agendamentosData = agendamentos || [];
+      const leadProcedimentosData = leadProcedimentos || [];
+
+      // Clientes
+      const totalClientes = clientesData.length;
+      const clientesAtivos = clientesData.filter(c => c.status === 'ativo').length;
+      const clientesVip = clientesData.filter(c => c.status === 'vip').length;
 
       // Faturamento
       const agendamentosRealizados = agendamentosData.filter(a => a.status === 'realizado');
       const faturamentoRealizado = agendamentosRealizados.reduce((acc, a) => acc + Number(a.valor || 0), 0);
+      const ticketMedio = agendamentosRealizados.length > 0 ? faturamentoRealizado / agendamentosRealizados.length : 0;
 
       const faturamentoMesAnterior = agendamentosRealizados
         .filter(a => {
@@ -89,12 +117,32 @@ export default function Dashboard() {
         })
         .reduce((acc, a) => acc + Number(a.valor || 0), 0);
 
+      // Taxa de no-show
+      const agendamentosPassados = agendamentosData.filter(a => {
+        const dataAgendamento = new Date(a.data_hora);
+        return dataAgendamento < hoje && ['realizado', 'nao_compareceu'].includes(a.status);
+      });
+      const noShows = agendamentosPassados.filter(a => a.status === 'nao_compareceu').length;
+      const taxaNoShow = agendamentosPassados.length > 0 ? (noShows / agendamentosPassados.length) * 100 : 0;
+
+      // Valor em negociação
+      const valorEmNegociacao = leadProcedimentosData
+        .filter(lp => lp.lead && !['convertido', 'perdido'].includes(lp.lead.etapa))
+        .reduce((acc, lp) => acc + Number(lp.valor_personalizado || lp.procedimento?.preco || 0), 0);
+
       // Agendamentos
       const totalAgendamentos = agendamentosData.filter(a => a.status !== 'cancelado').length;
       const agendamentosMesAnterior = agendamentosData.filter(a => {
         const data = new Date(a.data_hora);
         return data >= inicioMesAnterior && data <= fimMesAnterior && a.status !== 'cancelado';
       }).length;
+
+      const agendamentosHoje = agendamentosData.filter(a => {
+        const dataAgendamento = new Date(a.data_hora);
+        return dataAgendamento >= hoje && dataAgendamento <= fimDeHoje && a.status !== 'cancelado';
+      }).length;
+
+      const agendamentosPendentes = agendamentosData.filter(a => a.status === 'agendado').length;
 
       // Leads
       const totalLeads = leadsData.length;
@@ -104,6 +152,7 @@ export default function Dashboard() {
       }).length;
 
       const leadsConvertidos = leadsData.filter(l => l.etapa === 'convertido').length;
+      const leadsPerdidos = leadsData.filter(l => l.etapa === 'perdido').length;
       const leadsConvertidosMesAnterior = leadsData.filter(l => {
         const data = new Date(l.updated_at);
         return l.etapa === 'convertido' && data >= inicioMesAnterior && data <= fimMesAnterior;
@@ -121,6 +170,16 @@ export default function Dashboard() {
         leadsMesAnterior,
         taxaConversao,
         taxaConversaoMesAnterior,
+        ticketMedio,
+        taxaNoShow,
+        valorEmNegociacao,
+        totalClientes,
+        clientesAtivos,
+        clientesVip,
+        agendamentosHoje,
+        agendamentosPendentes,
+        leadsConvertidos,
+        leadsPerdidos,
       });
 
       // Leads por etapa para PieChart
@@ -176,7 +235,7 @@ export default function Dashboard() {
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, 6)
         .map(lead => {
-          const procedimentosLead = (leadProcedimentos || []).filter(lp => lp.lead_id === lead.id);
+          const procedimentosLead = leadProcedimentosData.filter(lp => lp.lead_id === lead.id);
           const valorTotal = procedimentosLead.reduce((acc, lp) => {
             return acc + Number(lp.valor_personalizado || lp.procedimento?.preco || 0);
           }, 0);
@@ -338,6 +397,102 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Botão para expandir métricas detalhadas */}
+      <button
+        onClick={() => setShowDetalhes(!showDetalhes)}
+        className="w-full flex items-center justify-center gap-2 py-3 text-sm text-[var(--theme-text-secondary)] hover:text-[var(--theme-text)] transition-colors"
+      >
+        {showDetalhes ? (
+          <>
+            <ChevronUp size={18} />
+            Ocultar métricas detalhadas
+          </>
+        ) : (
+          <>
+            <ChevronDown size={18} />
+            Ver métricas detalhadas
+          </>
+        )}
+      </button>
+
+      {/* Métricas detalhadas - expansível */}
+      {showDetalhes && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          {/* Ticket Médio */}
+          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Receipt size={16} className="text-pink-500" />
+              <span className="text-xs text-[var(--theme-text-muted)]">Ticket Médio</span>
+            </div>
+            <p className="text-xl font-bold text-[var(--theme-text)]">
+              R$ {metricas.ticketMedio.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+
+          {/* Taxa No-Show */}
+          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <UserX size={16} className="text-orange-500" />
+              <span className="text-xs text-[var(--theme-text-muted)]">No-Show</span>
+            </div>
+            <p className="text-xl font-bold text-[var(--theme-text)]">
+              {metricas.taxaNoShow.toFixed(1)}%
+            </p>
+            <span className={`text-xs ${metricas.taxaNoShow <= 10 ? 'text-emerald-500' : 'text-orange-500'}`}>
+              {metricas.taxaNoShow <= 10 ? 'Bom' : 'Atenção'}
+            </span>
+          </div>
+
+          {/* Em Negociação */}
+          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign size={16} className="text-amber-500" />
+              <span className="text-xs text-[var(--theme-text-muted)]">Em Negociação</span>
+            </div>
+            <p className="text-xl font-bold text-[var(--theme-text)]">
+              R$ {metricas.valorEmNegociacao.toLocaleString('pt-BR')}
+            </p>
+          </div>
+
+          {/* Clientes */}
+          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <UserCheck size={16} className="text-blue-500" />
+              <span className="text-xs text-[var(--theme-text-muted)]">Clientes</span>
+            </div>
+            <p className="text-xl font-bold text-[var(--theme-text)]">{metricas.totalClientes}</p>
+            <div className="flex gap-2 mt-1">
+              <span className="text-xs text-emerald-500">{metricas.clientesAtivos} ativos</span>
+              {metricas.clientesVip > 0 && (
+                <span className="text-xs text-amber-500 flex items-center gap-0.5">
+                  <Star size={10} /> {metricas.clientesVip} VIP
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Agendamentos Hoje */}
+          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock size={16} className="text-purple-500" />
+              <span className="text-xs text-[var(--theme-text-muted)]">Hoje</span>
+            </div>
+            <p className="text-xl font-bold text-[var(--theme-text)]">{metricas.agendamentosHoje}</p>
+            <span className="text-xs text-[var(--theme-text-muted)]">agendamentos</span>
+          </div>
+
+          {/* Pendentes */}
+          <div className="bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle size={16} className="text-yellow-500" />
+              <span className="text-xs text-[var(--theme-text-muted)]">Pendentes</span>
+            </div>
+            <p className="text-xl font-bold text-[var(--theme-text)]">{metricas.agendamentosPendentes}</p>
+            <span className="text-xs text-[var(--theme-text-muted)]">a confirmar</span>
+          </div>
+        </div>
+      )}
 
       {/* Gráficos lado a lado */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
