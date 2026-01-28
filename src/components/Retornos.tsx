@@ -16,20 +16,10 @@ interface Retorno {
   lead_id: string | null;
   cliente_id: string | null;
   procedimento_id: string | null;
-  lead: {
-    id: string;
-    nome: string;
-    telefone: string;
-  }[] | null;
-  cliente: {
-    id: string;
-    nome: string;
-    telefone: string;
-  }[] | null;
-  procedimento: {
-    id: string;
-    nome: string;
-  }[] | null;
+  lead_nome: string;
+  lead_telefone: string;
+  lead_avatar: string | null;
+  procedimento_nome: string | null;
 }
 
 interface RetornosProps {
@@ -85,12 +75,12 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
     const clienteIds = [...new Set(agendamentosData?.filter(a => a.cliente_id).map(a => a.cliente_id) || [])];
     const procedimentoIds = [...new Set(agendamentosData?.filter(a => a.procedimento_id).map(a => a.procedimento_id) || [])];
 
-    // Buscar leads
-    let leadsMap: Record<string, { id: string; nome: string; telefone: string }> = {};
+    // Buscar leads (incluindo avatar)
+    let leadsMap: Record<string, { id: string; nome: string; telefone: string; avatar: string | null }> = {};
     if (leadIds.length > 0) {
       const { data: leadsData } = await supabase
         .from('leads_ia')
-        .select('id, nome, telefone')
+        .select('id, nome, telefone, avatar')
         .in('id', leadIds);
       
       if (leadsData) {
@@ -125,12 +115,19 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
     }
 
     // Montar dados completos
-    const retornosCompletos = agendamentosData?.map(a => ({
-      ...a,
-      lead: a.lead_id ? [leadsMap[a.lead_id]] : null,
-      cliente: a.cliente_id ? [clientesMap[a.cliente_id]] : null,
-      procedimento: a.procedimento_id ? [procedimentosMap[a.procedimento_id]] : null,
-    })) || [];
+    const retornosCompletos = agendamentosData?.map(a => {
+      const lead = a.lead_id ? leadsMap[a.lead_id] : null;
+      const cliente = a.cliente_id ? clientesMap[a.cliente_id] : null;
+      const procedimento = a.procedimento_id ? procedimentosMap[a.procedimento_id] : null;
+
+      return {
+        ...a,
+        lead_nome: lead?.nome || cliente?.nome || 'Sem nome',
+        lead_telefone: lead?.telefone || cliente?.telefone || '',
+        lead_avatar: lead?.avatar || null,
+        procedimento_nome: procedimento?.nome || null,
+      };
+    }) || [];
 
     setRetornos(retornosCompletos);
     setLoading(false);
@@ -154,28 +151,14 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
     }
   };
 
-  const marcarContatado = async (retorno: Retorno) => {
-    // Apenas marca como confirmado se ainda não estiver
-    if (retorno.status === 'agendado') {
-      await confirmarAgendamento(retorno.id);
-    } else {
-      showSuccess('Agendamento já está confirmado!');
-    }
-  };
-
   const handleEnviarMensagem = (retorno: Retorno) => {
-    const lead = retorno.lead?.[0];
-    const cliente = retorno.cliente?.[0];
-    const nome = lead?.nome || cliente?.nome || 'Cliente';
-    const telefone = lead?.telefone || cliente?.telefone;
-    
-    if (!telefone) {
+    if (!retorno.lead_telefone) {
       showError('Este cliente não possui telefone cadastrado');
       return;
     }
 
     if (onAbrirConversa) {
-      onAbrirConversa(telefone, nome);
+      onAbrirConversa(retorno.lead_telefone, retorno.lead_nome);
     }
   };
 
@@ -205,6 +188,24 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
     dataRetorno.setHours(0, 0, 0, 0);
     const diffTime = dataRetorno.getTime() - hoje.getTime();
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  // Componente de Avatar
+  const Avatar = ({ src, nome, isRetorno = false }: { src?: string | null; nome: string; isRetorno?: boolean }) => {
+    if (src) {
+      return (
+        <img 
+          src={src} 
+          alt={nome}
+          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+        />
+      );
+    }
+    return (
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${isRetorno ? 'bg-blue-500' : 'bg-[#10b981]'}`}>
+        {isRetorno ? <RefreshCw size={20} /> : nome.charAt(0).toUpperCase()}
+      </div>
+    );
   };
 
   // Filtros por período
@@ -255,15 +256,9 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
     // Filtro por busca
     if (busca) {
       lista = lista.filter(r => {
-        const lead = r.lead?.[0];
-        const cliente = r.cliente?.[0];
-        const procedimento = r.procedimento?.[0];
-        const nome = lead?.nome || cliente?.nome || '';
-        const telefone = lead?.telefone || cliente?.telefone || '';
-        const procNome = procedimento?.nome || '';
-        return nome.toLowerCase().includes(busca.toLowerCase()) ||
-               telefone.includes(busca) ||
-               procNome.toLowerCase().includes(busca.toLowerCase());
+        return r.lead_nome.toLowerCase().includes(busca.toLowerCase()) ||
+               r.lead_telefone.includes(busca) ||
+               (r.procedimento_nome?.toLowerCase().includes(busca.toLowerCase()) || false);
       });
     }
 
@@ -378,22 +373,19 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
             const diasAtraso = getDiasAtraso(retorno.data_hora);
             const diasPara = getDiasParaRetorno(retorno.data_hora);
             const atrasado = diasAtraso > 0;
-            const lead = retorno.lead?.[0];
-            const cliente = retorno.cliente?.[0];
-            const procedimento = retorno.procedimento?.[0];
-            const nome = lead?.nome || cliente?.nome || 'Sem nome';
-            const telefone = lead?.telefone || cliente?.telefone || '';
 
             return (
               <div key={retorno.id} className={`bg-[#1e293b] rounded-xl border p-5 ${atrasado ? 'border-red-500/50' : retorno.status === 'confirmado' ? 'border-green-500/30' : 'border-[#334155]'}`}>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="flex items-center gap-4 flex-1">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${retorno.tipo === 'retorno' ? 'bg-blue-500' : 'bg-[#10b981]'}`}>
-                      {retorno.tipo === 'retorno' ? <RefreshCw size={20} /> : nome.charAt(0)}
-                    </div>
+                    <Avatar 
+                      src={retorno.lead_avatar} 
+                      nome={retorno.lead_nome} 
+                      isRetorno={retorno.tipo === 'retorno' && !retorno.lead_avatar}
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold">{nome}</h3>
+                        <h3 className="font-semibold">{retorno.lead_nome}</h3>
                         {retorno.tipo === 'retorno' && (
                           <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">
                             Retorno
@@ -413,12 +405,12 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
                       <div className="flex items-center gap-4 text-sm text-[#64748b] mt-1">
                         <div className="flex items-center gap-1">
                           <Phone size={14} />
-                          <span>{telefone || 'Sem telefone'}</span>
+                          <span>{retorno.lead_telefone || 'Sem telefone'}</span>
                         </div>
-                        {procedimento && (
+                        {retorno.procedimento_nome && (
                           <div className="flex items-center gap-1">
                             <Package size={14} />
-                            <span>{procedimento.nome}</span>
+                            <span>{retorno.procedimento_nome}</span>
                           </div>
                         )}
                       </div>
@@ -438,9 +430,9 @@ export default function Retornos({ onAbrirConversa }: RetornosProps) {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEnviarMensagem(retorno)}
-                      disabled={!telefone}
+                      disabled={!retorno.lead_telefone}
                       className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] disabled:bg-[#334155] disabled:text-[#64748b] text-white rounded-lg text-sm flex items-center gap-2 transition-colors"
-                      title={telefone ? 'Enviar mensagem' : 'Sem telefone'}
+                      title={retorno.lead_telefone ? 'Enviar mensagem' : 'Sem telefone'}
                     >
                       <MessageSquare size={16} />
                       Mensagem

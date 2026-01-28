@@ -27,6 +27,7 @@ interface LeadRecente {
   etapa: string;
   valor_total: number;
   created_at: string;
+  avatar: string | null;
 }
 
 interface AgendamentoProximo {
@@ -36,6 +37,7 @@ interface AgendamentoProximo {
   status: string;
   lead_nome: string;
   lead_telefone: string;
+  lead_avatar: string | null;
   procedimento_nome: string;
 }
 
@@ -64,7 +66,7 @@ export default function Dashboard() {
         .select('*')
         .eq('clinica_id', CLINICA_ID);
 
-      // Buscar leads da tabela leads_ia
+      // Buscar leads da tabela leads_ia (incluindo avatar)
       const { data: leads } = await supabase
         .from('leads_ia')
         .select('*')
@@ -90,13 +92,24 @@ export default function Dashboard() {
       // Buscar agendamentos
       const { data: agendamentos } = await supabase
         .from('agendamentos')
-        .select(`
-          *,
-          lead:leads_ia(nome, telefone),
-          procedimento:procedimentos(nome)
-        `)
+        .select('*')
         .eq('clinica_id', CLINICA_ID)
         .order('data_hora', { ascending: true });
+
+      // Buscar procedimentos para nomes
+      const { data: procedimentosNomes } = await supabase
+        .from('procedimentos')
+        .select('id, nome')
+        .eq('clinica_id', CLINICA_ID);
+
+      const procedimentosMap: Record<string, string> = {};
+      procedimentosNomes?.forEach(p => { procedimentosMap[p.id] = p.nome; });
+
+      // Criar mapa de leads para avatar
+      const leadsMap: Record<string, { nome: string; telefone: string; avatar: string | null }> = {};
+      leads?.forEach(l => { 
+        leadsMap[l.id] = { nome: l.nome, telefone: l.telefone, avatar: l.avatar }; 
+      });
 
       // Datas para cálculos
       const hoje = new Date();
@@ -187,6 +200,7 @@ export default function Dashboard() {
               etapa: lead.etapa,
               valor_total: valorTotal,
               created_at: lead.created_at,
+              avatar: lead.avatar || null,
             };
           })
       );
@@ -199,15 +213,19 @@ export default function Dashboard() {
           return dataAgendamento >= hoje && a.status !== 'cancelado';
         })
         .slice(0, 5)
-        .map(a => ({
-          id: a.id,
-          data_hora: a.data_hora,
-          valor: a.valor || 0,
-          status: a.status,
-          lead_nome: a.lead?.nome || 'Sem nome',
-          lead_telefone: a.lead?.telefone || '',
-          procedimento_nome: a.procedimento?.nome || 'Procedimento não especificado',
-        }));
+        .map(a => {
+          const leadInfo = a.lead_id ? leadsMap[a.lead_id] : null;
+          return {
+            id: a.id,
+            data_hora: a.data_hora,
+            valor: a.valor || 0,
+            status: a.status,
+            lead_nome: leadInfo?.nome || 'Sem nome',
+            lead_telefone: leadInfo?.telefone || '',
+            lead_avatar: leadInfo?.avatar || null,
+            procedimento_nome: a.procedimento_id ? procedimentosMap[a.procedimento_id] : 'Procedimento não especificado',
+          };
+        });
       setAgendamentosProximos(proximosAgendamentos);
 
     } catch (error) {
@@ -245,6 +263,24 @@ export default function Dashboard() {
       nao_compareceu: { label: 'Não compareceu', cor: 'bg-orange-500/20 text-orange-500' },
     };
     return statusMap[status] || { label: status, cor: 'bg-gray-500/20 text-gray-500' };
+  };
+
+  // Componente de Avatar
+  const Avatar = ({ src, nome, corFundo = 'bg-primary' }: { src?: string | null; nome: string; corFundo?: string }) => {
+    if (src) {
+      return (
+        <img 
+          src={src} 
+          alt={nome}
+          className="w-10 h-10 rounded-full object-cover"
+        />
+      );
+    }
+    return (
+      <div className={`w-10 h-10 rounded-full ${corFundo} flex items-center justify-center text-white font-bold`}>
+        {nome.charAt(0).toUpperCase()}
+      </div>
+    );
   };
 
   if (loading) {
@@ -351,9 +387,7 @@ export default function Dashboard() {
                 return (
                   <div key={lead.id} className="flex items-center justify-between p-3 rounded-lg bg-[var(--theme-bg-tertiary)]">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-                        {lead.nome.charAt(0).toUpperCase()}
-                      </div>
+                      <Avatar src={lead.avatar} nome={lead.nome} />
                       <div>
                         <p className="font-medium text-[var(--theme-text)]">{lead.nome}</p>
                         <p className="text-xs text-[var(--theme-text-secondary)]">
@@ -395,9 +429,7 @@ export default function Dashboard() {
                 return (
                   <div key={agendamento.id} className="flex items-center justify-between p-3 rounded-lg bg-[var(--theme-bg-tertiary)]">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white font-bold">
-                        {agendamento.lead_nome.charAt(0).toUpperCase()}
-                      </div>
+                      <Avatar src={agendamento.lead_avatar} nome={agendamento.lead_nome} corFundo="bg-purple-500" />
                       <div>
                         <p className="font-medium text-[var(--theme-text)]">{agendamento.lead_nome}</p>
                         <p className="text-xs text-[var(--theme-text-secondary)]">{agendamento.procedimento_nome}</p>

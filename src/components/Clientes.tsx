@@ -13,6 +13,7 @@ interface Cliente {
   email: string;
   status: string;
   observacoes: string;
+  avatar: string | null;
   // Dados calculados
   total_gasto: number;
   total_procedimentos: number;
@@ -49,6 +50,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
     email: '',
     status: 'ativo',
     observacoes: '',
+    avatar: null,
     total_gasto: 0,
     total_procedimentos: 0,
     ultimo_atendimento: null,
@@ -100,17 +102,17 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
       .gte('data_hora', new Date().toISOString())
       .order('data_hora', { ascending: true });
 
-    // Buscar leads para mapear lead_id -> cliente (pelo telefone)
+    // Buscar leads para mapear lead_id -> cliente (pelo telefone) e pegar avatar
     const { data: leadsData } = await supabase
       .from('leads_ia')
-      .select('id, telefone')
+      .select('id, telefone, avatar')
       .eq('clinica_id', CLINICA_ID);
 
-    // Criar mapa de telefone -> lead_id
-    const telefoneToLeadId: Record<string, string> = {};
+    // Criar mapa de telefone -> lead info (id + avatar)
+    const telefoneToLead: Record<string, { id: string; avatar: string | null }> = {};
     leadsData?.forEach(lead => {
       if (lead.telefone) {
-        telefoneToLeadId[lead.telefone] = lead.id;
+        telefoneToLead[lead.telefone] = { id: lead.id, avatar: lead.avatar };
       }
     });
 
@@ -130,8 +132,10 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
 
     // Calcular métricas para cada cliente
     const clientesComMetricas = clientesData.map(cliente => {
-      // Pegar lead_id do cliente pelo telefone
-      const leadId = cliente.telefone ? telefoneToLeadId[cliente.telefone] : null;
+      // Pegar lead info do cliente pelo telefone
+      const leadInfo = cliente.telefone ? telefoneToLead[cliente.telefone] : null;
+      const leadId = leadInfo?.id || null;
+      const avatar = leadInfo?.avatar || null;
 
       // Filtrar agendamentos realizados deste cliente (por cliente_id OU lead_id)
       const agRealizados = agendamentosRealizados?.filter(a => 
@@ -157,6 +161,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
 
       return {
         ...cliente,
+        avatar,
         total_gasto,
         total_procedimentos,
         ultimo_atendimento,
@@ -343,6 +348,24 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
     }
   };
 
+  // Componente de Avatar
+  const Avatar = ({ src, nome }: { src?: string | null; nome: string }) => {
+    if (src) {
+      return (
+        <img 
+          src={src} 
+          alt={nome}
+          className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+        />
+      );
+    }
+    return (
+      <div className="w-14 h-14 rounded-full bg-[#10b981] flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+        {nome.charAt(0).toUpperCase()}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -407,9 +430,7 @@ export default function Clientes({ onAbrirConversa }: ClientesProps) {
               <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                 {/* Avatar e Info Principal */}
                 <div className="flex items-center gap-4 flex-1">
-                  <div className="w-14 h-14 rounded-full bg-[#10b981] flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-                    {cliente.nome.charAt(0)}
-                  </div>
+                  <Avatar src={cliente.avatar} nome={cliente.nome} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold truncate">{cliente.nome}</h3>
