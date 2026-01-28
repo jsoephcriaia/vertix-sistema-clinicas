@@ -97,8 +97,8 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
         setStatus('connected');
         setPhoneNumber(data.instance?.phone || '');
 
-        // Garantir que o webhook está configurado (auto-fix)
-        await ensureWebhookConfigured(token);
+        // Garantir que a integração Chatwoot está configurada
+        await ensureChatwootConfigured(token);
 
         return true;
       } else {
@@ -112,50 +112,67 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
     }
   };
 
-  // Garante que o webhook está configurado corretamente
-  const ensureWebhookConfigured = async (token: string) => {
+  // Configura a integração UAZAPI ↔ Chatwoot
+  const ensureChatwootConfigured = async (token: string) => {
     try {
-      const webhookUrl = `${window.location.origin}/api/webhook/uazapi`;
+      // Buscar dados do Chatwoot da clínica
+      const { data: clinicaData, error } = await supabase
+        .from('clinicas')
+        .select('chatwoot_url, chatwoot_api_token, chatwoot_account_id, chatwoot_inbox_id')
+        .eq('id', clinicaId)
+        .single();
 
-      // Tentar diferentes endpoints de webhook do UAZAPI
-      const endpoints = [
-        { url: `${UAZAPI_URL}/instance/setWebhook`, method: 'POST' },
-        { url: `${UAZAPI_URL}/instance/webhook`, method: 'PUT' },
-        { url: `${UAZAPI_URL}/webhook`, method: 'POST' },
-      ];
+      if (error || !clinicaData?.chatwoot_url || !clinicaData?.chatwoot_api_token) {
+        console.log('Chatwoot não configurado para esta clínica');
+        return;
+      }
 
-      for (const endpoint of endpoints) {
-        try {
-          console.log(`Tentando configurar webhook via ${endpoint.url}...`);
-          const response = await fetch(endpoint.url, {
-            method: endpoint.method,
-            headers: {
-              'Content-Type': 'application/json',
-              'token': token,
-            },
-            body: JSON.stringify({
-              webhookUrl: webhookUrl,
-              url: webhookUrl,
-              webhook: webhookUrl,
-              enabled: true,
-              webhookEnabled: true,
-            }),
-          });
+      // Verificar configuração atual
+      const checkResponse = await fetch(`${UAZAPI_URL}/chatwoot/config`, {
+        method: 'GET',
+        headers: { 'token': token },
+      });
 
-          if (response.ok) {
-            const result = await response.json();
-            console.log('Webhook configurado com sucesso via:', endpoint.url, result);
-            return;
-          }
-          console.log(`Endpoint ${endpoint.url} retornou:`, response.status);
-        } catch (e) {
-          console.log(`Erro no endpoint ${endpoint.url}:`, e);
+      if (checkResponse.ok) {
+        const currentConfig = await checkResponse.json();
+        if (currentConfig.chatwootEnabled === true || currentConfig.enabled === true) {
+          console.log('Chatwoot já está configurado no UAZAPI');
+          return;
         }
       }
 
-      console.warn('Nenhum endpoint de webhook funcionou. Configure manualmente no painel UAZAPI.');
+      // Configurar integração Chatwoot no UAZAPI
+      // Remove trailing slash da URL do Chatwoot
+      const chatwootUrl = clinicaData.chatwoot_url.replace(/\/$/, '');
+
+      console.log('Configurando integração Chatwoot no UAZAPI...');
+      const configResponse = await fetch(`${UAZAPI_URL}/chatwoot/config`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': token,
+        },
+        body: JSON.stringify({
+          enabled: true,
+          url: chatwootUrl,
+          token: clinicaData.chatwoot_api_token,
+          accountId: clinicaData.chatwoot_account_id,
+          inboxId: clinicaData.chatwoot_inbox_id || '1',
+          ignoreGroups: true,
+          messageSignature: false,
+          createNewConversion: false,
+        }),
+      });
+
+      if (configResponse.ok) {
+        const result = await configResponse.json();
+        console.log('Integração Chatwoot configurada com sucesso:', result);
+      } else {
+        const errorText = await configResponse.text();
+        console.error('Erro ao configurar Chatwoot:', configResponse.status, errorText);
+      }
     } catch (error) {
-      console.error('Erro ao configurar webhook:', error);
+      console.error('Erro ao configurar integração Chatwoot:', error);
     }
   };
 
@@ -217,9 +234,9 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
           .eq('id', clinicaId);
       }
 
-      // Configurar webhook do UAZAPI para receber mensagens
-      console.log('Configurando webhook UAZAPI...');
-      await ensureWebhookConfigured(token);
+      // Configurar integração Chatwoot no UAZAPI
+      console.log('Configurando integração Chatwoot...');
+      await ensureChatwootConfigured(token);
 
       // Gerar QR Code (conectar)
       const connectResponse = await fetch(`${UAZAPI_URL}/instance/connect`, {
