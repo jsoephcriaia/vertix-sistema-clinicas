@@ -119,10 +119,10 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
             className="w-full flex items-center justify-between px-3 py-2 text-white/80 hover:bg-sidebar-hover hover:text-white rounded-lg transition-colors"
           >
             <div className="flex items-center gap-3">
-              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-              <span className="text-sm">{theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}</span>
+              {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+              <span className="text-sm">{theme === 'dark' ? 'Modo Escuro' : 'Modo Claro'}</span>
             </div>
-            <div className={`w-10 h-5 rounded-full relative transition-colors ${theme === 'dark' ? 'bg-primary' : 'bg-sidebar-hover'}`}>
+            <div className={`w-10 h-5 rounded-full relative transition-colors ${theme === 'dark' ? 'bg-primary' : 'bg-white/30'}`}>
               <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${theme === 'dark' ? 'translate-x-5' : 'translate-x-0.5'}`} />
             </div>
           </button>
