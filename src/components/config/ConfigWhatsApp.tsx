@@ -84,6 +84,13 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
         },
       });
 
+      // Se retornou 401, a instância foi deletada no UAZAPI
+      if (response.status === 401) {
+        console.log('Instância não existe mais no UAZAPI, limpando token...');
+        await clearInstanceToken();
+        return false;
+      }
+
       const data = await response.json();
 
       if (data.instance?.status === 'connected') {
@@ -98,6 +105,26 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       console.error('Erro ao verificar status:', error);
       setStatus('disconnected');
       return false;
+    }
+  };
+
+  // Limpa o token da instância quando ela foi deletada externamente
+  const clearInstanceToken = async () => {
+    try {
+      if (clinicaId) {
+        await supabase
+          .from('clinicas')
+          .update({
+            uazapi_instance_token: null,
+            uazapi_instance_name: null,
+          })
+          .eq('id', clinicaId);
+      }
+      setInstanceToken('');
+      setInstanceName('');
+      setStatus('disconnected');
+    } catch (error) {
+      console.error('Erro ao limpar token:', error);
     }
   };
 
@@ -140,7 +167,7 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       }
 
       // Gerar QR Code (conectar)
-      await fetch(`${UAZAPI_URL}/instance/connect`, {
+      const connectResponse = await fetch(`${UAZAPI_URL}/instance/connect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,6 +175,14 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
         },
         body: JSON.stringify({}),
       });
+
+      // Se retornou 401, a instância foi deletada - limpar e tentar criar nova
+      if (connectResponse.status === 401) {
+        console.log('Instância inválida ao conectar, criando nova...');
+        await clearInstanceToken();
+        // Recursivamente tentar conectar (agora vai criar nova instância)
+        return connectWhatsApp();
+      }
 
       // Aguardar um pouco para o QR Code ser gerado
       await new Promise(resolve => setTimeout(resolve, 2000));
