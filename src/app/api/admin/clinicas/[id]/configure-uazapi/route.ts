@@ -46,15 +46,19 @@ export async function POST(
       );
     }
 
+    // Formato correto para UAZAPI (camelCase, sem prefixo chatwoot_)
+    // URL sem barra no final
+    const chatwootUrl = clinica.chatwoot_url.replace(/\/$/, '');
+
     const chatwootConfig = {
-      chatwoot_url: clinica.chatwoot_url,
-      chatwoot_access_token: clinica.chatwoot_api_token,
-      chatwoot_account_id: parseInt(clinica.chatwoot_account_id),
-      chatwoot_inbox_id: parseInt(clinica.chatwoot_inbox_id),
-      chatwoot_enabled: true,
-      chatwoot_sign_messages: false,
-      chatwoot_ignore_groups: true,
-      chatwoot_create_new_conversation: true,
+      enabled: true,
+      url: chatwootUrl,
+      token: clinica.chatwoot_api_token,
+      accountId: parseInt(clinica.chatwoot_account_id),
+      inboxId: parseInt(clinica.chatwoot_inbox_id),
+      ignoreGroups: true,
+      signMessages: false,
+      createNewConversation: false,
     };
 
     console.log('Configurando Chatwoot no UAZAPI:', JSON.stringify(chatwootConfig, null, 2));

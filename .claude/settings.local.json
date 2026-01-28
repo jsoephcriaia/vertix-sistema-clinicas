@@ -15,7 +15,8 @@
       "Bash(npm run sync-n8n:*)",
       "Bash(ls:*)",
       "WebFetch(domain:docs.uazapi.com)",
-      "WebFetch(domain:www.postman.com)"
+      "WebFetch(domain:www.postman.com)",
+      "Bash(curl:*)"
     ]
   }
 }

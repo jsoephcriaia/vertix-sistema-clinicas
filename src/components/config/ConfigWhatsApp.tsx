@@ -156,16 +156,16 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       // Remove trailing slash da URL do Chatwoot
       const chatwootUrl = clinicaData.chatwoot_url.replace(/\/$/, '');
 
-      // Formato compatível com UAZAPI (campos com prefixo chatwoot_)
+      // Formato correto para UAZAPI (camelCase, sem prefixo chatwoot_)
       const chatwootConfig = {
-        chatwoot_url: chatwootUrl,
-        chatwoot_access_token: clinicaData.chatwoot_api_token,
-        chatwoot_account_id: parseInt(clinicaData.chatwoot_account_id) || 0,
-        chatwoot_inbox_id: parseInt(clinicaData.chatwoot_inbox_id) || 1,
-        chatwoot_enabled: true,
-        chatwoot_sign_messages: false,
-        chatwoot_ignore_groups: true,
-        chatwoot_create_new_conversation: true,
+        enabled: true,
+        url: chatwootUrl,
+        token: clinicaData.chatwoot_api_token,
+        accountId: parseInt(clinicaData.chatwoot_account_id) || 0,
+        inboxId: parseInt(clinicaData.chatwoot_inbox_id) || 1,
+        ignoreGroups: true,
+        signMessages: false,
+        createNewConversation: false,
       };
 
       // Tentar diferentes métodos HTTP (PUT, POST, PATCH)
