@@ -215,23 +215,52 @@ export async function DELETE(
       );
     }
 
-    // 1. Excluir instância UAZAPI (se tiver token)
+    // 1. Desconectar/excluir instância UAZAPI (se tiver token)
     if (clinica.uazapi_instance_token) {
       try {
-        console.log('Excluindo instância UAZAPI...');
-        // Primeiro faz logout
-        await fetch(`${UAZAPI_URL}/instance/logout`, {
-          method: 'POST',
-          headers: { 'token': clinica.uazapi_instance_token },
-        });
+        console.log('Desconectando instância UAZAPI...');
 
-        // Depois exclui a instância usando o admin token
+        // Tentar diferentes endpoints de logout (igual ao ConfigWhatsApp)
+        const logoutEndpoints = [
+          { url: `${UAZAPI_URL}/instance/logout`, method: 'POST' },
+          { url: `${UAZAPI_URL}/instance/disconnect`, method: 'POST' },
+          { url: `${UAZAPI_URL}/instance/logout`, method: 'DELETE' },
+        ];
+
+        let logoutSuccess = false;
+        for (const endpoint of logoutEndpoints) {
+          try {
+            const response = await fetch(endpoint.url, {
+              method: endpoint.method,
+              headers: {
+                'Content-Type': 'application/json',
+                'token': clinica.uazapi_instance_token,
+              },
+            });
+            if (response.ok) {
+              console.log(`Logout UAZAPI via ${endpoint.method} ${endpoint.url}`);
+              logoutSuccess = true;
+              break;
+            }
+          } catch {
+            // Tenta próximo endpoint
+          }
+        }
+
+        if (!logoutSuccess) {
+          console.warn('Não foi possível fazer logout da instância UAZAPI');
+        }
+
+        // Aguardar um pouco para o logout processar
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Tentar excluir a instância usando o admin token
         if (clinica.uazapi_instance_name && UAZAPI_ADMIN_TOKEN) {
           const deleteResponse = await fetch(`${UAZAPI_URL}/instance/delete`, {
             method: 'DELETE',
             headers: {
               'Content-Type': 'application/json',
-              'admin_token': UAZAPI_ADMIN_TOKEN,
+              'admintoken': UAZAPI_ADMIN_TOKEN,
             },
             body: JSON.stringify({ instance_name: clinica.uazapi_instance_name }),
           });
@@ -243,20 +272,35 @@ export async function DELETE(
           }
         }
       } catch (uazapiError) {
-        console.error('Erro ao excluir instância UAZAPI:', uazapiError);
+        console.error('Erro ao desconectar/excluir instância UAZAPI:', uazapiError);
         // Continua mesmo se falhar
       }
     }
 
-    // 2. Excluir account no Chatwoot (se tiver)
-    if (clinica.chatwoot_account_id && chatwootAdmin.isConfigured()) {
-      try {
-        console.log('Excluindo account no Chatwoot:', clinica.chatwoot_account_id);
-        await chatwootAdmin.deleteAccount(parseInt(clinica.chatwoot_account_id));
-        console.log('Account Chatwoot excluído com sucesso');
-      } catch (chatwootError) {
-        console.error('Erro ao excluir account no Chatwoot:', chatwootError);
-        // Continua mesmo se falhar
+    // 2. Excluir account e usuário no Chatwoot (se tiver)
+    if (chatwootAdmin.isConfigured()) {
+      // 2a. Excluir account
+      if (clinica.chatwoot_account_id) {
+        try {
+          console.log('Excluindo account no Chatwoot:', clinica.chatwoot_account_id);
+          await chatwootAdmin.deleteAccount(parseInt(clinica.chatwoot_account_id));
+          console.log('Account Chatwoot excluído com sucesso');
+        } catch (chatwootError) {
+          console.error('Erro ao excluir account no Chatwoot:', chatwootError);
+          // Continua mesmo se falhar
+        }
+      }
+
+      // 2b. Excluir usuário do Chatwoot (se tiver ID salvo)
+      if (clinica.chatwoot_user_id) {
+        try {
+          console.log('Excluindo usuário no Chatwoot:', clinica.chatwoot_user_id);
+          await chatwootAdmin.deleteUser(parseInt(clinica.chatwoot_user_id));
+          console.log('Usuário Chatwoot excluído com sucesso');
+        } catch (chatwootError) {
+          console.error('Erro ao excluir usuário no Chatwoot:', chatwootError);
+          // Continua mesmo se falhar - o usuário pode já ter sido deletado com o account
+        }
       }
     }
 

@@ -134,6 +134,7 @@ export async function POST(request: NextRequest) {
             chatwoot_url: process.env.CHATWOOT_PLATFORM_URL,
             chatwoot_account_id: String(chatwootResult.accountId),
             chatwoot_inbox_id: String(chatwootResult.inboxId),
+            chatwoot_user_id: String(chatwootResult.userId),
             chatwoot_api_token: chatwootResult.apiToken,
             chatwoot_setup_status: 'completed',
           })

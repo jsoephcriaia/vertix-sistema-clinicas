@@ -366,6 +366,26 @@ export class ChatwootAdminClient {
   }
 
   /**
+   * Exclui um usuário do Chatwoot via Platform API
+   */
+  async deleteUser(userId: number): Promise<void> {
+    const url = `${this.baseUrl}/platform/api/v1/users/${userId}`;
+
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'api_access_token': this.platformToken,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Chatwoot Delete User API Error: ${response.status} - ${errorText}`);
+    }
+  }
+
+  /**
    * Verifica se as credenciais da plataforma estão configuradas
    */
   isConfigured(): boolean {
