@@ -177,11 +177,21 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   const isFirstLoadRef = useRef(true);
   const etapaDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Função para buscar validações
-  const fetchValidacoes = useCallback(async () => {
+  // Refs para armazenar valores anteriores das validações (evita re-renders)
+  const validacoesRef = useRef({
+    whatsapp: null as boolean | null,
+    ia: null as boolean | null,
+    google: false,
+    horarios: false,
+    profissionais: false,
+    procedimentos: false,
+  });
+
+  // Função para buscar validações (silent = não mostra loading, para polling)
+  const fetchValidacoes = useCallback(async (silent = false) => {
     if (!CLINICA_ID) return;
 
-    setLoadingValidacoes(true);
+    if (!silent) setLoadingValidacoes(true);
     try {
       // Buscar dados da clínica
       const { data: clinicaData } = await supabase
@@ -191,10 +201,23 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         .single();
 
       if (clinicaData) {
-        setWhatsappConectado(!!clinicaData.uazapi_instance_token);
-        // agente_ia_pausado: true = IA pausada, false/null = IA ativa
-        setIaAtiva(clinicaData.agente_ia_pausado !== true);
-        setGoogleConectado(!!clinicaData.google_tokens);
+        const novoWhatsapp = !!clinicaData.uazapi_instance_token;
+        const novoIa = clinicaData.agente_ia_pausado !== true;
+        const novoGoogle = !!clinicaData.google_tokens;
+
+        // Só atualiza estado se valor mudou
+        if (validacoesRef.current.whatsapp !== novoWhatsapp) {
+          validacoesRef.current.whatsapp = novoWhatsapp;
+          setWhatsappConectado(novoWhatsapp);
+        }
+        if (validacoesRef.current.ia !== novoIa) {
+          validacoesRef.current.ia = novoIa;
+          setIaAtiva(novoIa);
+        }
+        if (validacoesRef.current.google !== novoGoogle) {
+          validacoesRef.current.google = novoGoogle;
+          setGoogleConectado(novoGoogle);
+        }
       }
 
       // Buscar horários da clínica
@@ -205,7 +228,11 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         .eq('ativo', true)
         .limit(1);
 
-      setHorariosDefinidos(!!horariosData && horariosData.length > 0);
+      const novoHorarios = !!horariosData && horariosData.length > 0;
+      if (validacoesRef.current.horarios !== novoHorarios) {
+        validacoesRef.current.horarios = novoHorarios;
+        setHorariosDefinidos(novoHorarios);
+      }
 
       // Buscar profissionais ativos
       const { data: profissionaisData } = await supabase
@@ -215,7 +242,11 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         .eq('ativo', true)
         .limit(1);
 
-      setProfissionaisComHorario(!!profissionaisData && profissionaisData.length > 0);
+      const novoProfissionais = !!profissionaisData && profissionaisData.length > 0;
+      if (validacoesRef.current.profissionais !== novoProfissionais) {
+        validacoesRef.current.profissionais = novoProfissionais;
+        setProfissionaisComHorario(novoProfissionais);
+      }
 
       // Buscar procedimentos ativos
       const { data: procedimentosData } = await supabase
@@ -225,11 +256,15 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         .eq('ativo', true)
         .limit(1);
 
-      setProcedimentosDefinidos(!!procedimentosData && procedimentosData.length > 0);
+      const novoProcedimentos = !!procedimentosData && procedimentosData.length > 0;
+      if (validacoesRef.current.procedimentos !== novoProcedimentos) {
+        validacoesRef.current.procedimentos = novoProcedimentos;
+        setProcedimentosDefinidos(novoProcedimentos);
+      }
     } catch (error) {
       console.error('Erro ao buscar validações:', error);
     } finally {
-      setLoadingValidacoes(false);
+      if (!silent) setLoadingValidacoes(false);
     }
   }, [CLINICA_ID]);
 
@@ -254,7 +289,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
       fetchValidacoes(); // Garante que validações são buscadas ao montar
       const interval = setInterval(() => {
         fetchConversas(true);
-        fetchValidacoes(); // Também atualiza validações no polling
+        fetchValidacoes(true); // Modo silencioso no polling (não causa re-render se nada mudou)
       }, 30000);
       return () => clearInterval(interval);
     }
@@ -493,12 +528,12 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
       const data = await response.json();
 
       if (data.error === 'Chatwoot não configurado') {
-        setChatwootConfigurado(false);
-        setLoadingConversas(false);
+        if (chatwootConfigurado) setChatwootConfigurado(false);
+        if (!isPolling) setLoadingConversas(false);
         return;
       }
 
-      setChatwootConfigurado(true);
+      if (!chatwootConfigurado) setChatwootConfigurado(true);
 
       if (data.data?.payload) {
         const novasConversas: Conversa[] = data.data.payload.map((conv: any) => {
@@ -593,7 +628,8 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     } catch (error) {
       console.error('Erro ao buscar conversas:', error);
     } finally {
-      setLoadingConversas(false);
+      // Só atualiza loading na primeira carga, não no polling
+      if (!isPolling) setLoadingConversas(false);
     }
   };
 
