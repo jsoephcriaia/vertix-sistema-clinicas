@@ -102,6 +102,31 @@ export class ChatwootAdminClient {
   }
 
   /**
+   * Atualiza o locale de um usuário (chamada direta à API do account)
+   */
+  async updateUserLocale(accountId: number, userToken: string, locale: string = 'pt_BR'): Promise<void> {
+    const url = `${this.baseUrl}/api/v1/profile`;
+
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'api_access_token': userToken,
+      },
+      body: JSON.stringify({
+        profile: {
+          locale,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Chatwoot Profile API Error: ${response.status} - ${errorText}`);
+    }
+  }
+
+  /**
    * Vincula um usuário a uma conta com uma role específica
    */
   async addUserToAccount(
@@ -263,12 +288,21 @@ export class ChatwootAdminClient {
     const apiToken = await this.getUserAccessToken(user.id);
     console.log('Token obtido');
 
-    // 5. Criar inbox
+    // 5. Atualizar locale do usuário para português
+    console.log('Configurando idioma pt_BR...');
+    try {
+      await this.updateUserLocale(account.id, apiToken, 'pt_BR');
+      console.log('Idioma configurado');
+    } catch (localeError) {
+      console.warn('Aviso: Não foi possível configurar idioma:', localeError);
+    }
+
+    // 6. Criar inbox
     console.log('Criando inbox WhatsApp...');
     const inbox = await this.createApiInbox(account.id, apiToken, 'WhatsApp', webhookUrl);
     console.log('Inbox criado:', inbox.id);
 
-    // 6. Criar webhook para receber eventos (message_created)
+    // 7. Criar webhook para receber eventos (message_created)
     console.log('Criando webhook para eventos...');
     try {
       const webhook = await this.createWebhook(account.id, apiToken, webhookUrl, ['message_created']);
@@ -278,7 +312,7 @@ export class ChatwootAdminClient {
       console.warn('Aviso: Não foi possível criar webhook automaticamente:', webhookError);
     }
 
-    // 7. Criar label "humano" (para indicar atendimento humano)
+    // 8. Criar label "humano" (para indicar atendimento humano)
     console.log('Criando label humano...');
     try {
       const label = await this.createLabel(account.id, apiToken, 'humano', '#E74C3C');

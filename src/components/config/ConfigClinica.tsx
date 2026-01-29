@@ -11,7 +11,7 @@ interface ConfigClinicaProps {
 }
 
 export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
-  const { clinica } = useAuth();
+  const { clinica, refreshClinica } = useAuth();
   const { showToast } = useAlert();
   const CLINICA_ID = clinica?.id || '';
 
@@ -176,6 +176,8 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
       showToast('Erro ao salvar dados', 'error');
     } else {
       showToast('Dados salvos com sucesso!', 'success');
+      // Atualizar nome da clínica no menu lateral
+      if (refreshClinica) await refreshClinica();
     }
 
     setSaving(false);

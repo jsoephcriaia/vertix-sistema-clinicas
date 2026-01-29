@@ -24,6 +24,7 @@ interface AuthContextType {
   login: (email: string, senha: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   refreshUsuario: () => Promise<void>;
+  refreshClinica: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -106,8 +107,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshClinica = async () => {
+    if (!clinica?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('clinicas')
+        .select('id, nome')
+        .eq('id', clinica.id)
+        .single();
+
+      if (data && !error) {
+        setClinica(data);
+        // Atualizar localStorage
+        const sessao = localStorage.getItem('vertix_sessao');
+        if (sessao) {
+          const dados = JSON.parse(sessao);
+          dados.clinica = data;
+          localStorage.setItem('vertix_sessao', JSON.stringify(dados));
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar clínica:', error);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ usuario, clinica, loading, login, logout, refreshUsuario }}>
+    <AuthContext.Provider value={{ usuario, clinica, loading, login, logout, refreshUsuario, refreshClinica }}>
       {children}
     </AuthContext.Provider>
   );
