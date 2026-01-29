@@ -88,6 +88,20 @@ const ETAPAS_LEAD = [
   { id: 'perdido', label: 'Perdido', cor: 'bg-red-500', textCor: 'text-red-400', bgCor: 'bg-red-500/20' },
 ];
 
+// Campos para buscar na query de validações (array separado para evitar bug de minificação)
+const CLINICA_VALIDACAO_FIELDS = [
+  'uazapi_instance_token',
+  'agente_ia_pausado',
+  'google_tokens'
+].join(', ');
+
+// Tipo para os dados de validação da clínica
+interface ClinicaValidacao {
+  uazapi_instance_token: string | null;
+  agente_ia_pausado: boolean | null;
+  google_tokens: object | null;
+}
+
 export default function Conversas({ conversaInicial, onConversaIniciada }: ConversasProps) {
   const { clinica } = useAuth();
   const { showConfirm, showToast } = useAlert();
@@ -193,12 +207,14 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
 
     if (!silent) setLoadingValidacoes(true);
     try {
-      // Buscar dados da clínica
-      const { data: clinicaData } = await supabase
+      // Buscar dados da clínica (usa constante externa para evitar bug de minificação)
+      const { data } = await supabase
         .from('clinicas')
-        .select('uazapi_instance_token, agente_ia_pausado, google_tokens')
+        .select(CLINICA_VALIDACAO_FIELDS)
         .eq('id', CLINICA_ID)
         .single();
+
+      const clinicaData = data as ClinicaValidacao | null;
 
       if (clinicaData) {
         const novoWhatsapp = !!clinicaData.uazapi_instance_token;
