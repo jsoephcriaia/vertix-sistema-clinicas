@@ -1501,7 +1501,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
               >
                 <div className="relative flex-shrink-0">
                   {renderAvatar(conv, 'lg')}
-                  {conv.humano && (
+                  {(conv.humano || iaAtiva === false) && (
                     <div className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
                       <User size={12} className="text-white" />
                     </div>
@@ -1723,17 +1723,17 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 <button
                   onClick={() => {
                     if (iaAtiva === false) {
-                      showToast('Secretária IA está desativada. Ative em Configurações → Avançado', 'info');
-                      return;
+                      return; // IA pausada = modo humano obrigatório
                     }
                     toggleHumano();
                   }}
+                  disabled={iaAtiva === false}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                     conversaSelecionada.humano || iaAtiva === false
                       ? 'bg-orange-500 text-white'
                       : 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-secondary)] hover:bg-[var(--theme-card-border)]'
-                  } ${iaAtiva === false ? 'cursor-not-allowed' : ''}`}
-                  title={iaAtiva === false ? "Secretária IA desativada" : "Alternar modo humano"}
+                  } ${iaAtiva === false ? 'opacity-80 cursor-not-allowed' : ''}`}
+                  title={iaAtiva === false ? "Secretária IA desativada - Todas as conversas estão em modo humano" : conversaSelecionada.humano ? "Desativar modo humano" : "Ativar modo humano"}
                 >
                   <User size={18} />
                   <span className="hidden sm:inline">HUMANO</span>
