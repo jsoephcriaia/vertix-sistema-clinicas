@@ -46,25 +46,25 @@ export async function POST(
       );
     }
 
-    // Formato correto para UAZAPI (camelCase, sem prefixo chatwoot_)
+    // Formato correto para UAZAPI (snake_case)
     // URL sem barra no final
     const chatwootUrl = clinica.chatwoot_url.replace(/\/$/, '');
 
     const chatwootConfig = {
       enabled: true,
       url: chatwootUrl,
-      token: clinica.chatwoot_api_token,
-      accountId: parseInt(clinica.chatwoot_account_id),
-      inboxId: parseInt(clinica.chatwoot_inbox_id),
-      ignoreGroups: true,
-      signMessages: false,
-      createNewConversation: false,
+      access_token: clinica.chatwoot_api_token,
+      account_id: parseInt(clinica.chatwoot_account_id),
+      inbox_id: parseInt(clinica.chatwoot_inbox_id),
+      ignore_groups: true,
+      sign_messages: false,
+      create_new_conversation: false,
     };
 
     console.log('Configurando Chatwoot no UAZAPI:', JSON.stringify(chatwootConfig, null, 2));
 
-    // Tentar múltiplos métodos HTTP
-    const methods = ['PUT', 'POST', 'PATCH'];
+    // Usar método PUT (conforme documentação)
+    const methods = ['PUT'];
     let success = false;
     let lastError = '';
     let responseData = null;
