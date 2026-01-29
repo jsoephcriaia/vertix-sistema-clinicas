@@ -268,27 +268,22 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     }
   }, [CLINICA_ID]);
 
-  // Carrega validações ao montar
-  useEffect(() => {
-    fetchValidacoes();
-  }, [fetchValidacoes]);
-
   // Escutar mudanças no status da IA (de ConfigAvancado)
   useEffect(() => {
     const handleIaStatusChanged = () => {
-      fetchValidacoes();
+      fetchValidacoes(true); // Silent para não mostrar loading
     };
     window.addEventListener('iaStatusChanged', handleIaStatusChanged);
     return () => window.removeEventListener('iaStatusChanged', handleIaStatusChanged);
   }, [fetchValidacoes]);
 
-  // Carrega conversas e validações (apenas na montagem)
+  // Carrega conversas e validações na montagem
   useEffect(() => {
     if (CLINICA_ID) {
       fetchConversas();
       fetchValidacoes();
     }
-  }, [CLINICA_ID, fetchValidacoes]);
+  }, [CLINICA_ID]);
 
   // Supabase Realtime: ouve mudanças em leads_ia para atualizar conversas/mensagens
   useEffect(() => {
@@ -305,8 +300,6 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           filter: `clinica_id=eq.${CLINICA_ID}`,
         },
         (payload) => {
-          console.log('Realtime: mudança detectada em leads_ia', payload);
-
           // Buscar conversas atualizadas (silencioso)
           fetchConversas(true);
 
@@ -329,17 +322,6 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     };
   }, [CLINICA_ID, conversaSelecionada]);
 
-  // Polling de backup (mais lento - 60s) para garantir sincronização
-  useEffect(() => {
-    if (CLINICA_ID) {
-      const interval = setInterval(() => {
-        fetchConversas(true);
-        fetchValidacoes(true);
-      }, 60000); // 60 segundos ao invés de 30
-      return () => clearInterval(interval);
-    }
-  }, [CLINICA_ID, fetchValidacoes]);
-
   // Processar conversa inicial quando vier de outra tela
   useEffect(() => {
     if (conversaInicial && !conversaInicialProcessada.current && !loadingConversas && CLINICA_ID) {
@@ -357,16 +339,6 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
       conversaInicialProcessada.current = false;
     }
   }, [conversaInicial]);
-
-  // Polling de mensagens mais lento (10s) como backup do Realtime
-  useEffect(() => {
-    if (conversaSelecionada && CLINICA_ID) {
-      const interval = setInterval(() => {
-        fetchMensagensSilent(conversaSelecionada.id);
-      }, 10000); // 10 segundos ao invés de 3
-      return () => clearInterval(interval);
-    }
-  }, [conversaSelecionada, CLINICA_ID]);
 
   // Buscar lead quando selecionar conversa (só quando muda o ID)
   useEffect(() => {

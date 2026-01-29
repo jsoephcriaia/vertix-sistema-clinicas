@@ -187,14 +187,20 @@ export class ChatwootAdminClient {
   }
 
   /**
-   * Cria um webhook para a conta (para receber eventos como message_created)
+   * Cria um webhook para a conta (para receber eventos do Chatwoot)
    * Nota: Esta chamada usa o token do usuário, não o token da plataforma
    */
   async createWebhook(
     accountId: number,
     userToken: string,
     webhookUrl: string,
-    subscriptions: string[] = ['message_created']
+    subscriptions: string[] = [
+      'message_created',
+      'message_updated',
+      'conversation_created',
+      'conversation_status_changed',
+      'conversation_updated'
+    ]
   ): Promise<ChatwootWebhook> {
     const url = `${this.baseUrl}/api/v1/accounts/${accountId}/webhooks`;
 
@@ -302,11 +308,19 @@ export class ChatwootAdminClient {
     const inbox = await this.createApiInbox(account.id, apiToken, 'WhatsApp', webhookUrl);
     console.log('Inbox criado:', inbox.id);
 
-    // 7. Criar webhook para receber eventos (message_created)
+    // 7. Criar webhook para receber eventos
     console.log('Criando webhook para eventos...');
     try {
-      const webhook = await this.createWebhook(account.id, apiToken, webhookUrl, ['message_created']);
-      console.log('Webhook criado:', webhook.id);
+      // Eventos necessários para o Realtime funcionar corretamente
+      const webhookEvents = [
+        'message_created',
+        'message_updated',
+        'conversation_created',
+        'conversation_status_changed',
+        'conversation_updated'
+      ];
+      const webhook = await this.createWebhook(account.id, apiToken, webhookUrl, webhookEvents);
+      console.log('Webhook criado com eventos:', webhookEvents.join(', '));
     } catch (webhookError) {
       // Não falha se o webhook não for criado, apenas loga o erro
       console.warn('Aviso: Não foi possível criar webhook automaticamente:', webhookError);

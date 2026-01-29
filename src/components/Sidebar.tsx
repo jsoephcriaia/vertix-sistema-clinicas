@@ -76,13 +76,37 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
     }
   }, [clinica?.id]);
 
-  // Buscar contagem inicial e polling
+  // Buscar contagem inicial (Realtime cuida das atualizações)
   useEffect(() => {
     if (clinica?.id) {
       fetchUnreadCount();
-      const interval = setInterval(fetchUnreadCount, 30000);
-      return () => clearInterval(interval);
     }
+  }, [clinica?.id, fetchUnreadCount]);
+
+  // Supabase Realtime: ouve mudanças em leads_ia para atualizar badge
+  useEffect(() => {
+    if (!clinica?.id) return;
+
+    const channel = supabase
+      .channel('sidebar_leads_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leads_ia',
+          filter: `clinica_id=eq.${clinica.id}`,
+        },
+        () => {
+          // Quando há mudança nos leads, atualiza contador
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [clinica?.id, fetchUnreadCount]);
 
   // Escutar eventos para atualizar contador imediatamente

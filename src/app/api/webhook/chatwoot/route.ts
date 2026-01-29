@@ -16,36 +16,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     console.log('=== WEBHOOK CHATWOOT RECEBIDO ===')
-    console.log(JSON.stringify(body, null, 2))
-    
-    // Só processa eventos de mensagem criada
-    if (body.event !== 'message_created') {
-      console.log('Evento ignorado:', body.event)
-      return NextResponse.json({ success: true, ignored: true })
-    }
+    console.log('Evento:', body.event)
 
-    // Ignora mensagens privadas
-    if (body.private === true) {
-      console.log('Mensagem privada, ignorando...')
-      return NextResponse.json({ success: true, ignored: true })
-    }
-
+    const eventType = body.event
     const accountId = body.account?.id?.toString()
-    const messageContent = body.content
+    const conversationId = body.conversation?.id || body.id
     const phoneNumber = body.conversation?.meta?.sender?.phone_number?.replace(/\D/g, '')
-    const conversationId = body.conversation?.id
     const senderName = body.conversation?.meta?.sender?.name || body.sender?.name || 'Novo contato'
-    const isIncoming = body.message_type === 'incoming'
 
-    // Para mensagens incoming, criar lead se não existir
-    if (isIncoming) {
-      console.log('Mensagem incoming recebida, verificando lead...')
+    // Eventos que devem atualizar o Realtime (notificar frontend)
+    const realtimeEvents = [
+      'message_created',
+      'message_updated',
+      'conversation_created',
+      'conversation_updated',
+      'conversation_status_changed'
+    ]
 
-      if (!accountId || !phoneNumber) {
-        console.log('Dados incompletos para criar lead')
-        return NextResponse.json({ success: true, ignored: true })
-      }
-
+    // Se é um evento que deve notificar o frontend, atualiza o lead
+    if (realtimeEvents.includes(eventType) && accountId && conversationId) {
       // Busca a clínica pelo account_id do Chatwoot
       const { data: clinica } = await supabase
         .from('clinicas')
@@ -53,19 +42,30 @@ export async function POST(request: NextRequest) {
         .eq('chatwoot_account_id', accountId)
         .single()
 
-      if (clinica) {
+      if (clinica && phoneNumber) {
         const telefoneFormatado = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`
 
         // Verificar se já existe lead com esse telefone
         const { data: leadExistente } = await supabase
           .from('leads_ia')
-          .select('id, conversation_id')
+          .select('id')
           .eq('clinica_id', clinica.id)
           .or(`telefone.eq.${phoneNumber},telefone.eq.${telefoneFormatado}`)
           .single()
 
-        if (!leadExistente) {
-          // Criar novo lead
+        if (leadExistente) {
+          // Atualizar updated_at do lead para notificar via Realtime
+          await supabase
+            .from('leads_ia')
+            .update({
+              updated_at: new Date().toISOString(),
+              conversation_id: conversationId
+            })
+            .eq('id', leadExistente.id)
+
+          console.log('Lead atualizado via Realtime para evento:', eventType)
+        } else if (eventType === 'message_created' || eventType === 'conversation_created') {
+          // Criar novo lead apenas para mensagens/conversas novas
           await supabase
             .from('leads_ia')
             .insert({
@@ -76,25 +76,31 @@ export async function POST(request: NextRequest) {
               conversation_id: conversationId,
             })
 
-          console.log('Lead criado automaticamente para mensagem incoming:', telefoneFormatado)
-        } else {
-          // Atualizar updated_at do lead para notificar via Realtime
-          await supabase
-            .from('leads_ia')
-            .update({
-              updated_at: new Date().toISOString(),
-              conversation_id: conversationId // Garante que está atualizado
-            })
-            .eq('id', leadExistente.id)
+          console.log('Lead criado automaticamente:', telefoneFormatado)
         }
       }
+    }
 
+    // Ignora eventos que não são message_created para o resto do processamento
+    if (eventType !== 'message_created') {
+      return NextResponse.json({ success: true, event: eventType })
+    }
+
+    // Ignora mensagens privadas
+    if (body.private === true) {
+      console.log('Mensagem privada, ignorando...')
+      return NextResponse.json({ success: true, ignored: true })
+    }
+
+    const messageContent = body.content
+
+    // Para mensagens incoming, já processamos o lead acima - só retorna
+    if (body.message_type === 'incoming') {
       return NextResponse.json({ success: true, leadProcessed: true })
     }
 
     // Só processa mensagens outgoing (do atendente) para envio via UAZAPI
     if (body.message_type !== 'outgoing') {
-      console.log('Não é mensagem outgoing, ignorando...')
       return NextResponse.json({ success: true, ignored: true })
     }
     
