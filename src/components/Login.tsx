@@ -108,13 +108,6 @@ export default function Login({ onSuccess }: LoginProps) {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-[var(--theme-card-border)]">
-            <p className="text-xs text-center mb-2 text-[var(--theme-text-muted)]">Credenciais de teste:</p>
-            <div className="rounded-lg p-3 text-xs bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-secondary)]">
-              <p><strong>Email:</strong> admin@clinicabella.com.br</p>
-              <p><strong>Senha:</strong> 123456</p>
-            </div>
-          </div>
         </div>
 
         <p className="text-center text-sm mt-6 text-[var(--theme-text-muted)]">
