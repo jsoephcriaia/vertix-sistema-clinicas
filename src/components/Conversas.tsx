@@ -1944,8 +1944,9 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                   </button>
                   <button
                     onClick={enviarMensagem}
-                    disabled={enviandoMensagem}
-                    className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors flex items-center gap-2"
+                    disabled={enviandoMensagem || (iaAtiva === true && !conversaSelecionada?.humano)}
+                    className="px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+                    title={iaAtiva === true && !conversaSelecionada?.humano ? 'Habilite o atendimento humano para enviar' : ''}
                   >
                     {enviandoMensagem ? (
                       <Loader2 size={18} className="animate-spin" />
@@ -1979,7 +1980,23 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
 
           {/* Input de mensagem */}
           <div className="bg-[var(--theme-card)] border-t border-[var(--theme-card-border)] p-4 flex-shrink-0">
-            {isRecording ? (
+            {/* Bloqueia input quando IA está ativa e modo humano não está habilitado */}
+            {iaAtiva === true && !conversaSelecionada.humano ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-2">
+                <p className="text-[var(--theme-text-muted)] text-sm text-center">
+                  A Secretária de IA está ativa nesta conversa.
+                  <br />
+                  Para enviar mensagens manualmente, assuma o atendimento.
+                </p>
+                <button
+                  onClick={toggleHumano}
+                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <User size={18} />
+                  Assumir Atendimento
+                </button>
+              </div>
+            ) : isRecording ? (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-center h-16 bg-[var(--theme-bg)] rounded-lg overflow-hidden px-2">
                   <div className="flex items-center gap-[2px] h-full">
