@@ -331,6 +331,27 @@ export class ChatwootAdminClient {
   }
 
   /**
+   * Exclui uma conta (account) do Chatwoot
+   * Isso remove automaticamente todos os usuários, inboxes, conversas, etc.
+   */
+  async deleteAccount(accountId: number): Promise<void> {
+    const url = `${this.baseUrl}/platform/api/v1/accounts/${accountId}`;
+
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'api_access_token': this.platformToken,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Chatwoot Delete Account API Error: ${response.status} - ${errorText}`);
+    }
+  }
+
+  /**
    * Verifica se as credenciais da plataforma estão configuradas
    */
   isConfigured(): boolean {

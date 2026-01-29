@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { chatwootAdmin } from '@/lib/chatwootAdmin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const UAZAPI_URL = 'https://iaparanegocios.uazapi.com';
+const UAZAPI_URL = process.env.NEXT_PUBLIC_UAZAPI_URL || 'https://iaparanegocios.uazapi.com';
+const UAZAPI_ADMIN_TOKEN = process.env.NEXT_PUBLIC_UAZAPI_ADMIN_TOKEN || '';
 
 /**
  * GET - Obter detalhes de uma clínica
@@ -213,34 +215,52 @@ export async function DELETE(
       );
     }
 
-    // 1. Desconectar WhatsApp via UAZAPI (se tiver token)
+    // 1. Excluir instância UAZAPI (se tiver token)
     if (clinica.uazapi_instance_token) {
       try {
-        const logoutEndpoints = [
-          { method: 'POST', url: '/instance/logout' },
-          { method: 'DELETE', url: '/instance/logout' },
-          { method: 'POST', url: '/instance/disconnect' },
-        ];
+        console.log('Excluindo instância UAZAPI...');
+        // Primeiro faz logout
+        await fetch(`${UAZAPI_URL}/instance/logout`, {
+          method: 'POST',
+          headers: { 'token': clinica.uazapi_instance_token },
+        });
 
-        for (const endpoint of logoutEndpoints) {
-          try {
-            const response = await fetch(`${UAZAPI_URL}${endpoint.url}`, {
-              method: endpoint.method,
-              headers: { 'token': clinica.uazapi_instance_token },
-            });
-            if (response.ok) {
-              break;
-            }
-          } catch {
-            // Tenta próximo endpoint
+        // Depois exclui a instância usando o admin token
+        if (clinica.uazapi_instance_name && UAZAPI_ADMIN_TOKEN) {
+          const deleteResponse = await fetch(`${UAZAPI_URL}/instance/delete`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              'admin_token': UAZAPI_ADMIN_TOKEN,
+            },
+            body: JSON.stringify({ instance_name: clinica.uazapi_instance_name }),
+          });
+
+          if (deleteResponse.ok) {
+            console.log('Instância UAZAPI excluída com sucesso');
+          } else {
+            console.warn('Não foi possível excluir instância UAZAPI:', await deleteResponse.text());
           }
         }
       } catch (uazapiError) {
-        console.error('Erro ao desconectar WhatsApp:', uazapiError);
+        console.error('Erro ao excluir instância UAZAPI:', uazapiError);
+        // Continua mesmo se falhar
       }
     }
 
-    // 2. Excluir dados relacionados (ordem importa por causa das foreign keys)
+    // 2. Excluir account no Chatwoot (se tiver)
+    if (clinica.chatwoot_account_id && chatwootAdmin.isConfigured()) {
+      try {
+        console.log('Excluindo account no Chatwoot:', clinica.chatwoot_account_id);
+        await chatwootAdmin.deleteAccount(parseInt(clinica.chatwoot_account_id));
+        console.log('Account Chatwoot excluído com sucesso');
+      } catch (chatwootError) {
+        console.error('Erro ao excluir account no Chatwoot:', chatwootError);
+        // Continua mesmo se falhar
+      }
+    }
+
+    // 3. Excluir dados relacionados no Supabase (ordem importa por causa das foreign keys)
     // Agendamentos
     await supabase
       .from('agendamentos')
@@ -303,13 +323,13 @@ export async function DELETE(
       .delete()
       .eq('clinica_id', clinicaId);
 
-    // 3. Limpar referências no audit log (evita erro de foreign key)
+    // 4. Limpar referências no audit log (evita erro de foreign key)
     await supabase
       .from('admin_audit_log')
       .update({ clinica_id: null })
       .eq('clinica_id', clinicaId);
 
-    // 4. Registrar no audit log antes de excluir a clínica
+    // 5. Registrar no audit log antes de excluir a clínica
     if (adminId) {
       await supabase.from('admin_audit_log').insert({
         admin_id: adminId,
@@ -323,7 +343,7 @@ export async function DELETE(
       });
     }
 
-    // 5. Finalmente, excluir a clínica
+    // 6. Finalmente, excluir a clínica
     const { error: deleteError } = await supabase
       .from('clinicas')
       .delete()
