@@ -303,12 +303,18 @@ export async function DELETE(
       .delete()
       .eq('clinica_id', clinicaId);
 
-    // 3. Registrar no audit log antes de excluir a clínica
+    // 3. Limpar referências no audit log (evita erro de foreign key)
+    await supabase
+      .from('admin_audit_log')
+      .update({ clinica_id: null })
+      .eq('clinica_id', clinicaId);
+
+    // 4. Registrar no audit log antes de excluir a clínica
     if (adminId) {
       await supabase.from('admin_audit_log').insert({
         admin_id: adminId,
         action: 'clinic_deleted',
-        clinica_id: null, // Será excluída
+        clinica_id: null,
         details: {
           clinicaId: clinicaId,
           clinicaNome: clinica.nome,
@@ -317,7 +323,7 @@ export async function DELETE(
       });
     }
 
-    // 4. Finalmente, excluir a clínica
+    // 5. Finalmente, excluir a clínica
     const { error: deleteError } = await supabase
       .from('clinicas')
       .delete()

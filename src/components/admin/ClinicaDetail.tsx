@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Building2, User, CheckCircle, AlertCircle, Clock, Loader2, RefreshCw, MessageSquare, Calendar, Power, Trash2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdminAuth } from '@/lib/adminAuth';
+import { useAlert } from '@/components/Alert';
 
 interface ClinicaDetailProps {
   clinicaId: string | null;
@@ -39,6 +40,7 @@ interface Usuario {
 
 export default function ClinicaDetail({ clinicaId, onNavigate }: ClinicaDetailProps) {
   const { admin } = useAdminAuth();
+  const { showAlert, showSuccess, showError } = useAlert();
   const [clinica, setClinica] = useState<Clinica | null>(null);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,35 +94,42 @@ export default function ClinicaDetail({ clinicaId, onNavigate }: ClinicaDetailPr
       ? 'Tem certeza que deseja DESATIVAR esta clínica? Os usuários perderão acesso e o WhatsApp será desconectado.'
       : 'Tem certeza que deseja ATIVAR esta clínica?';
 
-    if (!confirm(confirmMessage)) return;
+    showAlert({
+      type: 'confirm',
+      title: isActive ? 'Desativar Clínica' : 'Ativar Clínica',
+      message: confirmMessage,
+      confirmText: isActive ? 'Desativar' : 'Ativar',
+      cancelText: 'Cancelar',
+      onConfirm: async () => {
+        setActionLoading(true);
+        try {
+          const response = await fetch(`/api/admin/clinicas/${clinicaId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, adminId: admin?.id }),
+          });
 
-    setActionLoading(true);
-    try {
-      const response = await fetch(`/api/admin/clinicas/${clinicaId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, adminId: admin?.id }),
-      });
+          const data = await response.json();
 
-      const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || 'Erro ao atualizar clínica');
+          }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao atualizar clínica');
-      }
-
-      alert(data.message);
-      loadClinica();
-    } catch (error) {
-      console.error('Erro ao atualizar clínica:', error);
-      alert(error instanceof Error ? error.message : 'Erro ao atualizar clínica');
-    } finally {
-      setActionLoading(false);
-    }
+          showSuccess(data.message, isActive ? 'Clínica Desativada' : 'Clínica Ativada');
+          loadClinica();
+        } catch (error) {
+          console.error('Erro ao atualizar clínica:', error);
+          showError(error instanceof Error ? error.message : 'Erro ao atualizar clínica');
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
   };
 
   const handleDelete = async () => {
     if (!clinica || deleteConfirmText !== clinica.nome) {
-      alert('Digite o nome da clínica corretamente para confirmar a exclusão');
+      showError('Digite o nome da clínica corretamente para confirmar a exclusão', 'Confirmação Inválida');
       return;
     }
 
@@ -136,14 +145,14 @@ export default function ClinicaDetail({ clinicaId, onNavigate }: ClinicaDetailPr
         throw new Error(data.error || 'Erro ao excluir clínica');
       }
 
-      alert(data.message);
+      setShowDeleteModal(false);
+      showSuccess(data.message, 'Clínica Excluída');
       onNavigate('clinicas');
     } catch (error) {
       console.error('Erro ao excluir clínica:', error);
-      alert(error instanceof Error ? error.message : 'Erro ao excluir clínica');
+      showError(error instanceof Error ? error.message : 'Erro ao excluir clínica');
     } finally {
       setActionLoading(false);
-      setShowDeleteModal(false);
     }
   };
 
