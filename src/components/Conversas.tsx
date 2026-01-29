@@ -9,6 +9,9 @@ import EmojiPicker from './EmojiPicker';
 import PainelInteresse from './PainelInteresse';
 import PainelAgendamentos from './PainelAgendamentos';
 
+// Configuração UAZAPI
+const UAZAPI_URL = process.env.NEXT_PUBLIC_UAZAPI_URL || 'https://iaparanegocios.uazapi.com';
+
 interface Attachment {
   id: number;
   file_type: string;
@@ -201,14 +204,33 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
         .single();
 
       if (clinicaData) {
-        const novoWhatsapp = !!clinicaData.uazapi_instance_token;
+        // Verificar status real do WhatsApp via UAZAPI (não só se o token existe)
+        let novoWhatsapp = false;
+        if (clinicaData.uazapi_instance_token) {
+          try {
+            const statusResponse = await fetch(`${UAZAPI_URL}/instance/status`, {
+              method: 'GET',
+              headers: { 'token': clinicaData.uazapi_instance_token },
+            });
+
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json();
+              novoWhatsapp = statusData.instance?.status === 'connected';
+            }
+          } catch (error) {
+            console.error('Erro ao verificar status UAZAPI:', error);
+            novoWhatsapp = false;
+          }
+        }
+
         // agente_ia_pausado = true significa IA pausada, então iaAtiva = false
         const novoIa = clinicaData.agente_ia_pausado !== true;
         const novoGoogle = !!clinicaData.google_tokens;
 
         console.log('Validações:', {
           agente_ia_pausado: clinicaData.agente_ia_pausado,
-          iaAtiva: novoIa
+          iaAtiva: novoIa,
+          whatsappConectado: novoWhatsapp
         });
 
         // Só atualiza estado se valor mudou
