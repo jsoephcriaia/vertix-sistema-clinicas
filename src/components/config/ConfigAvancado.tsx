@@ -59,6 +59,9 @@ export default function ConfigAvancado({ onBack, onNavigate }: ConfigAvancadoPro
       if (error) throw error;
 
       setAgenteIaPausado(novoStatus);
+
+      // Dispara evento para atualizar outros componentes (ex: Conversas)
+      window.dispatchEvent(new CustomEvent('iaStatusChanged'));
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Erro desconhecido';
       setErro(`Erro ao alterar: ${msg}`);

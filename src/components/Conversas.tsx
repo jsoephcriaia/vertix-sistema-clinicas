@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Search, Send, User, StickyNote, X, Check, CheckCheck, Settings, Loader2, RefreshCw, Download, FileText, Smile, Paperclip, Mic, Square, Reply, Plus, Phone, MessageSquare, Play, Pause, Trash2, CheckCircle, Clock, Edit3, ChevronDown, CalendarPlus, Package } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
@@ -177,65 +177,75 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   const isFirstLoadRef = useRef(true);
   const etapaDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Carrega validações de funcionalidades
-  useEffect(() => {
-    const fetchValidacoes = async () => {
-      if (!CLINICA_ID) return;
+  // Função para buscar validações
+  const fetchValidacoes = useCallback(async () => {
+    if (!CLINICA_ID) return;
 
-      setLoadingValidacoes(true);
-      try {
-        // Buscar dados da clínica
-        const { data: clinicaData } = await supabase
-          .from('clinicas')
-          .select('uazapi_instance_token, agente_ia_pausado, google_tokens')
-          .eq('id', CLINICA_ID)
-          .single();
+    setLoadingValidacoes(true);
+    try {
+      // Buscar dados da clínica
+      const { data: clinicaData } = await supabase
+        .from('clinicas')
+        .select('uazapi_instance_token, agente_ia_pausado, google_tokens')
+        .eq('id', CLINICA_ID)
+        .single();
 
-        if (clinicaData) {
-          setWhatsappConectado(!!clinicaData.uazapi_instance_token);
-          // agente_ia_pausado: true = IA pausada, false/null = IA ativa
-          setIaAtiva(clinicaData.agente_ia_pausado !== true);
-          setGoogleConectado(!!clinicaData.google_tokens);
-        }
-
-        // Buscar horários da clínica
-        const { data: horariosData } = await supabase
-          .from('horarios')
-          .select('id')
-          .eq('clinica_id', CLINICA_ID)
-          .eq('ativo', true)
-          .limit(1);
-
-        setHorariosDefinidos(!!horariosData && horariosData.length > 0);
-
-        // Buscar profissionais ativos
-        const { data: profissionaisData } = await supabase
-          .from('equipe')
-          .select('id')
-          .eq('clinica_id', CLINICA_ID)
-          .eq('ativo', true)
-          .limit(1);
-
-        setProfissionaisComHorario(!!profissionaisData && profissionaisData.length > 0);
-
-        // Buscar procedimentos ativos
-        const { data: procedimentosData } = await supabase
-          .from('procedimentos')
-          .select('id')
-          .eq('clinica_id', CLINICA_ID)
-          .eq('ativo', true)
-          .limit(1);
-
-        setProcedimentosDefinidos(!!procedimentosData && procedimentosData.length > 0);
-      } catch (error) {
-        console.error('Erro ao buscar validações:', error);
-      } finally {
-        setLoadingValidacoes(false);
+      if (clinicaData) {
+        setWhatsappConectado(!!clinicaData.uazapi_instance_token);
+        // agente_ia_pausado: true = IA pausada, false/null = IA ativa
+        setIaAtiva(clinicaData.agente_ia_pausado !== true);
+        setGoogleConectado(!!clinicaData.google_tokens);
       }
-    };
 
-    fetchValidacoes();
+      // Buscar horários da clínica
+      const { data: horariosData } = await supabase
+        .from('horarios')
+        .select('id')
+        .eq('clinica_id', CLINICA_ID)
+        .eq('ativo', true)
+        .limit(1);
+
+      setHorariosDefinidos(!!horariosData && horariosData.length > 0);
+
+      // Buscar profissionais ativos
+      const { data: profissionaisData } = await supabase
+        .from('equipe')
+        .select('id')
+        .eq('clinica_id', CLINICA_ID)
+        .eq('ativo', true)
+        .limit(1);
+
+      setProfissionaisComHorario(!!profissionaisData && profissionaisData.length > 0);
+
+      // Buscar procedimentos ativos
+      const { data: procedimentosData } = await supabase
+        .from('procedimentos')
+        .select('id')
+        .eq('clinica_id', CLINICA_ID)
+        .eq('ativo', true)
+        .limit(1);
+
+      setProcedimentosDefinidos(!!procedimentosData && procedimentosData.length > 0);
+    } catch (error) {
+      console.error('Erro ao buscar validações:', error);
+    } finally {
+      setLoadingValidacoes(false);
+    }
   }, [CLINICA_ID]);
+
+  // Carrega validações ao montar
+  useEffect(() => {
+    fetchValidacoes();
+  }, [fetchValidacoes]);
+
+  // Escutar mudanças no status da IA (de ConfigAvancado)
+  useEffect(() => {
+    const handleIaStatusChanged = () => {
+      fetchValidacoes();
+    };
+    window.addEventListener('iaStatusChanged', handleIaStatusChanged);
+    return () => window.removeEventListener('iaStatusChanged', handleIaStatusChanged);
+  }, [fetchValidacoes]);
 
   // Carrega conversas
   useEffect(() => {
