@@ -202,8 +202,14 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
 
       if (clinicaData) {
         const novoWhatsapp = !!clinicaData.uazapi_instance_token;
+        // agente_ia_pausado = true significa IA pausada, então iaAtiva = false
         const novoIa = clinicaData.agente_ia_pausado !== true;
         const novoGoogle = !!clinicaData.google_tokens;
+
+        console.log('Validações:', {
+          agente_ia_pausado: clinicaData.agente_ia_pausado,
+          iaAtiva: novoIa
+        });
 
         // Só atualiza estado se valor mudou
         if (validacoesRef.current.whatsapp !== novoWhatsapp) {
