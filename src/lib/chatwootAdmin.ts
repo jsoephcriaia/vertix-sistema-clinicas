@@ -43,10 +43,12 @@ interface ChatwootLabel {
 export class ChatwootAdminClient {
   private baseUrl: string;
   private platformToken: string;
+  private n8nWebhookUrl: string;
 
   constructor() {
     this.baseUrl = process.env.CHATWOOT_PLATFORM_URL || '';
     this.platformToken = process.env.CHATWOOT_PLATFORM_TOKEN || '';
+    this.n8nWebhookUrl = process.env.N8N_WEBHOOK_URL || '';
 
     if (!this.baseUrl || !this.platformToken) {
       console.warn('CHATWOOT_PLATFORM_URL ou CHATWOOT_PLATFORM_TOKEN não configurados');
@@ -308,8 +310,8 @@ export class ChatwootAdminClient {
     const inbox = await this.createApiInbox(account.id, apiToken, 'WhatsApp', webhookUrl);
     console.log('Inbox criado:', inbox.id);
 
-    // 7. Criar webhook para receber eventos
-    console.log('Criando webhook para eventos...');
+    // 7. Criar webhook para receber eventos (Vertix)
+    console.log('Criando webhook Vertix para eventos...');
     try {
       // Eventos necessários para o Realtime funcionar corretamente
       const webhookEvents = [
@@ -319,14 +321,28 @@ export class ChatwootAdminClient {
         'conversation_status_changed',
         'conversation_updated'
       ];
-      const webhook = await this.createWebhook(account.id, apiToken, webhookUrl, webhookEvents);
-      console.log('Webhook criado com eventos:', webhookEvents.join(', '));
+      await this.createWebhook(account.id, apiToken, webhookUrl, webhookEvents);
+      console.log('Webhook Vertix criado com eventos:', webhookEvents.join(', '));
     } catch (webhookError) {
       // Não falha se o webhook não for criado, apenas loga o erro
-      console.warn('Aviso: Não foi possível criar webhook automaticamente:', webhookError);
+      console.warn('Aviso: Não foi possível criar webhook Vertix automaticamente:', webhookError);
     }
 
-    // 8. Criar label "humano" (para indicar atendimento humano)
+    // 8. Criar webhook para n8n (Secretária de IA)
+    if (this.n8nWebhookUrl) {
+      console.log('Criando webhook n8n para Secretária de IA...');
+      try {
+        // Apenas message_created é necessário para o n8n processar mensagens
+        await this.createWebhook(account.id, apiToken, this.n8nWebhookUrl, ['message_created']);
+        console.log('Webhook n8n criado:', this.n8nWebhookUrl);
+      } catch (webhookError) {
+        console.warn('Aviso: Não foi possível criar webhook n8n automaticamente:', webhookError);
+      }
+    } else {
+      console.warn('Aviso: N8N_WEBHOOK_URL não configurada, webhook da IA não criado');
+    }
+
+    // 9. Criar label "humano" (para indicar atendimento humano)
     console.log('Criando label humano...');
     try {
       const label = await this.createLabel(account.id, apiToken, 'humano', '#E74C3C');
