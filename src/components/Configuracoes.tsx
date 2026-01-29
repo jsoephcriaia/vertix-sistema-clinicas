@@ -30,7 +30,11 @@ export default function Configuracoes({ subPage, setSubPage }: ConfiguracoesProp
       case 'integracoes':
         return <ConfigIntegracoes onBack={() => setSubPage(null)} />;
       case 'avancado':
-        return <ConfigAvancado onBack={() => setSubPage(null)} />;
+        return <ConfigAvancado onBack={() => setSubPage(null)} onNavigate={(page) => {
+          if (page === 'configuracoes-whatsapp') {
+            setSubPage('whatsapp');
+          }
+        }} />;
       default:
         return null;
     }
