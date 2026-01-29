@@ -65,14 +65,14 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
       const response = await fetch(`/api/chatwoot/conversations?clinica_id=${clinica.id}`);
       const data = await response.json();
 
-      if (data.payload) {
-        const count = data.payload.filter((conv: { unread_count?: number }) =>
-          conv.unread_count && conv.unread_count > 0
-        ).length;
-        setUnreadCount(count);
-      }
+      // A API retorna { data: { payload: [...] } }
+      const conversations = data.data?.payload || [];
+      const count = conversations.filter((conv: { unread_count?: number }) =>
+        conv.unread_count && conv.unread_count > 0
+      ).length;
+      setUnreadCount(count);
     } catch (error) {
-      console.error('Erro ao buscar conversas não lidas:', error);
+      // Silencioso - não loga erro para não poluir console
     }
   }, [clinica?.id]);
 
@@ -250,15 +250,10 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
                         : 'text-[var(--theme-sidebar-text-muted)] hover:bg-[var(--theme-sidebar-hover)] hover:text-[var(--theme-sidebar-text)]'
                     }`}
                   >
-                    <div className="relative">
-                      <Icon size={20} />
-                      {showBadge && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-                      )}
-                    </div>
-                    <span className="font-medium flex-1">{item.label}</span>
+                    <Icon size={20} />
+                    <span className="font-medium">{item.label}</span>
                     {showBadge && (
-                      <span className={`min-w-[20px] h-5 px-1.5 text-xs font-bold rounded-full flex items-center justify-center ${
+                      <span className={`ml-auto min-w-[20px] h-5 px-1.5 text-xs font-bold rounded-full flex items-center justify-center ${
                         isActive ? 'bg-white/20 text-white' : 'bg-red-500 text-white'
                       }`}>
                         {unreadCount > 99 ? '99+' : unreadCount}
