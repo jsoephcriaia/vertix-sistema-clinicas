@@ -97,11 +97,20 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   const [conversaSelecionada, setConversaSelecionada] = useState<Conversa | null>(null);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [abaAtiva, setAbaAtiva] = useState<AbaConversa>('abertas');
-  
+
   const [loadingConversas, setLoadingConversas] = useState(true);
   const [loadingMensagens, setLoadingMensagens] = useState(false);
   const [enviandoMensagem, setEnviandoMensagem] = useState(false);
   const [chatwootConfigurado, setChatwootConfigurado] = useState(true);
+
+  // Estados para validações de funcionalidades
+  const [whatsappConectado, setWhatsappConectado] = useState<boolean | null>(null);
+  const [iaAtiva, setIaAtiva] = useState(false);
+  const [googleConectado, setGoogleConectado] = useState(false);
+  const [horariosDefinidos, setHorariosDefinidos] = useState(false);
+  const [profissionaisComHorario, setProfissionaisComHorario] = useState(false);
+  const [procedimentosDefinidos, setProcedimentosDefinidos] = useState(false);
+  const [loadingValidacoes, setLoadingValidacoes] = useState(true);
   
   const [mensagem, setMensagem] = useState('');
   const [busca, setBusca] = useState('');
@@ -167,6 +176,65 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   const lastMessageIdRef = useRef<number>(0);
   const isFirstLoadRef = useRef(true);
   const etapaDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Carrega validações de funcionalidades
+  useEffect(() => {
+    const fetchValidacoes = async () => {
+      if (!CLINICA_ID) return;
+
+      setLoadingValidacoes(true);
+      try {
+        // Buscar dados da clínica
+        const { data: clinicaData } = await supabase
+          .from('clinicas')
+          .select('uazapi_instance_token, agente_ia_pausado, google_tokens')
+          .eq('id', CLINICA_ID)
+          .single();
+
+        if (clinicaData) {
+          setWhatsappConectado(!!clinicaData.uazapi_instance_token);
+          setIaAtiva(!clinicaData.agente_ia_pausado);
+          setGoogleConectado(!!clinicaData.google_tokens);
+        }
+
+        // Buscar horários da clínica
+        const { data: horariosData } = await supabase
+          .from('horarios')
+          .select('id')
+          .eq('clinica_id', CLINICA_ID)
+          .eq('ativo', true)
+          .limit(1);
+
+        setHorariosDefinidos(!!horariosData && horariosData.length > 0);
+
+        // Buscar profissionais ativos
+        const { data: profissionaisData } = await supabase
+          .from('equipe')
+          .select('id')
+          .eq('clinica_id', CLINICA_ID)
+          .eq('ativo', true)
+          .limit(1);
+
+        setProfissionaisComHorario(!!profissionaisData && profissionaisData.length > 0);
+
+        // Buscar procedimentos ativos
+        const { data: procedimentosData } = await supabase
+          .from('procedimentos')
+          .select('id')
+          .eq('clinica_id', CLINICA_ID)
+          .eq('ativo', true)
+          .limit(1);
+
+        setProcedimentosDefinidos(!!procedimentosData && procedimentosData.length > 0);
+      } catch (error) {
+        console.error('Erro ao buscar validações:', error);
+      } finally {
+        setLoadingValidacoes(false);
+      }
+    };
+
+    fetchValidacoes();
+  }, [CLINICA_ID]);
 
   // Carrega conversas
   useEffect(() => {
@@ -965,11 +1033,33 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
   const formatarTempo = (timestamp: number) => {
     const agora = Date.now() / 1000;
     const diff = agora - timestamp;
-    
+
     if (diff < 60) return 'agora';
     if (diff < 3600) return `${Math.floor(diff / 60)}min`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
     return `${Math.floor(diff / 86400)}d`;
+  };
+
+  // Formatar telefone com máscara
+  const formatarTelefone = (valor: string) => {
+    const numeros = valor.replace(/\D/g, '');
+    if (numeros.length <= 2) return numeros;
+    if (numeros.length <= 7) return `(${numeros.slice(0, 2)}) ${numeros.slice(2)}`;
+    if (numeros.length <= 11) return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7)}`;
+    return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7, 11)}`;
+  };
+
+  // Validar telefone (mínimo 10 dígitos)
+  const validarTelefone = (telefone: string): boolean => {
+    const numeros = telefone.replace(/\D/g, '');
+    return numeros.length >= 10;
+  };
+
+  // Preparar telefone para salvar (adiciona 55 se não tiver)
+  const prepararTelefoneParaSalvar = (telefone: string): string => {
+    const numeros = telefone.replace(/\D/g, '');
+    if (numeros.startsWith('55')) return numeros;
+    return '55' + numeros;
   };
 
   const formatarHora = (timestamp: number) => {
@@ -1176,6 +1266,24 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           <p className="text-[var(--theme-text-muted)] mb-4">Configure a integração com o Chatwoot para ver as conversas.</p>
           <p className="text-primary">
             Vá em Configurações → Integrações
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Se WhatsApp não está conectado
+  if (!loadingValidacoes && whatsappConectado === false) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-48px)] -m-4 lg:-m-6">
+        <div className="text-center p-8">
+          <div className="w-20 h-20 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Phone size={40} className="text-orange-400" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">WhatsApp não conectado</h2>
+          <p className="text-[var(--theme-text-muted)] mb-4">Conecte seu WhatsApp para começar a conversar com seus clientes.</p>
+          <p className="text-primary">
+            Vá em Configurações → WhatsApp
           </p>
         </div>
       </div>
@@ -1432,9 +1540,13 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 {/* Botão Procedimentos de Interesse */}
                 <button
                   onClick={() => setShowPainelInteresse(true)}
-                  disabled={!leadIA}
+                  disabled={!leadIA || !procedimentosDefinidos}
                   className="p-2 rounded-lg transition-colors bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={leadIA ? "Procedimentos de Interesse" : "Sem lead vinculado"}
+                  title={
+                    !leadIA ? "Sem lead vinculado" :
+                    !procedimentosDefinidos ? "Cadastre procedimentos nas configurações" :
+                    "Procedimentos de Interesse"
+                  }
                 >
                   <Package size={20} />
                 </button>
@@ -1442,9 +1554,15 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 {/* Botão Agendar */}
                 <button
                   onClick={() => setShowPainelAgendamentos(true)}
-                  disabled={!leadIA}
+                  disabled={!leadIA || !googleConectado || !horariosDefinidos || !profissionaisComHorario}
                   className="p-2 rounded-lg transition-colors bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={leadIA ? "Agendamentos" : "Sem lead vinculado"}
+                  title={
+                    !leadIA ? "Sem lead vinculado" :
+                    !googleConectado ? "Conecte o Google Calendar nas configurações" :
+                    !horariosDefinidos ? "Defina os horários da clínica nas configurações" :
+                    !profissionaisComHorario ? "Cadastre profissionais na equipe" :
+                    "Agendamentos"
+                  }
                 >
                   <CalendarPlus size={20} />
                 </button>
@@ -1466,11 +1584,13 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 
                 <button
                   onClick={toggleHumano}
+                  disabled={!iaAtiva}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    conversaSelecionada.humano
+                    conversaSelecionada.humano || !iaAtiva
                       ? 'bg-orange-500 text-white'
                       : 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-secondary)] hover:bg-[var(--theme-card-border)]'
-                  }`}
+                  } ${!iaAtiva ? 'cursor-not-allowed' : ''}`}
+                  title={!iaAtiva ? "Secretária IA está desativada - somente modo humano ativo" : "Alternar modo humano"}
                 >
                   <User size={18} />
                   <span className="hidden sm:inline">HUMANO</span>
@@ -1573,11 +1693,14 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           </div>
 
           {/* Aviso de modo humano */}
-          {conversaSelecionada.humano && (
+          {(conversaSelecionada.humano || !iaAtiva) && (
             <div className="bg-orange-500/20 border-t border-orange-500/30 px-4 py-2 flex-shrink-0">
               <p className="text-orange-400 text-sm text-center">
                 <User size={14} className="inline mr-1" />
-                Modo humano ativo - A IA não responderá esta conversa
+                {!iaAtiva
+                  ? 'Secretária IA desativada - Todas as conversas em modo humano'
+                  : 'Modo humano ativo - A IA não responderá esta conversa'
+                }
               </p>
             </div>
           )}
@@ -1970,16 +2093,27 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                     placeholder="Nome"
                     className="w-full bg-[var(--theme-bg)] border border-[var(--theme-card-border)] rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary"
                   />
-                  <input
-                    type="text"
-                    value={novoContato.telefone}
-                    onChange={(e) => setNovoContato(prev => ({ ...prev, telefone: e.target.value }))}
-                    placeholder="Telefone (ex: 5511999999999)"
-                    className="w-full bg-[var(--theme-bg)] border border-[var(--theme-card-border)] rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary"
-                  />
+                  <div className="relative">
+                    <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--theme-text-muted)]" />
+                    <input
+                      type="text"
+                      value={novoContato.telefone}
+                      onChange={(e) => setNovoContato(prev => ({ ...prev, telefone: formatarTelefone(e.target.value) }))}
+                      placeholder="(11) 99999-9999"
+                      maxLength={15}
+                      className={`w-full bg-[var(--theme-bg)] border rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-primary ${
+                        novoContato.telefone && !validarTelefone(novoContato.telefone)
+                          ? 'border-red-500'
+                          : 'border-[var(--theme-card-border)]'
+                      }`}
+                    />
+                  </div>
+                  {novoContato.telefone && !validarTelefone(novoContato.telefone) && (
+                    <p className="text-xs text-red-400 mt-1">Telefone deve ter pelo menos 10 dígitos</p>
+                  )}
                   <button
-                    onClick={() => iniciarConversa(novoContato.telefone, novoContato.nome || 'Novo contato')}
-                    disabled={!novoContato.telefone || iniciandoConversa}
+                    onClick={() => iniciarConversa(prepararTelefoneParaSalvar(novoContato.telefone), novoContato.nome || 'Novo contato')}
+                    disabled={!validarTelefone(novoContato.telefone) || iniciandoConversa}
                     className="w-full bg-primary hover:bg-primary-hover disabled:bg-[var(--theme-bg-tertiary)] disabled:text-[var(--theme-text-muted)] text-white py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
                     {iniciandoConversa ? (
