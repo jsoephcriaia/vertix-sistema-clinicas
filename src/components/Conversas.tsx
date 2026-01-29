@@ -497,7 +497,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
       setChatwootConfigurado(true);
 
       if (data.data?.payload) {
-        const conversasFormatadas: Conversa[] = data.data.payload.map((conv: any) => {
+        const novasConversas: Conversa[] = data.data.payload.map((conv: any) => {
           const sender = conv.meta?.sender || {};
           const lastMessage = conv.last_non_activity_message;
           const tempoPassado = formatarTempo(conv.timestamp || conv.last_activity_at);
@@ -528,26 +528,57 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           };
         });
 
-        // Se é polling, só atualiza se houver diferença real
-        if (isPolling) {
-          const hasChanges = conversasFormatadas.length !== conversas.length ||
-            conversasFormatadas.some((conv, i) => {
-              const old = conversas.find(c => c.id === conv.id);
-              if (!old) return true;
-              return old.ultima !== conv.ultima ||
-                     old.naoLida !== conv.naoLida ||
-                     old.status !== conv.status ||
-                     old.humano !== conv.humano;
-            });
+        // Atualização inteligente: mantém referências de objetos que não mudaram
+        setConversas(prevConversas => {
+          // Se é primeira carga, retorna tudo
+          if (prevConversas.length === 0 || !isPolling) {
+            return novasConversas;
+          }
 
-          if (!hasChanges) return;
-        }
+          // Verifica se há diferenças
+          let hasChanges = novasConversas.length !== prevConversas.length;
 
-        setConversas(conversasFormatadas);
+          if (!hasChanges) {
+            for (const nova of novasConversas) {
+              const antiga = prevConversas.find(c => c.id === nova.id);
+              if (!antiga ||
+                  antiga.ultima !== nova.ultima ||
+                  antiga.naoLida !== nova.naoLida ||
+                  antiga.status !== nova.status ||
+                  antiga.humano !== nova.humano ||
+                  antiga.tempo !== nova.tempo) {
+                hasChanges = true;
+                break;
+              }
+            }
+          }
+
+          // Se não há mudanças, retorna o array anterior (mesma referência = sem re-render)
+          if (!hasChanges) {
+            return prevConversas;
+          }
+
+          // Faz merge: mantém objetos inalterados, atualiza só os que mudaram
+          return novasConversas.map(nova => {
+            const antiga = prevConversas.find(c => c.id === nova.id);
+            if (antiga &&
+                antiga.ultima === nova.ultima &&
+                antiga.naoLida === nova.naoLida &&
+                antiga.status === nova.status &&
+                antiga.humano === nova.humano &&
+                antiga.tempo === nova.tempo &&
+                antiga.nome === nova.nome) {
+              // Retorna objeto antigo (mesma referência)
+              return antiga;
+            }
+            // Retorna novo objeto
+            return nova;
+          });
+        });
 
         // Seleciona primeira conversa da aba ativa se nenhuma selecionada
         if (!conversaSelecionada) {
-          const conversasAba = conversasFormatadas.filter(c =>
+          const conversasAba = novasConversas.filter(c =>
             abaAtiva === 'abertas' ? c.status !== 'resolved' : c.status === 'resolved'
           );
           if (conversasAba.length > 0) {
@@ -587,20 +618,39 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
 
   const fetchMensagensSilent = async (conversaId: number) => {
     if (!CLINICA_ID) return;
-    
+
     try {
       const response = await fetch(
         `/api/chatwoot/messages?clinica_id=${CLINICA_ID}&conversation_id=${conversaId}`
       );
       const data = await response.json();
-      
+
       if (data.payload) {
-        const mensagensFormatadas = formatarMensagens(data.payload);
-        
-        if (mensagensFormatadas.length !== mensagens.length || 
-            (mensagensFormatadas.length > 0 && mensagensFormatadas[mensagensFormatadas.length - 1].id !== lastMessageIdRef.current)) {
-          setMensagens(mensagensFormatadas);
-        }
+        const novasMensagens = formatarMensagens(data.payload);
+
+        // Atualização inteligente: só atualiza se houver mudanças reais
+        setMensagens(prevMensagens => {
+          // Verifica se última mensagem é diferente (nova mensagem chegou)
+          const ultimaNova = novasMensagens[novasMensagens.length - 1];
+          const ultimaAnterior = prevMensagens[prevMensagens.length - 1];
+
+          // Se não há mudanças, retorna array anterior (mesma referência = sem re-render)
+          if (novasMensagens.length === prevMensagens.length &&
+              ultimaNova?.id === ultimaAnterior?.id &&
+              ultimaNova?.status === ultimaAnterior?.status) {
+            return prevMensagens;
+          }
+
+          // Se há novas mensagens, faz merge mantendo referências antigas
+          return novasMensagens.map(nova => {
+            const antiga = prevMensagens.find(m => m.id === nova.id);
+            // Se mensagem existe e não mudou, retorna referência antiga
+            if (antiga && antiga.status === nova.status && antiga.texto === nova.texto) {
+              return antiga;
+            }
+            return nova;
+          });
+        });
       }
     } catch (error) {
       console.error('Erro ao buscar mensagens:', error);
