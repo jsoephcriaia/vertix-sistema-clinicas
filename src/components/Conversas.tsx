@@ -105,7 +105,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
 
   // Estados para validações de funcionalidades
   const [whatsappConectado, setWhatsappConectado] = useState<boolean | null>(null);
-  const [iaAtiva, setIaAtiva] = useState(false);
+  const [iaAtiva, setIaAtiva] = useState<boolean | null>(null); // null = ainda carregando
   const [googleConectado, setGoogleConectado] = useState(false);
   const [horariosDefinidos, setHorariosDefinidos] = useState(false);
   const [profissionaisComHorario, setProfissionaisComHorario] = useState(false);
@@ -193,7 +193,8 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
 
         if (clinicaData) {
           setWhatsappConectado(!!clinicaData.uazapi_instance_token);
-          setIaAtiva(!clinicaData.agente_ia_pausado);
+          // agente_ia_pausado: true = IA pausada, false/null = IA ativa
+          setIaAtiva(clinicaData.agente_ia_pausado !== true);
           setGoogleConectado(!!clinicaData.google_tokens);
         }
 
@@ -1539,30 +1540,50 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 
                 {/* Botão Procedimentos de Interesse */}
                 <button
-                  onClick={() => setShowPainelInteresse(true)}
-                  disabled={!leadIA || !procedimentosDefinidos}
-                  className="p-2 rounded-lg transition-colors bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={
-                    !leadIA ? "Sem lead vinculado" :
-                    !procedimentosDefinidos ? "Cadastre procedimentos nas configurações" :
-                    "Procedimentos de Interesse"
-                  }
+                  onClick={() => {
+                    if (!leadIA) {
+                      showToast('Sem lead vinculado a esta conversa', 'warning');
+                      return;
+                    }
+                    if (!procedimentosDefinidos) {
+                      showToast('Cadastre procedimentos em Configurações → Procedimentos', 'warning');
+                      return;
+                    }
+                    setShowPainelInteresse(true);
+                  }}
+                  className={`p-2 rounded-lg transition-colors bg-primary/20 text-primary hover:bg-primary/30 ${
+                    (!leadIA || !procedimentosDefinidos) ? 'opacity-50' : ''
+                  }`}
+                  title="Procedimentos de Interesse"
                 >
                   <Package size={20} />
                 </button>
                 
                 {/* Botão Agendar */}
                 <button
-                  onClick={() => setShowPainelAgendamentos(true)}
-                  disabled={!leadIA || !googleConectado || !horariosDefinidos || !profissionaisComHorario}
-                  className="p-2 rounded-lg transition-colors bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={
-                    !leadIA ? "Sem lead vinculado" :
-                    !googleConectado ? "Conecte o Google Calendar nas configurações" :
-                    !horariosDefinidos ? "Defina os horários da clínica nas configurações" :
-                    !profissionaisComHorario ? "Cadastre profissionais na equipe" :
-                    "Agendamentos"
-                  }
+                  onClick={() => {
+                    if (!leadIA) {
+                      showToast('Sem lead vinculado a esta conversa', 'warning');
+                      return;
+                    }
+                    if (!googleConectado) {
+                      showToast('Conecte o Google Calendar em Configurações → Integrações', 'warning');
+                      return;
+                    }
+                    if (!horariosDefinidos) {
+                      showToast('Defina os horários da clínica em Configurações → Horários', 'warning');
+                      return;
+                    }
+                    if (!profissionaisComHorario) {
+                      showToast('Cadastre profissionais em Configurações → Equipe', 'warning');
+                      return;
+                    }
+                    setShowPainelAgendamentos(true);
+                  }}
+                  className={`p-2 rounded-lg transition-colors bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 ${
+                    (!leadIA || !googleConectado || !horariosDefinidos || !profissionaisComHorario) ? 'opacity-50' : ''
+                  }`}
+                  title="Agendamentos"
                 >
                   <CalendarPlus size={20} />
                 </button>
@@ -1583,14 +1604,19 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
                 </button>
                 
                 <button
-                  onClick={toggleHumano}
-                  disabled={!iaAtiva}
+                  onClick={() => {
+                    if (iaAtiva === false) {
+                      showToast('Secretária IA está desativada. Ative em Configurações → Avançado', 'info');
+                      return;
+                    }
+                    toggleHumano();
+                  }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    conversaSelecionada.humano || !iaAtiva
+                    conversaSelecionada.humano || iaAtiva === false
                       ? 'bg-orange-500 text-white'
                       : 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-secondary)] hover:bg-[var(--theme-card-border)]'
-                  } ${!iaAtiva ? 'cursor-not-allowed' : ''}`}
-                  title={!iaAtiva ? "Secretária IA está desativada - somente modo humano ativo" : "Alternar modo humano"}
+                  } ${iaAtiva === false ? 'cursor-not-allowed' : ''}`}
+                  title={iaAtiva === false ? "Secretária IA desativada" : "Alternar modo humano"}
                 >
                   <User size={18} />
                   <span className="hidden sm:inline">HUMANO</span>
@@ -1693,11 +1719,11 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           </div>
 
           {/* Aviso de modo humano */}
-          {(conversaSelecionada.humano || !iaAtiva) && (
+          {(conversaSelecionada.humano || iaAtiva === false) && (
             <div className="bg-orange-500/20 border-t border-orange-500/30 px-4 py-2 flex-shrink-0">
               <p className="text-orange-400 text-sm text-center">
                 <User size={14} className="inline mr-1" />
-                {!iaAtiva
+                {iaAtiva === false
                   ? 'Secretária IA desativada - Todas as conversas em modo humano'
                   : 'Modo humano ativo - A IA não responderá esta conversa'
                 }
