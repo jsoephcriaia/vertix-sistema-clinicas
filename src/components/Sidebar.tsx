@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   LayoutDashboard,
   MessageSquare,
@@ -53,6 +53,37 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const inputAvatarRef = useRef<HTMLInputElement>(null);
+
+  // Contador de mensagens não lidas
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Buscar contagem de conversas não lidas
+  const fetchUnreadCount = useCallback(async () => {
+    if (!clinica?.id) return;
+
+    try {
+      const response = await fetch(`/api/chatwoot/conversations?clinica_id=${clinica.id}`);
+      const data = await response.json();
+
+      if (data.payload) {
+        const count = data.payload.filter((conv: { unread_count?: number }) =>
+          conv.unread_count && conv.unread_count > 0
+        ).length;
+        setUnreadCount(count);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar conversas não lidas:', error);
+    }
+  }, [clinica?.id]);
+
+  // Buscar contagem inicial e polling
+  useEffect(() => {
+    if (clinica?.id) {
+      fetchUnreadCount();
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [clinica?.id, fetchUnreadCount]);
 
   // Reset avatar error quando o avatar mudar
   useEffect(() => {
@@ -207,6 +238,7 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentPage === item.id || currentPage.startsWith(item.id);
+              const showBadge = item.id === 'conversas' && unreadCount > 0;
 
               return (
                 <li key={item.id}>
@@ -218,8 +250,20 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
                         : 'text-[var(--theme-sidebar-text-muted)] hover:bg-[var(--theme-sidebar-hover)] hover:text-[var(--theme-sidebar-text)]'
                     }`}
                   >
-                    <Icon size={20} />
-                    <span className="font-medium">{item.label}</span>
+                    <div className="relative">
+                      <Icon size={20} />
+                      {showBadge && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                      )}
+                    </div>
+                    <span className="font-medium flex-1">{item.label}</span>
+                    {showBadge && (
+                      <span className={`min-w-[20px] h-5 px-1.5 text-xs font-bold rounded-full flex items-center justify-center ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-red-500 text-white'
+                      }`}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </button>
                 </li>
               );
