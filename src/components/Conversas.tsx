@@ -247,14 +247,18 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     return () => window.removeEventListener('iaStatusChanged', handleIaStatusChanged);
   }, [fetchValidacoes]);
 
-  // Carrega conversas
+  // Carrega conversas e validações
   useEffect(() => {
     if (CLINICA_ID) {
       fetchConversas();
-      const interval = setInterval(() => fetchConversas(true), 30000);
+      fetchValidacoes(); // Garante que validações são buscadas ao montar
+      const interval = setInterval(() => {
+        fetchConversas(true);
+        fetchValidacoes(); // Também atualiza validações no polling
+      }, 30000);
       return () => clearInterval(interval);
     }
-  }, [CLINICA_ID]);
+  }, [CLINICA_ID, fetchValidacoes]);
 
   // Processar conversa inicial quando vier de outra tela
   useEffect(() => {
