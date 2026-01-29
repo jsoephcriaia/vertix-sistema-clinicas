@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Edit, Trash2, Save, X, Upload, Clock, DollarSign, Cale
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
+import { triggerRAGReindex } from '@/lib/rag';
 
 interface ConfigProcedimentosProps {
   onBack: () => void;
@@ -157,6 +158,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
     setShowModal(false);
     setEditando(null);
     fetchProcedimentos();
+    triggerRAGReindex(CLINICA_ID);
   };
 
   const handleDelete = async (id: string) => {
@@ -172,6 +174,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
       showToast('Erro ao excluir procedimento', 'error');
     } else {
       fetchProcedimentos();
+      triggerRAGReindex(CLINICA_ID);
     }
   };
 
@@ -187,6 +190,7 @@ export default function ConfigProcedimentos({ onBack }: ConfigProcedimentosProps
     } else {
       showToast(ativo ? 'Procedimento desativado' : 'Procedimento ativado', 'success');
       fetchProcedimentos();
+      triggerRAGReindex(CLINICA_ID);
     }
   };
 

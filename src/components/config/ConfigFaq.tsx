@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Edit, Trash2, Save, X, ChevronDown, ChevronUp, HelpCir
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
+import { triggerRAGReindex } from '@/lib/rag';
 
 interface ConfigFaqProps {
   onBack: () => void;
@@ -106,6 +107,7 @@ export default function ConfigFaq({ onBack }: ConfigFaqProps) {
     setShowModal(false);
     setEditando(null);
     fetchFaqs();
+    triggerRAGReindex(CLINICA_ID);
   };
 
   const handleDelete = async (id: string) => {
@@ -121,6 +123,7 @@ export default function ConfigFaq({ onBack }: ConfigFaqProps) {
       showToast('Erro ao excluir FAQ', 'error');
     } else {
       fetchFaqs();
+      triggerRAGReindex(CLINICA_ID);
     }
   };
 

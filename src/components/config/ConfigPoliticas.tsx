@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Edit, Trash2, Save, X, FileText, Loader2 } from 'lucid
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
+import { triggerRAGReindex } from '@/lib/rag';
 
 interface ConfigPoliticasProps {
   onBack: () => void;
@@ -101,6 +102,7 @@ export default function ConfigPoliticas({ onBack }: ConfigPoliticasProps) {
     setShowModal(false);
     setEditando(null);
     fetchPoliticas();
+    triggerRAGReindex(CLINICA_ID);
   };
 
   const handleDelete = async (id: string) => {
@@ -116,6 +118,7 @@ export default function ConfigPoliticas({ onBack }: ConfigPoliticasProps) {
       showToast('Erro ao excluir política', 'error');
     } else {
       fetchPoliticas();
+      triggerRAGReindex(CLINICA_ID);
     }
   };
 

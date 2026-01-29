@@ -512,7 +512,70 @@ export default function PainelAgendamentos({
         showToast('Marcado como realizado!', 'success');
       }
 
-      if (leadIdParaRetorno) {
+      // Converter lead para cliente se ainda não existe cliente
+      if (leadIdParaRetorno && !clienteIdParaRetorno) {
+        // Buscar dados do lead
+        const { data: leadData } = await supabase
+          .from('leads_ia')
+          .select('nome, telefone, email')
+          .eq('id', leadIdParaRetorno)
+          .single();
+
+        if (leadData) {
+          // Verificar se já existe cliente com mesmo telefone
+          const { data: clienteExistente } = await supabase
+            .from('clientes')
+            .select('id')
+            .eq('clinica_id', clinicaId)
+            .eq('telefone', leadData.telefone)
+            .single();
+
+          let novoClienteId = clienteExistente?.id;
+
+          if (!novoClienteId) {
+            // Criar novo cliente
+            const { data: novoCliente, error: erroCliente } = await supabase
+              .from('clientes')
+              .insert({
+                clinica_id: clinicaId,
+                nome: leadData.nome || 'Cliente',
+                telefone: leadData.telefone,
+                email: leadData.email,
+                status: 'ativo'
+              })
+              .select('id')
+              .single();
+
+            if (!erroCliente && novoCliente) {
+              novoClienteId = novoCliente.id;
+            }
+          }
+
+          if (novoClienteId) {
+            // Atualizar este agendamento com cliente_id
+            await supabase
+              .from('agendamentos')
+              .update({ cliente_id: novoClienteId })
+              .eq('id', agendamento.id);
+
+            // Atualizar agendamentos futuros deste lead
+            await supabase
+              .from('agendamentos')
+              .update({ cliente_id: novoClienteId })
+              .eq('lead_id', leadIdParaRetorno)
+              .is('cliente_id', null);
+          }
+        }
+
+        // Marcar lead como convertido
+        await supabase
+          .from('leads_ia')
+          .update({ etapa: 'convertido' })
+          .eq('id', leadIdParaRetorno);
+
+        if (onStatusAlterado) onStatusAlterado('convertido');
+      } else if (leadIdParaRetorno) {
+        // Lead já tem cliente associado, só marcar como convertido
         await supabase
           .from('leads_ia')
           .update({ etapa: 'convertido' })
