@@ -310,6 +310,9 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           // Buscar conversas atualizadas (silencioso)
           fetchConversas(true);
 
+          // Notifica outros componentes (ex: Sidebar) para atualizar badge
+          window.dispatchEvent(new CustomEvent('conversasAtualizadas'));
+
           // Se há conversa selecionada e o lead atualizado é o da conversa atual, buscar mensagens
           if (conversaSelecionada && payload.new) {
             const leadAtualizado = payload.new as { conversation_id?: number };

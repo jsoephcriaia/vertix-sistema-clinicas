@@ -85,13 +85,20 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
     }
   }, [clinica?.id, fetchUnreadCount]);
 
-  // Escutar evento de conversa lida para atualizar contador imediatamente
+  // Escutar eventos para atualizar contador imediatamente
   useEffect(() => {
     const handleConversaLida = () => {
       fetchUnreadCount();
     };
+    const handleConversasAtualizadas = () => {
+      fetchUnreadCount();
+    };
     window.addEventListener('conversaLida', handleConversaLida);
-    return () => window.removeEventListener('conversaLida', handleConversaLida);
+    window.addEventListener('conversasAtualizadas', handleConversasAtualizadas);
+    return () => {
+      window.removeEventListener('conversaLida', handleConversaLida);
+      window.removeEventListener('conversasAtualizadas', handleConversasAtualizadas);
+    };
   }, [fetchUnreadCount]);
 
   // Reset avatar error quando o avatar mudar
