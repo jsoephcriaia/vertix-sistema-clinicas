@@ -17,13 +17,21 @@ export async function POST(request: NextRequest) {
 
     console.log('=== WEBHOOK UAZAPI RECEBIDO ===')
     console.log(JSON.stringify(body, null, 2))
-    
-    // Ignora mensagens enviadas pela API (evita loop)
-    if (body.message?.wasSentByApi) {
-      console.log('Mensagem enviada pela API, ignorando...')
+
+    // Ignora eventos que não são mensagens de entrada (incoming)
+    // Eventos de conexão, status, etc. não devem criar conversas
+    const eventType = body.event || body.type || ''
+    if (eventType && !['message', 'messages', 'messages.upsert'].includes(eventType)) {
+      console.log('Evento não é mensagem, ignorando:', eventType)
       return NextResponse.json({ success: true, ignored: true })
     }
-    
+
+    // Ignora mensagens enviadas pela API ou pelo próprio número (evita loop)
+    if (body.message?.wasSentByApi || body.message?.fromMe || body.fromMe) {
+      console.log('Mensagem enviada pela API ou própria, ignorando...')
+      return NextResponse.json({ success: true, ignored: true })
+    }
+
     // Ignora mensagens de grupo
     if (body.message?.isGroup || body.chat?.wa_isGroup) {
       console.log('Mensagem de grupo, ignorando...')
@@ -36,9 +44,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, ignored: true })
     }
 
-    // Ignora se não tiver mensagem ou chat
+    // Ignora se não tiver mensagem ou chat com conteúdo
     if (!body.message && !body.chat?.wa_lastMessageTextVote) {
       console.log('Evento sem mensagem, ignorando...')
+      return NextResponse.json({ success: true, ignored: true })
+    }
+
+    // Ignora se o chat/mensagem não tiver número de telefone válido de terceiro
+    const chatId = body.message?.chatid || body.chat?.wa_chatid || body.chat?.chatid || ''
+    if (!chatId || chatId.includes('status') || chatId.includes('broadcast')) {
+      console.log('ChatID inválido ou de status/broadcast, ignorando:', chatId)
       return NextResponse.json({ success: true, ignored: true })
     }
     
