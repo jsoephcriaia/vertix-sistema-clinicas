@@ -29,6 +29,18 @@ export async function POST(request: NextRequest) {
       console.log('Mensagem de grupo, ignorando...')
       return NextResponse.json({ success: true, ignored: true })
     }
+
+    // Ignora eventos de conexão/status (não são mensagens reais)
+    if (body.event === 'connection' || body.event === 'status' || body.event === 'qrcode') {
+      console.log('Evento de sistema, ignorando:', body.event)
+      return NextResponse.json({ success: true, ignored: true })
+    }
+
+    // Ignora se não tiver mensagem ou chat
+    if (!body.message && !body.chat?.wa_lastMessageTextVote) {
+      console.log('Evento sem mensagem, ignorando...')
+      return NextResponse.json({ success: true, ignored: true })
+    }
     
     // Pega o token da instância
     const instanceToken = body.token
@@ -97,10 +109,22 @@ export async function POST(request: NextRequest) {
                       body.chat?.wa_lastMessageTextVote || ''
     
     console.log('Dados extraídos:', { phoneNumber, senderName, messageText, messageId, isMedia })
-    
+
     if (!phoneNumber) {
       console.log('Número de telefone não encontrado')
       return NextResponse.json({ success: false, error: 'Telefone não encontrado' }, { status: 400 })
+    }
+
+    // Ignora se não tiver conteúdo (mensagem vazia e sem mídia)
+    if (!messageText && !isMedia) {
+      console.log('Mensagem sem conteúdo, ignorando...')
+      return NextResponse.json({ success: true, ignored: true })
+    }
+
+    // Ignora se o nome parecer ser um ID de instância (vertix-XXXXXXX)
+    if (senderName.startsWith('vertix-') || senderName.match(/^\d{10,}$/)) {
+      console.log('Remetente parece ser instância, ignorando:', senderName)
+      return NextResponse.json({ success: true, ignored: true })
     }
     
     // 1. Busca ou cria o contato no Chatwoot
