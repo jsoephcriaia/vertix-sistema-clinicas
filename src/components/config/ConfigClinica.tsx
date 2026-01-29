@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Save, Upload, MapPin, Phone, Mail, Instagram, Facebook, Globe, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Upload, MapPin, Phone, Mail, Instagram, Facebook, Globe, Loader2, Trash2, ChevronDown, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { useAlert } from '@/components/Alert';
@@ -9,6 +9,53 @@ import { useAlert } from '@/components/Alert';
 interface ConfigClinicaProps {
   onBack: () => void;
 }
+
+// Lista de estados brasileiros
+const ESTADOS_BRASILEIROS = [
+  { sigla: 'AC', nome: 'Acre' },
+  { sigla: 'AL', nome: 'Alagoas' },
+  { sigla: 'AP', nome: 'Amapá' },
+  { sigla: 'AM', nome: 'Amazonas' },
+  { sigla: 'BA', nome: 'Bahia' },
+  { sigla: 'CE', nome: 'Ceará' },
+  { sigla: 'DF', nome: 'Distrito Federal' },
+  { sigla: 'ES', nome: 'Espírito Santo' },
+  { sigla: 'GO', nome: 'Goiás' },
+  { sigla: 'MA', nome: 'Maranhão' },
+  { sigla: 'MT', nome: 'Mato Grosso' },
+  { sigla: 'MS', nome: 'Mato Grosso do Sul' },
+  { sigla: 'MG', nome: 'Minas Gerais' },
+  { sigla: 'PA', nome: 'Pará' },
+  { sigla: 'PB', nome: 'Paraíba' },
+  { sigla: 'PR', nome: 'Paraná' },
+  { sigla: 'PE', nome: 'Pernambuco' },
+  { sigla: 'PI', nome: 'Piauí' },
+  { sigla: 'RJ', nome: 'Rio de Janeiro' },
+  { sigla: 'RN', nome: 'Rio Grande do Norte' },
+  { sigla: 'RS', nome: 'Rio Grande do Sul' },
+  { sigla: 'RO', nome: 'Rondônia' },
+  { sigla: 'RR', nome: 'Roraima' },
+  { sigla: 'SC', nome: 'Santa Catarina' },
+  { sigla: 'SP', nome: 'São Paulo' },
+  { sigla: 'SE', nome: 'Sergipe' },
+  { sigla: 'TO', nome: 'Tocantins' },
+];
+
+// Função para formatar telefone
+const formatarTelefone = (valor: string) => {
+  const numeros = valor.replace(/\D/g, '');
+  if (numeros.length <= 2) return numeros;
+  if (numeros.length <= 7) return `(${numeros.slice(0, 2)}) ${numeros.slice(2)}`;
+  if (numeros.length <= 11) return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7)}`;
+  return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7, 11)}`;
+};
+
+// Função para formatar CEP
+const formatarCep = (valor: string) => {
+  const numeros = valor.replace(/\D/g, '');
+  if (numeros.length <= 5) return numeros;
+  return `${numeros.slice(0, 5)}-${numeros.slice(5, 8)}`;
+};
 
 export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
   const { clinica, refreshClinica } = useAuth();
@@ -21,6 +68,11 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
   const [driveConectado, setDriveConectado] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const inputLogoRef = useRef<HTMLInputElement>(null);
+
+  // Estado para dropdown de estados
+  const [showEstadoDropdown, setShowEstadoDropdown] = useState(false);
+  const [estadoFiltro, setEstadoFiltro] = useState('');
+  const estadoDropdownRef = useRef<HTMLDivElement>(null);
 
   const [dados, setDados] = useState({
     nome: '',
@@ -42,6 +94,17 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
       fetchClinica();
     }
   }, [CLINICA_ID]);
+
+  // Fechar dropdown de estado ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (estadoDropdownRef.current && !estadoDropdownRef.current.contains(event.target as Node)) {
+        setShowEstadoDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchClinica = async () => {
     setLoading(true);
@@ -75,8 +138,29 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
   };
 
   const handleChange = (field: string, value: string) => {
-    setDados(prev => ({ ...prev, [field]: value }));
+    let formattedValue = value;
+
+    // Aplicar máscara de telefone
+    if (field === 'telefone') {
+      formattedValue = formatarTelefone(value);
+    }
+
+    // Aplicar máscara de CEP
+    if (field === 'cep') {
+      formattedValue = formatarCep(value);
+    }
+
+    setDados(prev => ({ ...prev, [field]: formattedValue }));
   };
+
+  // Filtrar estados
+  const estadosFiltrados = ESTADOS_BRASILEIROS.filter(estado =>
+    estado.nome.toLowerCase().includes(estadoFiltro.toLowerCase()) ||
+    estado.sigla.toLowerCase().includes(estadoFiltro.toLowerCase())
+  );
+
+  // Encontrar nome do estado selecionado
+  const estadoSelecionado = ESTADOS_BRASILEIROS.find(e => e.sigla === dados.estado || e.nome === dados.estado);
 
   const handleUploadLogo = async (file: File) => {
     if (!driveConectado) {
@@ -150,6 +234,12 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
   };
 
   const handleSave = async () => {
+    // Validar campo obrigatório
+    if (!dados.telefone || dados.telefone.replace(/\D/g, '').length < 10) {
+      showToast('O Telefone/WhatsApp é obrigatório', 'error');
+      return;
+    }
+
     setSaving(true);
 
     const { error } = await supabase
@@ -287,14 +377,20 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
             </div>
             <div>
               <label className="block text-sm text-[var(--theme-text-muted)] mb-2">
-                <Phone size={14} className="inline mr-1" /> Telefone/WhatsApp
+                <Phone size={14} className="inline mr-1" /> Telefone/WhatsApp <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 value={dados.telefone}
                 onChange={(e) => handleChange('telefone', e.target.value)}
-                className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
+                placeholder="(11) 99999-9999"
+                className={`w-full bg-[var(--theme-input)] border rounded-lg px-4 py-3 focus:outline-none focus:border-primary ${
+                  !dados.telefone ? 'border-red-500/50' : 'border-[var(--theme-card-border)]'
+                }`}
               />
+              {!dados.telefone && (
+                <p className="text-xs text-red-400 mt-1">Campo obrigatório</p>
+              )}
             </div>
             <div>
               <label className="block text-sm text-[var(--theme-text-muted)] mb-2">
@@ -342,14 +438,58 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
                 className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
               />
             </div>
-            <div>
+            <div className="relative" ref={estadoDropdownRef}>
               <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Estado</label>
-              <input
-                type="text"
-                value={dados.estado}
-                onChange={(e) => handleChange('estado', e.target.value)}
-                className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
-              />
+              <button
+                type="button"
+                onClick={() => setShowEstadoDropdown(!showEstadoDropdown)}
+                className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary text-left flex items-center justify-between"
+              >
+                <span className={estadoSelecionado ? '' : 'text-[var(--theme-text-muted)]'}>
+                  {estadoSelecionado ? `${estadoSelecionado.sigla} - ${estadoSelecionado.nome}` : 'Selecione o estado'}
+                </span>
+                <ChevronDown size={16} className={`transition-transform ${showEstadoDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showEstadoDropdown && (
+                <div className="absolute z-50 mt-1 w-full bg-[var(--theme-card)] border border-[var(--theme-card-border)] rounded-lg shadow-lg max-h-64 overflow-hidden">
+                  <div className="p-2 border-b border-[var(--theme-card-border)]">
+                    <div className="relative">
+                      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--theme-text-muted)]" />
+                      <input
+                        type="text"
+                        value={estadoFiltro}
+                        onChange={(e) => setEstadoFiltro(e.target.value)}
+                        placeholder="Buscar estado..."
+                        className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg pl-9 pr-4 py-2 focus:outline-none focus:border-primary text-sm"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  <div className="overflow-y-auto max-h-48">
+                    {estadosFiltrados.map((estado) => (
+                      <button
+                        key={estado.sigla}
+                        type="button"
+                        onClick={() => {
+                          handleChange('estado', estado.sigla);
+                          setShowEstadoDropdown(false);
+                          setEstadoFiltro('');
+                        }}
+                        className={`w-full px-4 py-2 text-left hover:bg-[var(--theme-bg-tertiary)] transition-colors ${
+                          dados.estado === estado.sigla ? 'bg-primary/20 text-primary' : ''
+                        }`}
+                      >
+                        <span className="font-medium">{estado.sigla}</span>
+                        <span className="text-[var(--theme-text-muted)]"> - {estado.nome}</span>
+                      </button>
+                    ))}
+                    {estadosFiltrados.length === 0 && (
+                      <p className="px-4 py-3 text-sm text-[var(--theme-text-muted)]">Nenhum estado encontrado</p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm text-[var(--theme-text-muted)] mb-2">CEP</label>
@@ -357,6 +497,8 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
                 type="text"
                 value={dados.cep}
                 onChange={(e) => handleChange('cep', e.target.value)}
+                placeholder="00000-000"
+                maxLength={9}
                 className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
               />
             </div>
@@ -374,6 +516,7 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
                 type="text"
                 value={dados.instagram}
                 onChange={(e) => handleChange('instagram', e.target.value)}
+                placeholder="@suaclinica"
                 className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
               />
             </div>
@@ -385,6 +528,7 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
                 type="text"
                 value={dados.facebook}
                 onChange={(e) => handleChange('facebook', e.target.value)}
+                placeholder="facebook.com/suaclinica"
                 className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
               />
             </div>
@@ -396,6 +540,7 @@ export default function ConfigClinica({ onBack }: ConfigClinicaProps) {
                 type="text"
                 value={dados.website}
                 onChange={(e) => handleChange('website', e.target.value)}
+                placeholder="https://www.suaclinica.com.br"
                 className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary"
               />
             </div>

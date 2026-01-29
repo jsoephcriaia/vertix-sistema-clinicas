@@ -31,12 +31,21 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { clinicaNome, usuarioNome, usuarioEmail, usuarioSenha, adminId } = body;
+    const { clinicaNome, clinicaTelefone, usuarioNome, usuarioEmail, usuarioSenha, adminId } = body;
 
     // Validações
     if (!clinicaNome || !usuarioNome || !usuarioEmail || !usuarioSenha) {
       return NextResponse.json(
         { error: 'Todos os campos são obrigatórios' },
+        { status: 400 }
+      );
+    }
+
+    // Validar telefone (mínimo 10 dígitos)
+    const telefoneLimpo = clinicaTelefone?.replace(/\D/g, '') || '';
+    if (!telefoneLimpo || telefoneLimpo.length < 10) {
+      return NextResponse.json(
+        { error: 'Telefone da clínica é obrigatório (mínimo 10 dígitos)' },
         { status: 400 }
       );
     }
@@ -60,6 +69,7 @@ export async function POST(request: NextRequest) {
     // 1. Criar clínica no Supabase
     const clinicaInsert: Record<string, unknown> = {
       nome: clinicaNome,
+      telefone: clinicaTelefone,
       email: usuarioEmail.toLowerCase(), // Usa o email do usuário como email da clínica
       chatwoot_setup_status: 'in_progress',
       status: 'ativo',
@@ -137,6 +147,7 @@ export async function POST(request: NextRequest) {
             clinica_id: clinica.id,
             details: {
               clinicaNome,
+              clinicaTelefone,
               usuarioEmail,
               chatwoot_account_id: chatwootResult.accountId,
               chatwoot_inbox_id: chatwootResult.inboxId,
@@ -203,6 +214,7 @@ export async function POST(request: NextRequest) {
           clinica_id: clinica.id,
           details: {
             clinicaNome,
+            clinicaTelefone,
             usuarioEmail,
             chatwoot_configured: false,
           },

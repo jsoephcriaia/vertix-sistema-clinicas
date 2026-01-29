@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowLeft, Building2, User, CheckCircle, AlertCircle, Loader2, Copy, Check, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Building2, User, CheckCircle, AlertCircle, Loader2, Copy, Check, Eye, EyeOff, Phone } from 'lucide-react';
 import { useAdminAuth } from '@/lib/adminAuth';
 import { useAlert } from '@/components/Alert';
 
@@ -13,10 +13,20 @@ type Step = 'dados' | 'revisao' | 'progresso' | 'sucesso';
 
 interface FormData {
   clinicaNome: string;
+  clinicaTelefone: string;
   usuarioNome: string;
   usuarioEmail: string;
   usuarioSenha: string;
 }
+
+// Função para formatar telefone
+const formatarTelefone = (valor: string) => {
+  const numeros = valor.replace(/\D/g, '');
+  if (numeros.length <= 2) return numeros;
+  if (numeros.length <= 7) return `(${numeros.slice(0, 2)}) ${numeros.slice(2)}`;
+  if (numeros.length <= 11) return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7)}`;
+  return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7, 11)}`;
+};
 
 interface ProgressStep {
   id: string;
@@ -31,6 +41,7 @@ export default function ClinicaCreate({ onNavigate }: ClinicaCreateProps) {
   const [step, setStep] = useState<Step>('dados');
   const [formData, setFormData] = useState<FormData>({
     clinicaNome: '',
+    clinicaTelefone: '',
     usuarioNome: '',
     usuarioEmail: '',
     usuarioSenha: '',
@@ -87,6 +98,11 @@ export default function ClinicaCreate({ onNavigate }: ClinicaCreateProps) {
       setError('Nome da clínica é obrigatório');
       return false;
     }
+    const telefoneLimpo = formData.clinicaTelefone.replace(/\D/g, '');
+    if (!telefoneLimpo || telefoneLimpo.length < 10) {
+      setError('Telefone da clínica é obrigatório (mínimo 10 dígitos)');
+      return false;
+    }
     if (!formData.usuarioNome.trim()) {
       setError('Nome do usuário é obrigatório');
       return false;
@@ -127,6 +143,7 @@ export default function ClinicaCreate({ onNavigate }: ClinicaCreateProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clinicaNome: formData.clinicaNome,
+          clinicaTelefone: formData.clinicaTelefone,
           usuarioNome: formData.usuarioNome,
           usuarioEmail: formData.usuarioEmail,
           usuarioSenha: formData.usuarioSenha,
@@ -242,15 +259,33 @@ export default function ClinicaCreate({ onNavigate }: ClinicaCreateProps) {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Nome da Clínica *</label>
-                <input
-                  type="text"
-                  value={formData.clinicaNome}
-                  onChange={(e) => handleInputChange('clinicaNome', e.target.value)}
-                  className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary text-[var(--theme-text)]"
-                  placeholder="Ex: Clínica Bella Estética"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">Nome da Clínica *</label>
+                  <input
+                    type="text"
+                    value={formData.clinicaNome}
+                    onChange={(e) => handleInputChange('clinicaNome', e.target.value)}
+                    className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg px-4 py-3 focus:outline-none focus:border-primary text-[var(--theme-text)]"
+                    placeholder="Ex: Clínica Bella Estética"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-[var(--theme-text-muted)] mb-2">
+                    Telefone/WhatsApp *
+                  </label>
+                  <div className="relative">
+                    <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--theme-text-muted)]" />
+                    <input
+                      type="tel"
+                      value={formData.clinicaTelefone}
+                      onChange={(e) => handleInputChange('clinicaTelefone', formatarTelefone(e.target.value))}
+                      className="w-full bg-[var(--theme-input)] border border-[var(--theme-card-border)] rounded-lg pl-10 pr-4 py-3 focus:outline-none focus:border-primary text-[var(--theme-text)]"
+                      placeholder="(11) 99999-9999"
+                      maxLength={15}
+                    />
+                  </div>
+                </div>
               </div>
 
               <hr className="border-[var(--theme-card-border)]" />
@@ -349,6 +384,10 @@ export default function ClinicaCreate({ onNavigate }: ClinicaCreateProps) {
                 <div className="flex justify-between">
                   <span className="text-[var(--theme-text-muted)]">Nome da Clínica:</span>
                   <span className="font-medium text-[var(--theme-text)]">{formData.clinicaNome}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[var(--theme-text-muted)]">Telefone/WhatsApp:</span>
+                  <span className="font-medium text-[var(--theme-text)]">{formData.clinicaTelefone}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[var(--theme-text-muted)]">Nome do Usuário:</span>

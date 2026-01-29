@@ -1048,6 +1048,9 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
           c.id === conv.id ? { ...c, naoLida: false } : c
         ));
         setConversaSelecionada(prev => prev ? { ...prev, naoLida: false } : null);
+
+        // Dispara evento para atualizar o contador do Sidebar
+        window.dispatchEvent(new CustomEvent('conversaLida'));
       } catch (error) {
         console.error('Erro ao marcar conversa como lida:', error);
       }

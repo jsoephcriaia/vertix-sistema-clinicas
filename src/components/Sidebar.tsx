@@ -85,6 +85,15 @@ export default function Sidebar({ currentPage, setCurrentPage }: SidebarProps) {
     }
   }, [clinica?.id, fetchUnreadCount]);
 
+  // Escutar evento de conversa lida para atualizar contador imediatamente
+  useEffect(() => {
+    const handleConversaLida = () => {
+      fetchUnreadCount();
+    };
+    window.addEventListener('conversaLida', handleConversaLida);
+    return () => window.removeEventListener('conversaLida', handleConversaLida);
+  }, [fetchUnreadCount]);
+
   // Reset avatar error quando o avatar mudar
   useEffect(() => {
     setAvatarError(false);

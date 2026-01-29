@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Smartphone, RefreshCw, CheckCircle, XCircle, Loader2, Unplug } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useAlert } from '@/components/Alert';
 
 interface ConfigWhatsAppProps {
   onBack: () => void;
@@ -15,6 +16,7 @@ const UAZAPI_ADMIN_TOKEN = process.env.NEXT_PUBLIC_UAZAPI_ADMIN_TOKEN || '';
 type Status = 'loading' | 'disconnected' | 'generating' | 'qrcode' | 'connected' | 'error';
 
 export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
+  const { showConfirm, showToast } = useAlert();
   const [status, setStatus] = useState<Status>('loading');
   const [qrcode, setQrcode] = useState<string>('');
   const [instanceToken, setInstanceToken] = useState<string>('');
@@ -350,66 +352,64 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
     setCountdownIntervalState(null);
   };
 
-  const disconnect = async () => {
-    if (!confirm('Tem certeza que deseja desconectar o WhatsApp?')) return;
+  const disconnect = () => {
+    showConfirm('Tem certeza que deseja desconectar o WhatsApp?', async () => {
+      setStatus('loading');
 
-    setStatus('loading');
+      try {
+        if (instanceToken) {
+          // Tentar diferentes endpoints de logout
+          const logoutEndpoints = [
+            { url: `${UAZAPI_URL}/instance/logout`, method: 'POST' },
+            { url: `${UAZAPI_URL}/instance/disconnect`, method: 'POST' },
+            { url: `${UAZAPI_URL}/instance/logout`, method: 'DELETE' },
+          ];
 
-    try {
-      if (instanceToken) {
-        // Tentar diferentes endpoints de logout
-        const logoutEndpoints = [
-          { url: `${UAZAPI_URL}/instance/logout`, method: 'POST' },
-          { url: `${UAZAPI_URL}/instance/disconnect`, method: 'POST' },
-          { url: `${UAZAPI_URL}/instance/logout`, method: 'DELETE' },
-        ];
+          for (const endpoint of logoutEndpoints) {
+            try {
+              const response = await fetch(endpoint.url, {
+                method: endpoint.method,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'token': instanceToken,
+                },
+              });
 
-        let logoutSuccess = false;
-
-        for (const endpoint of logoutEndpoints) {
-          try {
-            const response = await fetch(endpoint.url, {
-              method: endpoint.method,
-              headers: {
-                'Content-Type': 'application/json',
-                'token': instanceToken,
-              },
-            });
-
-            if (response.ok) {
-              logoutSuccess = true;
-              break;
+              if (response.ok) {
+                break;
+              }
+            } catch {
+              // Tenta próximo endpoint
             }
-          } catch {
-            // Tenta próximo endpoint
+          }
+
+          // Aguardar um pouco para o logout processar
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          // Verificar se realmente desconectou
+          const statusResponse = await fetch(`${UAZAPI_URL}/instance/status`, {
+            method: 'GET',
+            headers: { 'token': instanceToken },
+          });
+
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            if (statusData.instance?.status === 'connected') {
+              showToast('Não foi possível desconectar automaticamente. Tente desconectar pelo WhatsApp do celular (Dispositivos Conectados).', 'warning');
+              setStatus('connected');
+              return;
+            }
           }
         }
-
-        // Aguardar um pouco para o logout processar
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Verificar se realmente desconectou
-        const statusResponse = await fetch(`${UAZAPI_URL}/instance/status`, {
-          method: 'GET',
-          headers: { 'token': instanceToken },
-        });
-
-        if (statusResponse.ok) {
-          const statusData = await statusResponse.json();
-          if (statusData.instance?.status === 'connected') {
-            alert('Não foi possível desconectar automaticamente. Tente desconectar diretamente no painel UAZAPI ou pelo WhatsApp do celular (Dispositivos Conectados).');
-            setStatus('connected');
-            return;
-          }
-        }
+      } catch {
+        // Erro ao desconectar
       }
-    } catch {
-      // Erro ao desconectar
-    }
 
-    setStatus('disconnected');
-    setQrcode('');
-    setPhoneNumber('');
+      setStatus('disconnected');
+      setQrcode('');
+      setPhoneNumber('');
+      showToast('WhatsApp desconectado com sucesso', 'success');
+    }, 'Desconectar WhatsApp');
   };
 
   const resetAndRetry = () => {
