@@ -25,6 +25,7 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [countdown, setCountdown] = useState(30);
   const [clinicaId, setClinicaId] = useState<string>('');
+  const [clinicaNome, setClinicaNome] = useState<string>('');
   const [pollingInterval, setPollingIntervalState] = useState<NodeJS.Timeout | null>(null);
   const [countdownInterval, setCountdownIntervalState] = useState<NodeJS.Timeout | null>(null);
 
@@ -42,7 +43,7 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
     try {
       const sessao = localStorage.getItem('vertix_sessao');
       const clinica = sessao ? JSON.parse(sessao).clinica : null;
-      
+
       if (!clinica?.id) {
         setStatus('error');
         setErrorMessage('Clínica não encontrada');
@@ -54,9 +55,13 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
       // Buscar dados da instância no banco
       const { data, error } = await supabase
         .from('clinicas')
-        .select('uazapi_instance_token, uazapi_instance_name')
+        .select('uazapi_instance_token, uazapi_instance_name, nome')
         .eq('id', clinica.id)
         .single();
+
+      if (data?.nome) {
+        setClinicaNome(data.nome);
+      }
 
       if (error) throw error;
 
@@ -224,7 +229,17 @@ export default function ConfigWhatsApp({ onBack }: ConfigWhatsAppProps) {
 
       // Se não tem instância, criar uma nova
       if (!token) {
-        const instName = 'vertix-' + Date.now();
+        // Gerar nome da instância baseado no nome da clínica
+        const nomeNormalizado = (clinicaNome || 'clinica')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+          .replace(/[^a-z0-9]/g, '-') // Substitui caracteres especiais por hífen
+          .replace(/-+/g, '-') // Remove hífens duplicados
+          .replace(/^-|-$/g, '') // Remove hífens do início e fim
+          .substring(0, 30); // Limita o tamanho
+
+        const instName = `vertix-${nomeNormalizado}`;
         const createResponse = await fetch(`${UAZAPI_URL}/instance/init`, {
           method: 'POST',
           headers: {
