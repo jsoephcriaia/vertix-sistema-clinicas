@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         // Verificar se já existe lead com esse telefone
         const { data: leadExistente } = await supabase
           .from('leads_ia')
-          .select('id')
+          .select('id, conversation_id')
           .eq('clinica_id', clinica.id)
           .or(`telefone.eq.${phoneNumber},telefone.eq.${telefoneFormatado}`)
           .single()
@@ -77,6 +77,15 @@ export async function POST(request: NextRequest) {
             })
 
           console.log('Lead criado automaticamente para mensagem incoming:', telefoneFormatado)
+        } else {
+          // Atualizar updated_at do lead para notificar via Realtime
+          await supabase
+            .from('leads_ia')
+            .update({
+              updated_at: new Date().toISOString(),
+              conversation_id: conversationId // Garante que está atualizado
+            })
+            .eq('id', leadExistente.id)
         }
       }
 
