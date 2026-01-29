@@ -1021,7 +1021,7 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     setShowAnotacao(false);
   };
 
-  const selecionarConversa = (conv: Conversa) => {
+  const selecionarConversa = async (conv: Conversa) => {
     setConversaSelecionada(conv);
     setShowAnotacao(false);
     setReplyingTo(null);
@@ -1030,6 +1030,28 @@ export default function Conversas({ conversaInicial, onConversaIniciada }: Conve
     limparAudio();
     lastMessageIdRef.current = 0;
     fetchMensagens(conv.id);
+
+    // Marca a conversa como lida no Chatwoot
+    if (conv.naoLida && CLINICA_ID) {
+      try {
+        await fetch('/api/chatwoot/conversations/read', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clinica_id: CLINICA_ID,
+            conversation_id: conv.id
+          })
+        });
+
+        // Atualiza o estado local para remover indicador de não lida
+        setConversas(prev => prev.map(c =>
+          c.id === conv.id ? { ...c, naoLida: false } : c
+        ));
+        setConversaSelecionada(prev => prev ? { ...prev, naoLida: false } : null);
+      } catch (error) {
+        console.error('Erro ao marcar conversa como lida:', error);
+      }
+    }
   };
 
   // Filtrar conversas por aba e busca
