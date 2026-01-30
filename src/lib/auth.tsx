@@ -22,7 +22,7 @@ interface AuthContextType {
   clinica: Clinica | null;
   loading: boolean;
   login: (email: string, senha: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUsuario: () => Promise<void>;
   refreshClinica: () => Promise<void>;
 }
@@ -34,15 +34,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [clinica, setClinica] = useState<Clinica | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Verificar sessão ao carregar
+  // Verificar sessão ao carregar (via API que lê o cookie httpOnly)
   useEffect(() => {
-    const sessao = localStorage.getItem('vertix_sessao');
-    if (sessao) {
-      const dados = JSON.parse(sessao);
-      setUsuario(dados.usuario);
-      setClinica(dados.clinica);
+    async function checkSession() {
+      try {
+        const res = await fetch('/api/auth/session');
+        const data = await res.json();
+
+        if (data.usuario && data.clinica) {
+          setUsuario(data.usuario);
+          setClinica(data.clinica);
+        }
+      } catch (error) {
+        console.error('Erro ao verificar sessão:', error);
+      } finally {
+        setLoading(false);
+      }
     }
-    setLoading(false);
+
+    checkSession();
   }, []);
 
   const login = async (email: string, senha: string): Promise<{ success: boolean; error?: string }> => {
@@ -59,13 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: data.error || 'Erro ao fazer login' };
       }
 
-      // Salvar sessão
-      const sessao = {
-        usuario: data.usuario,
-        clinica: data.clinica,
-      };
-      localStorage.setItem('vertix_sessao', JSON.stringify(sessao));
-
+      // Cookie já foi setado pelo backend, apenas atualizar estado
       setUsuario(data.usuario);
       setClinica(data.clinica);
 
@@ -76,8 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('vertix_sessao');
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
     setUsuario(null);
     setClinica(null);
   };
@@ -94,13 +102,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (data && !error) {
         setUsuario(data);
-        // Atualizar localStorage
-        const sessao = localStorage.getItem('vertix_sessao');
-        if (sessao) {
-          const dados = JSON.parse(sessao);
-          dados.usuario = data;
-          localStorage.setItem('vertix_sessao', JSON.stringify(dados));
-        }
       }
     } catch (error) {
       console.error('Erro ao atualizar usuário:', error);
@@ -119,13 +120,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (data && !error) {
         setClinica(data);
-        // Atualizar localStorage
-        const sessao = localStorage.getItem('vertix_sessao');
-        if (sessao) {
-          const dados = JSON.parse(sessao);
-          dados.clinica = data;
-          localStorage.setItem('vertix_sessao', JSON.stringify(dados));
-        }
       }
     } catch (error) {
       console.error('Erro ao atualizar clínica:', error);

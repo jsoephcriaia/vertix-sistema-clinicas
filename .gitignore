@@ -43,3 +43,37 @@ next-env.d.ts
 # n8n workflows (contém dados sensíveis)
 n8n-workflows/
 .env.local
+
+# Scripts temporários de n8n (análise, debug, correções)
+analyze-*.js
+check-*.js
+fix-*.js
+create-*.js
+update-*.js
+update_*.js
+configure-*.js
+add-rag-tool-to-agents.js
+debug-*.js
+implement-*.js
+list-all-*.js
+remove-*.js
+restore-*.js
+
+# Arquivos temporários
+temp_*.json
+nul
+
+# Documentação local (não necessária para o projeto funcionar)
+prd.md
+spec.md
+SecretariaIA.md
+sistemaVertix.md
+PLANO_DE_TESTES.md
+ajustes.docx
+LEMBRETES_DE_CONSULTAS_MULTI_AGENDAS.json
+V2_-_CLINICA_CONSOLE_-_TEMPLATE.json
+
+# Configurações MCP (Claude Code)
+.mcp.json
+mcp.json
+.claude/

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
+import { createSessionToken } from '@/lib/jwt';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -44,27 +46,10 @@ export async function POST(request: NextRequest) {
 
     console.log('[LOGIN] Usuário tem senha_hash:', usuario.senha_hash ? 'Sim' : 'Não');
 
-    // Se não tem senha_hash, permitir login com senha padrão 123456
+    // Usuário sem senha definida
     if (!usuario.senha_hash) {
-      console.log('[LOGIN] Usuário sem senha_hash, verificando senha padrão');
-      if (senha === '123456') {
-        const { data: clinicaData } = await supabase
-          .from('clinicas')
-          .select('id, nome')
-          .eq('id', usuario.clinica_id)
-          .single();
-
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { senha_hash: _, ...usuarioSemSenha } = usuario;
-
-        return NextResponse.json({
-          success: true,
-          usuario: usuarioSemSenha,
-          clinica: clinicaData
-        });
-      }
       return NextResponse.json(
-        { error: 'Senha incorreta' },
+        { error: 'Usuário sem senha definida. Solicite redefinição de senha.' },
         { status: 401 }
       );
     }
@@ -105,6 +90,23 @@ export async function POST(request: NextRequest) {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { senha_hash: _, ...usuarioSemSenha } = usuario;
+
+    // Criar token JWT
+    const token = await createSessionToken({
+      usuario_id: usuario.id,
+      clinica_id: usuario.clinica_id,
+      email: usuario.email,
+    });
+
+    // Setar cookie httpOnly
+    const cookieStore = await cookies();
+    cookieStore.set('session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 30, // 30 dias
+      path: '/',
+    });
 
     console.log('[LOGIN] Login bem sucedido para:', email);
 
